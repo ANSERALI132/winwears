@@ -1,11 +1,20 @@
 # Minimal static file server for local preview of the WIN WEARS frontend.
-# Usage:  powershell -ExecutionPolicy Bypass -File tools\serve.ps1 [-Port 8080]
+# Usage:  powershell -ExecutionPolicy Bypass -File tools\serve.ps1 [-Port 8080] [-Root frontend]
 # Stop with Ctrl+C.
+#
+# This serves files and nothing else. The site's catalogue comes from the API,
+# so pages previewed here show their loading and error states where products
+# would be. Run the backend (backend/npm run dev) for the whole thing.
 
-param([int]$Port = 8080)
+param(
+  [int]$Port = 8080,
+  # Relative to the project root. 'backend\src\admin\public' previews the
+  # admin dashboard shell.
+  [string]$Root = 'frontend'
+)
 
-$root = Join-Path (Split-Path -Parent $PSScriptRoot) 'frontend'
-if (-not (Test-Path $root)) { Write-Error "frontend folder not found at $root"; exit 1 }
+$root = Join-Path (Split-Path -Parent $PSScriptRoot) $Root
+if (-not (Test-Path $root)) { Write-Error "folder not found at $root"; exit 1 }
 
 $types = @{
   '.html' = 'text/html; charset=utf-8'
