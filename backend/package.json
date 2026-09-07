@@ -4,7 +4,9 @@
   "private": true,
   "description": "WIN WEARS — REST API, admin dashboard and PostgreSQL data layer",
   "license": "UNLICENSED",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json && node scripts/copy-static.mjs",
@@ -17,7 +19,9 @@
     "studio": "prisma studio",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
@@ -30,7 +34,7 @@
     "express-session": "^1.18.1",
     "helmet": "^8.0.0",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.3.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -44,5 +48,11 @@
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "esbuild@0.28.2": true
   }
 }

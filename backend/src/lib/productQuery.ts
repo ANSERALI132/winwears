@@ -40,7 +40,7 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
 
   /* `equals` with insensitive mode, not `contains`: filter chips come from the
      distinct values we published, so a partial match would only add surprises. */
-  const exact = (field: 'construction' | 'material' | 'usage', value?: string) => {
+  const exact = (field: 'construction' | 'material' | 'usage', value?: string | null) => {
     if (value) and.push({ [field]: { equals: value, mode: 'insensitive' } } as Prisma.ProductWhereInput);
   };
   exact('construction', q.construction);
