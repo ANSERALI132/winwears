@@ -1,0 +1,131 @@
+/**
+ * Express application wiring.
+ *
+ * Kept separate from server.ts so the app can be imported by a test or a
+ * serverless adapter without a port being opened.
+ */
+import path from 'node:path';
+import express from 'express';
+import session from 'express-session';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import { env, isProd } from './env';
+import { PrismaSessionStore } from './lib/sessionStore';
+import { loadUser } from './middleware/auth';
+import { errorHandler, notFoundHandler } from './middleware/error';
+import { publicRouter } from './api/public';
+import { authRouter } from './api/auth';
+import { adminRouter } from './api/admin';
+
+export function createApp(): express.Express {
+  const app = express();
+
+  /* Behind a reverse proxy the client IP and the https flag arrive in headers.
+     Only trust them when we know a proxy is really in front, or rate limiting
+     can be defeated by a spoofed X-Forwarded-For. */
+  if (env.TRUST_PROXY) app.set('trust proxy', 1);
+  app.disable('x-powered-by');
+
+  app.use(
+    helmet({
+      /* The public site loads three.js from cdnjs and Google Fonts CSS, so the
+         policy names those hosts explicitly instead of allowing everything. */
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          ...(isProd ? { upgradeInsecureRequests: [] } : {}),
+        },
+      },
+      /* Product photos are served to the site itself; the default same-origin
+         policy is what we want, spelled out so it is not accidentally relaxed. */
+      crossOriginResourcePolicy: { policy: 'same-origin' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
+
+  app.use(compression());
+  app.use(morgan(isProd ? 'combined' : 'dev'));
+
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+  app.use(
+    session({
+      name: 'ww.sid',
+      secret: env.AUTH_SECRET,
+      store: new PrismaSessionStore(),
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        /* Secure cookies require https; in local development there is none,
+           and an unsettable cookie would make sign-in silently fail. */
+        secure: isProd,
+        sameSite: 'lax',
+        maxAge: env.SESSION_TTL_HOURS * 60 * 60 * 1000,
+        path: '/',
+      },
+    }),
+  );
+
+  app.use(loadUser);
+
+  app.get('/api/health', (_req, res) => {
+    res.json({ data: { ok: true, uptime: Math.round(process.uptime()) } });
+  });
+
+  app.use('/api/auth', authRouter);
+  app.use('/api/admin', adminRouter);
+  app.use('/api', publicRouter);
+
+  /* Uploaded files, when the local storage driver is in use. */
+  if (env.STORAGE_PROVIDER === 'local') {
+    const dir = path.isAbsolute(env.STORAGE_LOCAL_DIR)
+      ? env.STORAGE_LOCAL_DIR
+      : path.resolve(__dirname, '..', env.STORAGE_LOCAL_DIR);
+    app.use(
+      env.STORAGE_PUBLIC_PATH,
+      express.static(dir, {
+        maxAge: '30d',
+        index: false,
+        /* Nothing in here is ever meant to run: tell the browser to take the
+           declared type literally and never sniff its way to a script. */
+        setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+      }),
+    );
+  }
+
+  /* The admin dashboard: static files, with the API doing the real gating. */
+  app.use('/admin', express.static(path.resolve(__dirname, 'admin', 'public'), { index: 'index.html' }));
+  app.get('/admin/*', (_req, res) => {
+    res.sendFile(path.resolve(__dirname, 'admin', 'public', 'index.html'));
+  });
+
+  /* The public website. Optional — a CDN usually serves it in production. */
+  if (env.SERVE_FRONTEND) {
+    const frontend = path.isAbsolute(env.FRONTEND_DIR)
+      ? env.FRONTEND_DIR
+      : path.resolve(__dirname, '..', env.FRONTEND_DIR);
+    app.use(express.static(frontend, { extensions: ['html'], maxAge: isProd ? '1h' : 0 }));
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+      res.status(404).sendFile(path.join(frontend, '404.html'), (err) => (err ? next() : undefined));
+    });
+  }
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
+}

@@ -199,7 +199,8 @@
     var host = $('#cx-type');
     if (!host) return;
     host.innerHTML = WW.CATEGORIES.map(function (c) {
-      return optButton({ id: c.key, t: c.name, d: c.blurb.split('.')[0] + '.' }, false);
+      var blurb = (c.blurb || c.shortDescription || '').split('.')[0];
+      return optButton({ id: c.key, t: c.name, d: blurb ? blurb + '.' : '' }, false);
     }).join('');
     $$('.opt', host).forEach(function (b) {
       b.addEventListener('click', function () {
@@ -372,6 +373,6 @@
     if (WW.wireWhatsApp) WW.wireWhatsApp(doc);
   }
 
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
-  else init();
+  /* The ball-type buttons are built from the categories in the database. */
+  WW.ready.then(init).catch(function () { boot3D(); });
 })();

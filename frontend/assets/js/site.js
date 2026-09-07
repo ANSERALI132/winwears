@@ -21,7 +21,10 @@
 
   /** Build a wa.me link with a pre-filled message. */
   WW.wa = function (message) {
-    var base = WW.CONTACT.whatsapp;
+    /* The number lives in the database now, so it is not there on the very
+       first paint. Callers re-run wireWhatsApp once WW.ready resolves. */
+    var base = WW.CONTACT && WW.CONTACT.whatsapp;
+    if (!base) return '';
     return message ? base + '?text=' + encodeURIComponent(message) : base;
   };
 
@@ -312,6 +315,44 @@
     $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
   }
 
+  /**
+   * Contact details and social links now come from the database, so any
+   * element that displays one is filled in once the settings arrive.
+   *
+   *   <a data-contact="email">      href and text become the email address
+   *   <a data-contact="phone">      tel: link
+   *   <a data-social="instagram">   href becomes the stored profile URL
+   *   <span data-contact-text="brand">
+   */
+  function bootContactDetails() {
+    var c = WW.CONTACT;
+    if (!c) return;
+
+    $$('[data-contact]').forEach(function (el) {
+      var kind = el.getAttribute('data-contact');
+      if (kind === 'email' && c.email) {
+        el.setAttribute('href', 'mailto:' + c.email);
+        if (!el.getAttribute('data-keep-text')) el.textContent = c.email;
+      } else if (kind === 'phone' && c.phoneDisplay) {
+        el.setAttribute('href', 'tel:' + c.phoneDisplay.replace(/[^\d+]/g, ''));
+        if (!el.getAttribute('data-keep-text')) el.textContent = c.phoneDisplay;
+      }
+    });
+
+    $$('[data-social]').forEach(function (el) {
+      var url = c.social && c.social[el.getAttribute('data-social')];
+      if (!url) return;
+      el.setAttribute('href', url);
+      el.setAttribute('target', '_blank');
+      el.setAttribute('rel', 'noopener noreferrer');
+    });
+
+    $$('[data-contact-text]').forEach(function (el) {
+      var value = c[el.getAttribute('data-contact-text')];
+      if (value) el.textContent = value;
+    });
+  }
+
   /* ----------------------------------------------------------- Boot ------ */
   function init() {
     bootPreloader();
@@ -326,7 +367,16 @@
     bootParallax();
     bootCurrent();
     bootFooter();
-    wireWhatsApp(doc);
+
+    /* Everything above is chrome and motion — it needs no data and must not
+       wait on the network. Anything that prints a phone number, an email or a
+       social link does, because those values live in the database. */
+    if (WW.ready) {
+      WW.ready.then(function () {
+        bootContactDetails();
+        wireWhatsApp(doc);
+      }).catch(function () { /* Links stay as authored in the markup. */ });
+    }
   }
 
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);

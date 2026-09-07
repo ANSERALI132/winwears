@@ -93,6 +93,11 @@
   <div class="toolbar">
     <div class="wrap">
       <div class="toolbar__row">
+        <div class="filter filter--search">
+          <label class="filter__label" for="f-search">Search</label>
+          <input class="input" id="f-search" type="search" placeholder="Name, SKU, material…"
+                 autocomplete="off" spellcheck="false">
+        </div>
         <div class="filter">
           <label class="filter__label" for="f-cat">Category</label>
           <select class="select" id="f-cat" data-filter="cat"><option value="">All categories</option></select>
@@ -129,6 +134,9 @@
   <section class="section section--tight">
     <div class="wrap">
       <div class="grid grid--auto" id="product-grid"></div>
+      <div class="cluster cluster--center" style="margin-top: var(--s-6)">
+        <button class="btn" type="button" id="f-more" hidden>Load more footballs</button>
+      </div>
     </div>
   </section>
 
@@ -220,7 +228,7 @@
   <span class="wa-float__label">WhatsApp</span>
 </a>
 
-<script src="assets/js/data/products.js"></script>
+<script src="assets/js/api.js"></script>
 <script src="assets/js/site.js"></script>
 <script src="assets/js/catalog.js"></script>
 </body>

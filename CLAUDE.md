@@ -20,46 +20,63 @@ or any build tooling beyond plain HTML/CSS/JS.
 ## Architecture
 
 ```
-frontend/          Static site — plain HTML, CSS, vanilla JS. No framework, no bundler.
+frontend/          Public site — plain HTML, CSS, vanilla JS. No framework, no bundler.
   *.html             15 pages (home, products, product detail, customization,
                      manufacturing, technology, about, contact, quote, faq, 404)
   products/          The four category landing pages
   assets/css/        tokens · base · components · modules
-  assets/js/         site · catalog · product · customizer · quote · ball3d · home
-  assets/js/data/    products.js — the whole catalogue
+  assets/js/         api · site · catalog · product · customizer · quote ·
+                     contact · ball3d · home · technology
+  assets/js/data/    products.js — LEGACY. Not loaded by any page; kept only
+                     as the source the seed script migrates from.
   assets/img/        logo · factory · products/<category>/<id>/N.jpeg
-backend/           Server code and APIs. Empty until a real need exists.
+backend/           API, PostgreSQL data layer, admin dashboard. TypeScript.
+  prisma/            schema · migrations · seed · create-admin
+  src/api/           public routes, auth, admin/
+  src/lib/           storage · slug · settings · serialize · audit · rateLimit
+  src/middleware/    auth · CSRF · error boundary · uploads
+  src/validation/    Zod schemas
+  src/admin/public/  the dashboard (plain HTML/CSS/JS, no build)
 prompts/           Prompt files used by the project's AI tooling.
-tools/             serve.ps1 (local preview), build-chrome.sh (nav/footer sync),
+tools/             serve.ps1 (static preview), build-chrome.sh (nav/footer sync),
                    organize-assets.sh (source photos → assets/img), partials/
 Catagories/        Source image assets — product category photos
 LOGO/              Source image assets — brand logo
 OUR FACTORY/       Source image assets — factory photos
 ```
 
-Data flow: `assets/js/data/products.js` → the page scripts render into the
-markup. Content changes should be edits to that data file, not to markup.
+Data flow: PostgreSQL → Prisma → `/api/*` → `assets/js/api.js` → the page
+scripts render into the markup. **Content changes are made in the admin
+dashboard at `/admin`, not in source files.** Nothing about a product,
+category, or the contact details should ever be hard-coded again.
 
-The CSS and JS are split by concern rather than kept as single files: at ~1,100
-lines of CSS and seven distinct behaviours, one file each would be unnavigable.
-Every page is standalone HTML with real nav/footer markup — no build step, and
-`tools/build-chrome.sh` keeps those two regions identical across all 15 pages.
+`assets/js/api.js` populates `WW.CONTACT` and `WW.CATEGORIES` and exposes a
+`WW.ready` promise; every page script waits on it before rendering. Product
+lists are fetched per view, filtered and paginated on the server.
 
-Product data is a `.js` file assigning to `window.WW`, not `.json`, so the site
-works when opened directly from disk (`fetch` fails on `file://`).
+The CSS and JS are split by concern rather than kept as single files: at ~1,200
+lines of CSS and eight distinct behaviours, one file each would be unnavigable.
+Every page is standalone HTML with real nav/footer markup — no build step for
+the frontend, and `tools/build-chrome.sh` keeps those two regions identical
+across all 15 pages.
 
-The frontend must work when opened as static files. Do not introduce a backend
-dependency for content that can be shipped statically.
+The admin dashboard is deliberately built the same way — plain HTML, CSS and
+classic scripts served by Express — so the project has exactly one build step
+(TypeScript on the backend) and no bundler anywhere.
 
 ## Coding rules
 
-- Vanilla HTML/CSS/JS. Do not add frameworks, build steps, or npm dependencies
-  without asking first.
+- Frontend and admin dashboard: vanilla HTML/CSS/JS, no framework, no bundler.
+  Backend: TypeScript on Express + Prisma. Do not add npm dependencies to
+  either without asking first.
+- Never hard-code a product, a category, a specification or a contact detail
+  into markup or a script. If it can change, it belongs in the database.
+- Every public input is validated server-side with Zod. Client-side checks are
+  for user experience only and must never be the guard.
 - Semantic HTML. Real headings, `<nav>`, `<main>`, `<footer>`; `alt` text on every image.
 - Mobile-first CSS. Use CSS custom properties for colors, spacing, and fonts —
   define them once in `:root`.
-- Keep the three frontend files as the only frontend files unless the size genuinely
-  warrants splitting; if you split, say why.
+- Keep files split by concern as they are now; if you add one, say why.
 - No inline styles or inline event handlers; keep structure, style, and behaviour separate.
 - Match the existing style of the file you are editing — naming, quoting, indentation.
 - Comments explain *why*, not *what*. Skip obvious ones.

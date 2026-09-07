@@ -15,7 +15,10 @@
 (function () {
   'use strict';
 
-  var ENDPOINT = '';   /* e.g. '/api/quote' — leave empty to stay frontend-only */
+  /* The RFQ is stored in the database and appears in /admin/quotes. If the
+     request fails the WhatsApp / email handoff below still runs, so a lead is
+     never lost to a server hiccup. */
+  var ENDPOINT = '/api/quotes';
 
   var doc = document;
   function $(s, c) { return (c || doc).querySelector(s); }
@@ -42,38 +45,57 @@
     var ball = $('#q-ball');
     var key = cat.selectedOptions[0] ? cat.selectedOptions[0].getAttribute('data-key') : '';
     ball.innerHTML = '<option value="">Any model in the range</option>';
-    if (!key) return;
-    WW.publicProducts(key).forEach(function (p) {
-      var o = doc.createElement('option');
-      o.value = p.name + ' (' + p.sku + ')';
-      o.textContent = p.name + ' — ' + p.colour;
-      o.setAttribute('data-id', p.id);
-      ball.appendChild(o);
-    });
+    if (!key) return Promise.resolve();
+
+    ball.disabled = true;
+    /* A generous page size: this is a picker, not a browsing grid, and the
+       range is expected to be tens rather than thousands. */
+    return WW.loadProducts({ category: key, perPage: 100, sort: 'name' })
+      .then(function (res) {
+        res.items.forEach(function (p) {
+          var o = doc.createElement('option');
+          o.value = p.productName + ' (' + p.sku + ')';
+          o.textContent = p.shortDescription ? p.productName + ' — ' + p.shortDescription : p.productName;
+          o.setAttribute('data-slug', p.slug);
+          ball.appendChild(o);
+        });
+      })
+      .catch(function () { /* Leave "any model" selected; the form still sends. */ })
+      .then(function () { ball.disabled = false; });
   }
 
-  /* Deep links: ?product=hyb-02, ?category=tpu, ?custom=1 */
+  /* Deep links: ?product=<slug>, ?category=<slug>, ?custom=1 */
   function applyDeepLink() {
     var params = new URLSearchParams(location.search);
-    var productId = params.get('product');
+    var productSlug = params.get('product');
     var categoryKey = params.get('category');
 
-    if (productId) {
-      var p = WW.productBy(productId);
-      if (p && p.status === 'public') categoryKey = p.cat;
-    }
+    var lookup = productSlug
+      ? WW.loadProduct(productSlug).then(
+          function (res) { return res.product; },
+          function () { return null; }
+        )
+      : Promise.resolve(null);
 
-    if (categoryKey) {
-      var c = WW.catBy(categoryKey);
-      if (c) {
-        $('#q-category').value = c.name;
-        fillModels();
+    lookup.then(function (product) {
+      if (product && product.category) categoryKey = product.category.slug;
+
+      var filled = Promise.resolve();
+      if (categoryKey) {
+        var c = WW.catBy(categoryKey);
+        if (c) {
+          $('#q-category').value = c.name;
+          filled = fillModels() || Promise.resolve();
+        }
       }
-    }
-    if (productId) {
-      var opt = $('#q-ball option[data-id="' + productId + '"]');
-      if (opt) $('#q-ball').value = opt.value;
-    }
+
+      /* Select the model only once its options exist. */
+      return filled.then(function () {
+        if (!product) return;
+        var opt = $('#q-ball option[data-slug="' + product.slug.replace(/"/g, '') + '"]');
+        if (opt) $('#q-ball').value = opt.value;
+      });
+    });
 
     /* Specification carried over from the customiser */
     var spec = '';
@@ -218,15 +240,34 @@
 
   /* --------------------------------------------------------- submission -- */
   function submitToBackend(d) {
-    /* Connect a real endpoint here. The server must re-validate everything. */
+    /* Field names match the server's Zod schema. Everything is validated
+       again there — these client-side checks are for the user's benefit. */
     var fd = new FormData();
-    Object.keys(d).forEach(function (k) { fd.append(k, d[k]); });
-    files.logo.forEach(function (f) { fd.append('logo', f, f.name); });
-    files.design.forEach(function (f) { fd.append('design', f, f.name); });
-    return fetch(ENDPOINT, { method: 'POST', body: fd }).then(function (r) {
-      if (!r.ok) throw new Error('Request failed');
-      return r;
-    });
+    fd.append('name', d.name || '');
+    fd.append('company', d.company || '');
+    fd.append('country', d.country || '');
+    fd.append('email', d.email || '');
+    fd.append('whatsapp', d.whatsapp || '');
+    fd.append('category', d.category || '');
+    fd.append('size', d.size || '');
+    fd.append('customizationRequired', d.custom ? 'true' : 'false');
+
+    if (d.quantity) fd.append('quantity', String(d.quantity).replace(/[^\d]/g, ''));
+
+    var selected = $('#q-ball').selectedOptions[0];
+    var productSlug = selected ? selected.getAttribute('data-slug') : '';
+    if (productSlug) fd.append('productId', productSlug);
+
+    var notes = [d.custom ? 'Customisation: ' + d.custom : '', d.ball ? 'Model: ' + d.ball : '', d.message || '']
+      .filter(Boolean)
+      .join('\n');
+    fd.append('message', notes);
+
+    /* One file each — the model has a logo slot and a design slot. */
+    if (files.logo[0]) fd.append('logoFile', files.logo[0], files.logo[0].name);
+    if (files.design[0]) fd.append('designFile', files.design[0], files.design[0].name);
+
+    return WW.submitQuote(fd);
   }
 
   form.addEventListener('submit', function (e) {
@@ -291,6 +332,11 @@
     applyDeepLink();
   }
 
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
-  else init();
+  /* Categories come from the API, so the selects cannot be built until the
+     first payload lands. Uploads work regardless. */
+  WW.ready.then(init).catch(function () {
+    initUploads();
+    status('error', 'We could not load the ranges.',
+      'You can still send the form, or message us on WhatsApp and we will pick it up.');
+  });
 })();

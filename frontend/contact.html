@@ -167,6 +167,65 @@
     </div>
   </section>
 
+
+  <!-- ==================== MESSAGE FORM ============================== -->
+  <section class="section section--tight" id="message">
+    <div class="wrap wrap--narrow">
+      <div class="sec-head reveal">
+        <p class="eyebrow">Or write to us</p>
+        <h2 class="sec-head__title">Send a message.</h2>
+        <p class="lead">Anything that is not a quotation request — partnerships, samples, factory visits, or a question about what we make.</p>
+      </div>
+
+      <form class="stack" id="contact-form" novalidate>
+
+        <div class="form-status" id="cf-status" data-show="false" role="status" aria-live="polite"></div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="cf-name">Name <span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="cf-name" name="name" type="text" autocomplete="name" maxlength="120" required>
+            <span class="field__error">Please enter your name.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cf-email">Email <span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="cf-email" name="email" type="email" autocomplete="email" maxlength="254" required>
+            <span class="field__error">Please enter a valid email address.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="cf-company">Company</label>
+            <input class="input" id="cf-company" name="company" type="text" autocomplete="organization" maxlength="160">
+          </div>
+          <div class="field">
+            <label class="field__label" for="cf-whatsapp">WhatsApp</label>
+            <input class="input" id="cf-whatsapp" name="whatsapp" type="tel" autocomplete="tel" maxlength="32">
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="cf-subject">Subject</label>
+            <input class="input" id="cf-subject" name="subject" type="text" maxlength="200">
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="cf-message">Message <span class="req" aria-hidden="true">*</span></label>
+            <textarea class="textarea" id="cf-message" name="message" rows="6" maxlength="5000" required></textarea>
+            <span class="field__error">Please write your message.</span>
+          </div>
+        </div>
+
+        <!-- Left empty by people, filled by bots. Hidden from the page and
+             from the accessibility tree. -->
+        <div class="u-hide" aria-hidden="true">
+          <label>Website<input class="input" type="text" name="website" tabindex="-1" autocomplete="off"></label>
+        </div>
+
+        <div class="cluster">
+          <button class="btn btn--accent btn--lg" type="submit" data-magnetic>Send message</button>
+          <a class="btn btn--whatsapp" data-wa="Hello WIN WEARS, I have a question.">Or message on WhatsApp</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ==================== CTA BAND ================================= -->
   <section class="cta-band">
     <div class="wrap">
       <h2 class="cta-band__title reveal">Send the brief. We will quote it.</h2>
@@ -254,7 +313,8 @@
   <span class="wa-float__label">WhatsApp</span>
 </a>
 
-<script src="assets/js/data/products.js"></script>
+<script src="assets/js/api.js"></script>
 <script src="assets/js/site.js"></script>
+<script src="assets/js/contact.js"></script>
 </body>
 </html>

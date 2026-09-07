@@ -1,4 +1,18 @@
 /* ==========================================================================
+   WIN WEARS — Legacy catalogue data  (NO LONGER LOADED BY THE WEBSITE)
+   --------------------------------------------------------------------------
+   The site now reads its catalogue from the API, which reads it from
+   PostgreSQL. Products are managed at /admin — editing this file changes
+   nothing on the website.
+
+   It is kept for one reason: backend/prisma/seed.ts reads it to migrate this
+   catalogue into the database on a fresh install. Once you have seeded, the
+   database is the source of truth and this file is only history.
+
+   See backend/README.md.
+   ========================================================================== */
+
+/* ==========================================================================
    WIN WEARS — Catalogue data
    --------------------------------------------------------------------------
    This is the ONLY file you need to edit to change products, contact details

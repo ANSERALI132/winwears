@@ -700,3 +700,90 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 @media (max-width: 900px) {
   .split > aside { position: static !important; }
 }
+
+/* ==========================================================================
+   Data-driven states
+   The catalogue arrives over the network now, so the grid needs a loading
+   shape, an empty photo slot, and somewhere to put the fields the admin can
+   fill in per product.
+   ========================================================================== */
+
+.sk {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.045) 25%,
+    rgba(255,255,255,.085) 37%,
+    rgba(255,255,255,.045) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+.sk--media  { aspect-ratio: 4 / 5; width: 100%; }
+.sk--line   { height: .8rem; margin: var(--s-3) var(--s-4) 0; }
+.sk--short  { width: 55%; }
+.sk--block  { height: 12rem; margin-top: var(--s-4); }
+
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk { animation: none; }
+}
+
+.p-card--skeleton { pointer-events: none; }
+.p-card--skeleton .sk--line:last-child { margin-bottom: var(--s-4); }
+
+/* A product with no photograph yet — a flat panel rather than a broken icon. */
+.p-card__noimg,
+.gallery__main--empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background:
+    repeating-linear-gradient(45deg,
+      rgba(255,255,255,.02) 0 12px,
+      rgba(255,255,255,.04) 12px 24px);
+}
+.gallery__main--empty { aspect-ratio: 1; }
+.gallery__main--empty p { color: var(--ink-faint); font-size: var(--t-micro); }
+
+/* --- product detail, fields the admin controls --------------------------- */
+
+.pdp__price {
+  font-size: var(--t-h4);
+  font-weight: 600;
+  letter-spacing: var(--tr-tight);
+}
+.pdp__moq { font-size: var(--t-micro); color: var(--ink-faint); }
+
+.pdp__copy { display: grid; gap: .75rem; color: var(--ink-soft); }
+
+.pdp__features { display: grid; gap: .6rem; list-style: none; padding: 0; margin: 0; }
+.pdp__features li {
+  display: grid;
+  gap: .2rem;
+  padding-left: var(--s-5);
+  position: relative;
+}
+.pdp__features li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: .55em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red-500);
+}
+.pdp__features strong { font-weight: 600; }
+.pdp__features span { font-size: var(--t-micro); color: var(--ink-faint); }
+
+/* Search sits with the filter selects but wants more room than a dropdown. */
+.filter--search { min-width: 220px; flex: 1 1 220px; }
+.filter--search .input { min-height: 42px; padding-block: .5rem; font-size: var(--t-micro); }
+
+@media (max-width: 720px) {
+  .filter--search { grid-column: 1 / -1; }
+}
+
+/* Used by the "load more" row under a product grid. */
+.cluster--center { justify-content: center; }
