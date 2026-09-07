@@ -70,7 +70,7 @@ function readLegacy(): Legacy | null {
     return null;
   }
 
-  const ww = sandbox.window.WW as Legacy | undefined;
+  const ww = sandbox.window.WW_SNAPSHOT as Legacy | undefined;
   if (!ww?.CATEGORIES || !ww?.PRODUCTS) return null;
   return ww;
 }

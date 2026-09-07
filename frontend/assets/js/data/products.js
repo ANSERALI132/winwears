@@ -1,15 +1,22 @@
 /* ==========================================================================
-   WIN WEARS — Legacy catalogue data  (NO LONGER LOADED BY THE WEBSITE)
+   WIN WEARS — Catalogue snapshot  (FALLBACK ONLY — NOT THE SOURCE OF TRUTH)
    --------------------------------------------------------------------------
-   The site now reads its catalogue from the API, which reads it from
-   PostgreSQL. Products are managed at /admin — editing this file changes
-   nothing on the website.
+   The live catalogue lives in PostgreSQL and is managed at /admin. This file
+   is the safety net, and it has exactly two jobs:
 
-   It is kept for one reason: backend/prisma/seed.ts reads it to migrate this
-   catalogue into the database on a fresh install. Once you have seeded, the
-   database is the source of truth and this file is only history.
+     1. backend/prisma/seed.ts reads it once, to migrate this catalogue into
+        the database on a fresh install.
+     2. assets/js/api.js loads it ONLY if the API cannot be reached at all —
+        the backend is down, or the site is being served as static files with
+        no backend behind it. The site then shows this catalogue instead of an
+        error, and switches back to the database the moment the API answers.
 
-   See backend/README.md.
+   It assigns to window.WW_SNAPSHOT, deliberately not window.WW, so it can
+   never overwrite the live data layer.
+
+   Editing this file changes nothing on a running site. Edit products at
+   /admin. Keep it in step by exporting from the admin if you want the
+   fallback to stay current.
    ========================================================================== */
 
 /* ==========================================================================
@@ -20,7 +27,7 @@
    when the site is opened straight from disk as well as from a web server.
 
    To move to a CMS / API later, replace this file with a fetch that assigns
-   the same shapes to window.WW.
+   the same shapes to window.WW_SNAPSHOT.
 
    PRODUCT FIELDS
      id      unique slug, also the image folder name
@@ -35,10 +42,10 @@
      flag    why it is hidden. Set status to "public" to publish it.
    ========================================================================== */
 
-window.WW = window.WW || {};
+window.WW_SNAPSHOT = window.WW_SNAPSHOT || {};
 
 /* --- Business details ----------------------------------------------------- */
-WW.CONTACT = {
+WW_SNAPSHOT.CONTACT = {
   brand: 'WIN WEARS',
   tagline: 'Premium Football Manufacturing',
   phoneDisplay: '+92 370 6495974',
@@ -53,7 +60,7 @@ WW.CONTACT = {
 };
 
 /* --- Categories ----------------------------------------------------------- */
-WW.CATEGORIES = [
+WW_SNAPSHOT.CATEGORIES = [
   {
     slug: 'hybrid-pro-match-ball',
     key: 'hybrid',
@@ -118,7 +125,7 @@ WW.CATEGORIES = [
 
 /* --- Products ------------------------------------------------------------- */
 /* eslint-disable */
-WW.PRODUCTS = [
+WW_SNAPSHOT.PRODUCTS = [
   /* ---------- 01 · HYBRID PRO MATCH BALL ---------- */
   { id:'hyb-01', sku:'WW-HYB-01', cat:'hybrid', name:'Hybrid Pro', colour:'White · Red · Black', shots:4, usage:'Match', status:'public' },
   { id:'hyb-02', sku:'WW-HYB-02', cat:'hybrid', name:'Hybrid Pro', colour:'Volt · Black · Silver', shots:3, usage:'Match', status:'public' },
@@ -208,35 +215,35 @@ WW.PRODUCTS = [
 ];
 
 /* --- Helpers -------------------------------------------------------------- */
-WW.catBy = function (key) {
-  for (var i = 0; i < WW.CATEGORIES.length; i++) {
-    if (WW.CATEGORIES[i].key === key || WW.CATEGORIES[i].slug === key) return WW.CATEGORIES[i];
+WW_SNAPSHOT.catBy = function (key) {
+  for (var i = 0; i < WW_SNAPSHOT.CATEGORIES.length; i++) {
+    if (WW_SNAPSHOT.CATEGORIES[i].key === key || WW_SNAPSHOT.CATEGORIES[i].slug === key) return WW_SNAPSHOT.CATEGORIES[i];
   }
   return null;
 };
 
 /** Products that are safe to render. */
-WW.publicProducts = function (catKey) {
-  return WW.PRODUCTS.filter(function (p) {
+WW_SNAPSHOT.publicProducts = function (catKey) {
+  return WW_SNAPSHOT.PRODUCTS.filter(function (p) {
     return p.status === 'public' && (!catKey || p.cat === catKey);
   });
 };
 
-WW.productBy = function (id) {
-  for (var i = 0; i < WW.PRODUCTS.length; i++) if (WW.PRODUCTS[i].id === id) return WW.PRODUCTS[i];
+WW_SNAPSHOT.productBy = function (id) {
+  for (var i = 0; i < WW_SNAPSHOT.PRODUCTS.length; i++) if (WW_SNAPSHOT.PRODUCTS[i].id === id) return WW_SNAPSHOT.PRODUCTS[i];
   return null;
 };
 
 /** Image paths for a product, relative to the site root. */
-WW.images = function (p) {
+WW_SNAPSHOT.images = function (p) {
   var out = [];
   for (var i = 1; i <= p.shots; i++) out.push('assets/img/products/' + p.cat + '/' + p.id + '/' + i + '.jpeg');
   return out;
 };
 
 /** Indicative spec sheet. Values come from the category and stay editable. */
-WW.specs = function (p) {
-  var c = WW.catBy(p.cat) || {};
+WW_SNAPSHOT.specs = function (p) {
+  var c = WW_SNAPSHOT.catBy(p.cat) || {};
   return [
     ['Category', c.name || ''],
     ['Construction', c.construction || ''],
