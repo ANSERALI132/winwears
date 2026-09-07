@@ -1,0 +1,20 @@
+# OS / editor cruft
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Working files
+tools/tmp/
+*.bak
+*.log
+
+# Dependencies / build output (none today — the site has no build step)
+node_modules/
+dist/
+.env
+.env.*
+!.env.example

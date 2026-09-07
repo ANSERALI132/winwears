@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Replace with your live domain before going live.
+Sitemap: https://winwears.com/sitemap.xml
