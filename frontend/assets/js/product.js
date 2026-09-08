@@ -138,6 +138,25 @@
     var w = $('#cta-wa');
     if (w) w.setAttribute('data-wa', waMsg);
 
+    /* --- ask the assistant --------------------------------------------- */
+    /* Added only once the widget confirms it exists, so no button appears
+       when no AI key is configured. WWChat.ready settles either way, so this
+       does not race the status request. */
+    if (window.WWChat) {
+      window.WWChat.ready.then(function (available) {
+        var cta = $('.pdp__cta');
+        if (!available || !cta) return;
+        var ask = doc.createElement('button');
+        ask.type = 'button';
+        ask.className = 'btn btn--ghost';
+        ask.textContent = 'Ask AI About This Ball';
+        ask.addEventListener('click', function () {
+          window.WWChat.openForProduct({ slug: p.slug, name: p.productName });
+        });
+        cta.appendChild(ask);
+      });
+    }
+
     /* --- related ------------------------------------------------------- */
     if (related.length) {
       $('#related-wrap').hidden = false;

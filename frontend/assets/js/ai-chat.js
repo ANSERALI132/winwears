@@ -29,6 +29,15 @@
     'Talk to a WIN WEARS representative.'
   ];
 
+  /* §31 — what a customer standing on a product page is most likely to want.
+     These open the conversation about that specific ball. */
+  var PRODUCT_QUICK = [
+    'Tell me the specifications',
+    'Is customization available?',
+    'What quantity can I order?',
+    'Request a quote'
+  ];
+
   var state = {
     open: false,
     busy: false,
@@ -36,7 +45,10 @@
     sessionId: null,
     whatsappUrl: null,
     maxLength: 2000,
-    lastFocus: null
+    lastFocus: null,
+    /* Set when the widget is opened from a product page, so the welcome
+       screen and the first question are about that ball. */
+    product: null
   };
 
   var el = {};
@@ -174,11 +186,21 @@
 
   function buildWelcome() {
     var wrap = h('div', 'aic-welcome');
-    wrap.appendChild(h('h2', 'aic-welcome__h', 'How can we help?'));
-    wrap.appendChild(h('p', 'aic-welcome__p', 'Ask about footballs, customization, bulk orders or request a quote.'));
+    var onProduct = state.product && state.product.name;
+
+    /* The product greeting is written here rather than fetched. Opening the
+       panel should cost nothing; the first paid call happens when the
+       customer actually asks something. */
+    if (onProduct) {
+      wrap.appendChild(h('h2', 'aic-welcome__h', 'About the ' + state.product.name));
+      wrap.appendChild(h('p', 'aic-welcome__p', 'I can help with this football. What would you like to know?'));
+    } else {
+      wrap.appendChild(h('h2', 'aic-welcome__h', 'How can we help?'));
+      wrap.appendChild(h('p', 'aic-welcome__p', 'Ask about footballs, customization, bulk orders or request a quote.'));
+    }
 
     var chips = h('div', 'aic-chips');
-    QUICK.forEach(function (text) {
+    (onProduct ? PRODUCT_QUICK : QUICK).forEach(function (text) {
       var chip = h('button', 'aic-chip', text);
       chip.type = 'button';
       chip.addEventListener('click', function () { submit(text); });
@@ -367,8 +389,11 @@
     return "Sorry, I'm temporarily unable to answer. You can contact the WIN WEARS team directly on WhatsApp.";
   }
 
-  /** The product page is one template driven by ?slug=. */
+  /** Which ball the customer is looking at, if any. An explicit open from a
+   *  product page wins over the URL, since that is the more deliberate
+   *  signal; otherwise the product page is one template driven by ?slug=. */
   function productSlug() {
+    if (state.product && state.product.slug) return state.product.slug;
     if (!/\/product\.html$/.test(location.pathname)) return null;
     try {
       return new URLSearchParams(location.search).get('slug');
@@ -438,11 +463,54 @@
     document.body.appendChild(el.panel);
   }
 
+  /* --------------------------------------------------------------- api --- */
+
+  /**
+   * The small surface other page scripts use.
+   *
+   * `ready` resolves with whether the assistant exists at all, so a caller
+   * can decide whether to render an "Ask AI" control without racing the
+   * status request or having to know it happened.
+   */
+  var resolveReady;
+  var WWChat = {
+    ready: new Promise(function (resolve) { resolveReady = resolve; }),
+    available: false,
+
+    /** Opens the panel about one product, with that ball's quick prompts. */
+    openForProduct: function (product) {
+      if (!WWChat.available || !product || !product.slug) return;
+      /* A different ball means a fresh welcome rather than the last one. */
+      if (!state.product || state.product.slug !== product.slug) {
+        state.product = { slug: product.slug, name: product.name || null };
+        if (!state.started && el.log) el.log.textContent = '';
+      }
+      open();
+    },
+
+    /** Opens the panel and sends one message straight away. */
+    ask: function (text) {
+      if (!WWChat.available || !text) return;
+      open();
+      submit(String(text));
+    }
+  };
+
+  window.WWChat = WWChat;
+
   function boot() {
     fetch(API + '/status')
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (payload) { start(payload && payload.data); })
-      .catch(function () { /* No API reachable: the site works without us. */ });
+      .then(function (payload) {
+        var data = payload && payload.data;
+        start(data);
+        WWChat.available = Boolean(data && data.enabled);
+        resolveReady(WWChat.available);
+      })
+      .catch(function () {
+        /* No API reachable: the site works without us. */
+        resolveReady(false);
+      });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
