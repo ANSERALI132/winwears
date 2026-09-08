@@ -13,6 +13,7 @@ import { adminQuotesRouter, adminMessagesRouter } from './enquiries';
 import { adminStatsRouter, adminSettingsRouter, adminUsersRouter, adminActivityRouter } from './system';
 import { adminPortabilityRouter } from './portability';
 import { adminKnowledgeRouter } from './knowledge';
+import { adminAiRouter } from './ai';
 
 export const adminRouter = Router();
 
@@ -28,4 +29,6 @@ adminRouter.use('/settings', adminSettingsRouter);
 adminRouter.use('/users', adminUsersRouter);
 adminRouter.use('/activity', adminActivityRouter);
 adminRouter.use('/portability', adminPortabilityRouter);
+/* Knowledge first: /ai/knowledge must not be swallowed by /ai. */
 adminRouter.use('/ai/knowledge', adminKnowledgeRouter);
+adminRouter.use('/ai', adminAiRouter);

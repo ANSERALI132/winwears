@@ -429,3 +429,45 @@ td.right, th.right { text-align: right; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ==========================================================================
+   AI assistant screens
+   Added with the AI dashboard. Uses the tokens above; no new colours.
+   ========================================================================== */
+
+.card__title { padding: 14px 16px 0; font-size: 15px; font-weight: 600; }
+.card__subtitle { margin: 18px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.card__hint { padding: 6px 16px 14px; margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.card__title + .card__hint { padding-top: 4px; }
+
+/* Transcript left, lead panel right. Stacks under 1000px so the transcript
+   stays readable on a laptop rather than being squeezed into a column. */
+.split { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); margin-top: 14px; }
+.split > .card { padding: 16px; }
+@media (max-width: 1000px) { .split { grid-template-columns: minmax(0, 1fr); } }
+
+.transcript { display: flex; flex-direction: column; gap: 12px; max-height: 62vh; overflow-y: auto; padding-right: 4px; }
+.transcript__row { border-left: 3px solid var(--line-2); padding-left: 10px; }
+.transcript__row--user { border-left-color: var(--accent); }
+.transcript__row--assistant { border-left-color: var(--info); }
+.transcript__row--tool { border-left-color: var(--line-2); opacity: .82; }
+.transcript__who { font-size: 11.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.transcript__text { font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+
+/* Tool results are JSON. Scrollable rather than wrapped, so a long product
+   payload cannot push the human part of the transcript off the screen. */
+.transcript__tool {
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.5;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 8px 10px; margin: 0; max-height: 190px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+}
+
+.detail { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 4px; font-size: 13.5px; }
+.detail dt { color: var(--text-3); white-space: nowrap; }
+.detail dd { margin: 0; word-break: break-word; }
+.detail__note { font-size: 13.5px; line-height: 1.6; color: var(--text-2); margin: 0 0 4px; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-row .btn[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.plain-list { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; }

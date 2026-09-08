@@ -53,6 +53,11 @@
       { path: '/quotes', label: 'Quote Requests', icon: 'quotes', count: 'quotes' },
       { path: '/messages', label: 'Contact Messages', icon: 'messages', count: 'messages' },
     ] },
+    { group: 'AI Assistant', items: [
+      { path: '/ai', label: 'Overview', icon: 'overview' },
+      { path: '/ai/conversations', label: 'Conversations', icon: 'messages' },
+      { path: '/ai/knowledge', label: 'Knowledge', icon: 'settings' },
+    ] },
     { group: 'Site', items: [
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/users', label: 'Admin Users', icon: 'users', adminOnly: true },
