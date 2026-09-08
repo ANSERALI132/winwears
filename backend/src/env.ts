@@ -52,6 +52,30 @@ const schema = z
     RATE_LIMIT_PUBLIC_MAX: z.coerce.number().int().positive().default(100),
     RATE_LIMIT_FORM_MAX: z.coerce.number().int().positive().default(10),
     RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().positive().default(8),
+    RATE_LIMIT_AI_MAX: z.coerce.number().int().positive().default(20),
+
+    /* --- ai support agent -------------------------------------------------
+       Deliberately not required. A missing key must not stop the site from
+       booting: the catalogue, the quote form and the admin all work without
+       the agent, so an absent key degrades to "the assistant is unavailable,
+       here is WhatsApp" rather than taking the whole process down. */
+    AI_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    AI_PROVIDER: z.enum(['anthropic', 'openai', 'none']).default('anthropic'),
+    AI_API_KEY: z.string().optional(),
+    AI_MODEL: z.string().default('claude-sonnet-5'),
+
+    /* Cost ceilings. Every customer message is a paid call, so each of these
+       is a hard stop rather than a suggestion. */
+    AI_MAX_TOKENS: z.coerce.number().int().positive().max(8192).default(1024),
+    /* How many times one question may bounce through tools before the agent
+       must answer with what it has. Guards against a tool loop billing
+       forever on a single message. */
+    AI_MAX_TOOL_ITERATIONS: z.coerce.number().int().positive().max(20).default(6),
+    AI_MAX_MESSAGES_PER_CONVERSATION: z.coerce.number().int().positive().default(40),
+    AI_MAX_INPUT_CHARS: z.coerce.number().int().positive().default(2000),
 
     /* Serve the static site from this process too. Handy in development; in
        production a CDN or nginx usually does it instead. */
