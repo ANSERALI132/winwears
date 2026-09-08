@@ -53,16 +53,23 @@ interface Legacy {
 }
 
 /**
- * The catalogue file is a browser script that assigns to `window.WW`. Running
- * it in a VM with a stub window is the least fragile way to read it — parsing
- * it by hand would break the moment a quote or a comment moved.
+ * The catalogue snapshot is a browser script that assigns to
+ * `window.WW_SNAPSHOT` and then refers to `WW_SNAPSHOT` bare. Running it in a
+ * VM is the least fragile way to read it — parsing it by hand would break the
+ * moment a quote or a comment moved.
  */
 function readLegacy(): Legacy | null {
   const file = path.resolve(__dirname, '..', '..', 'frontend', 'assets', 'js', 'data', 'products.js');
   if (!fs.existsSync(file)) return null;
 
-  const sandbox: { window: Record<string, unknown> } = { window: {} };
+  /* The sandbox must be its own `window`, as in a browser: there, assigning
+     window.X defines the global X, and the file relies on that. A plain
+     { window: {} } stub leaves the bare references undefined. */
+  const sandbox: Record<string, unknown> = {};
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+
   try {
     vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { timeout: 5000 });
   } catch (err) {
@@ -70,7 +77,7 @@ function readLegacy(): Legacy | null {
     return null;
   }
 
-  const ww = sandbox.window.WW_SNAPSHOT as Legacy | undefined;
+  const ww = sandbox.WW_SNAPSHOT as Legacy | undefined;
   if (!ww?.CATEGORIES || !ww?.PRODUCTS) return null;
   return ww;
 }

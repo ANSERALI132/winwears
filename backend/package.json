@@ -12,12 +12,13 @@
     "build": "prisma generate && tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts",
-    "create-admin": "tsx prisma/create-admin.ts",
-    "studio": "prisma studio",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "migrate:dev": "node scripts/with-env.mjs prisma migrate dev",
+    "migrate:deploy": "node scripts/with-env.mjs prisma migrate deploy",
+    "seed": "node scripts/with-env.mjs tsx prisma/seed.ts",
+    "create-admin": "node scripts/with-env.mjs tsx prisma/create-admin.ts",
+    "studio": "node scripts/with-env.mjs prisma studio",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate:reset": "node scripts/with-env.mjs prisma migrate reset"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
