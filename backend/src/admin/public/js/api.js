@@ -53,8 +53,13 @@
 
         var err = payload && payload.error ? payload.error : {};
         /* A dropped session should send the operator to the login screen
-           rather than showing a bare "unauthorised" in the middle of a form. */
-        if (res.status === 401 && location.hash.indexOf('#/login') !== 0) {
+           rather than showing a bare "unauthorised" in the middle of a form.
+           Only a session that existed can drop, though: boot() opens with
+           /api/auth/me, and before sign-in its 401 is the ordinary "nobody is
+           logged in" answer. Reading that as an expiry toasted and reloaded
+           every 900ms, so the login form could never be filled in — and a
+           mistyped password wiped the form instead of showing the reason. */
+        if (res.status === 401 && Admin.state && Admin.state.user) {
           Admin.onSessionLost && Admin.onSessionLost();
         }
         throw new ApiError(
