@@ -95,6 +95,32 @@
     if (el.log) el.log.scrollTop = el.log.scrollHeight;
   }
 
+  /** Fire-and-forget. The server cannot see a WhatsApp click, and a failed
+   *  analytics write must never interrupt one. */
+  function track(event) {
+    if (!state.sessionId) return;
+    try {
+      fetch(API + '/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: state.sessionId, event: event }),
+        keepalive: true
+      }).catch(function () {});
+    } catch (err) { /* nothing to do */ }
+  }
+
+  /** Builds a WhatsApp link that reports its own click before following.
+   *  The href is set normally, so it still works with JavaScript disabled
+   *  and a middle-click opens the real destination. */
+  function whatsappLink(label) {
+    var a = h('a', 'aic-mini aic-mini--wa', label);
+    a.href = state.whatsappUrl;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.addEventListener('click', function () { track('WHATSAPP_CLICKED'); });
+    return a;
+  }
+
   function announce(text) {
     if (el.sr) el.sr.textContent = text;
   }
@@ -257,13 +283,7 @@
       });
       actions.appendChild(quote);
 
-      if (state.whatsappUrl) {
-        var wa = h('a', 'aic-mini aic-mini--wa', 'WhatsApp');
-        wa.href = state.whatsappUrl;
-        wa.target = '_blank';
-        wa.rel = 'noopener';
-        actions.appendChild(wa);
-      }
+      if (state.whatsappUrl) actions.appendChild(whatsappLink('WhatsApp'));
 
       body.appendChild(actions);
       card.appendChild(body);
@@ -281,11 +301,7 @@
     var wrap = h('div', 'aic-cards');
     var row = h('div', 'aic-card__actions');
 
-    var wa = h('a', 'aic-mini aic-mini--wa', 'WhatsApp WIN WEARS');
-    wa.href = state.whatsappUrl;
-    wa.target = '_blank';
-    wa.rel = 'noopener';
-    row.appendChild(wa);
+    row.appendChild(whatsappLink('WhatsApp WIN WEARS'));
 
     var rq = h('a', 'aic-mini', 'Request a quote');
     rq.href = '/request-quote.html';
@@ -415,6 +431,7 @@
 
     if (!state.started && !el.log.childNodes.length) el.log.appendChild(buildWelcome());
 
+    track('CHAT_OPENED');
     document.addEventListener('keydown', onKeydown);
     el.input.focus();
   }

@@ -19,6 +19,8 @@ import { aiProvider } from './index';
 import { AIProviderError, type AITurn } from './provider';
 import { buildSystemPrompt } from './prompt';
 import { runTool, toolDefinitions } from './tools';
+import { getAllSettings } from '../lib/settings';
+import { handoffLink, handoffMessage } from '../lib/whatsapp';
 
 /**
  * How many past messages are replayed.
@@ -38,6 +40,10 @@ export interface ChatResult {
   products: unknown[];
   escalate: boolean;
   conversationId: string;
+  /** Deep link carrying what the customer has already told us. Rebuilt every
+   *  turn rather than only on escalation, because the WhatsApp button is
+   *  always on screen and should always be current. */
+  whatsappUrl: string | null;
 }
 
 export class ChatUnavailable extends Error {
@@ -251,12 +257,23 @@ export async function sendMessage(input: {
     return true;
   });
 
+  /* Built from the conversation as it now stands, so the button reflects
+     anything recorded during this very turn. */
+  const settings = await getAllSettings();
+  const withProduct = updated.productId
+    ? await prisma.product.findUnique({
+        where: { id: updated.productId },
+        select: { productName: true, sku: true },
+      })
+    : null;
+
   return {
     sessionId: updated.sessionId,
     reply,
     products: cards.slice(0, 4),
     escalate,
     conversationId: updated.id,
+    whatsappUrl: handoffLink(settings['contact.whatsappUrl'], handoffMessage(updated, withProduct)),
   };
 }
 

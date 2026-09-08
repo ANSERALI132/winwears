@@ -15,6 +15,7 @@ import { aiProvider } from '../ai';
 import { AIProviderError } from '../ai/provider';
 import { ChatUnavailable, sendMessage } from '../ai/conversation';
 import { getAllSettings } from '../lib/settings';
+import { prisma } from '../db';
 
 export const aiRouter = Router();
 
@@ -54,6 +55,39 @@ aiRouter.get(
   }),
 );
 
+/**
+ * Records that something happened in the widget.
+ *
+ * Only the events a browser is in a position to observe — a WhatsApp button
+ * being clicked is invisible to the server otherwise. Deliberately narrow:
+ * the client names an event from a fixed list and nothing else, so this
+ * cannot be used to write arbitrary rows. Unknown sessions are ignored rather
+ * than reported, and a failure here never surfaces to the customer, because
+ * an analytics write must not break a handoff.
+ */
+const eventSchema = z.object({
+  sessionId: z.string().trim().min(8).max(128),
+  event: z.enum(['CHAT_OPENED', 'WHATSAPP_CLICKED', 'PRODUCT_VIEWED']),
+});
+
+aiRouter.post(
+  '/event',
+  aiLimiter,
+  asyncHandler(async (req, res) => {
+    const body = eventSchema.parse(req.body);
+    const conversation = await prisma.aIConversation.findUnique({
+      where: { sessionId: body.sessionId },
+      select: { id: true },
+    });
+    if (conversation) {
+      await prisma.aIEvent.create({
+        data: { conversationId: conversation.id, eventType: body.event },
+      });
+    }
+    res.status(204).end();
+  }),
+);
+
 aiRouter.post(
   '/chat',
   aiLimiter,
@@ -68,6 +102,7 @@ aiRouter.post(
           reply: result.reply,
           products: result.products,
           escalate: result.escalate,
+          whatsappUrl: result.whatsappUrl,
         },
       });
     } catch (err) {
