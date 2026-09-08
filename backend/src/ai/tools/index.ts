@@ -17,6 +17,7 @@ import {
 } from './catalogue';
 import { createQuoteRequest, rememberRequirements } from './quote';
 import { escalateToHuman, generateWhatsappLink } from './handoff';
+import { getBusinessInformation, searchFaq } from './knowledge';
 import type { AIToolDefinition } from '../provider';
 import type { AnyAITool, ToolContext } from './types';
 
@@ -30,6 +31,8 @@ const REGISTRY: Record<string, AnyAITool> = {
   search_categories: searchCategories as AnyAITool,
   get_product_features: getProductFeatures as AnyAITool,
   get_product_specifications: getProductSpecifications as AnyAITool,
+  search_faq: searchFaq as AnyAITool,
+  get_business_information: getBusinessInformation as AnyAITool,
   remember_requirements: rememberRequirements as AnyAITool,
   create_quote_request: createQuoteRequest as AnyAITool,
   generate_whatsapp_link: generateWhatsappLink as AnyAITool,
