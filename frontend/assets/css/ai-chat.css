@@ -1,0 +1,313 @@
+/* ==========================================================================
+   WIN WEARS — AI assistant
+   A separate file because the widget is self-contained: it can be dropped
+   from a page by removing two tags, and nothing else in the site styles it.
+   Every colour, radius and easing comes from tokens.css.
+   ========================================================================== */
+
+/* The WhatsApp float already owns the bottom-right corner at 56px tall
+   (54px under 640px), so the launcher stacks above it rather than over it. */
+.aic-launch {
+  position: fixed;
+  right: clamp(1rem, 2vw, 1.75rem);
+  bottom: calc(clamp(1rem, 2vw, 1.75rem) + 56px + .75rem);
+  z-index: var(--z-float);
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  height: 56px;
+  padding: 0 1.15rem 0 1rem;
+  border: 0;
+  cursor: pointer;
+  background: var(--red-500);
+  color: var(--white);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-red), 0 2px 6px rgba(7, 14, 36, .2);
+  font-family: var(--font-body);
+  font-size: var(--t-micro);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: transform var(--d-mid) var(--e-out), box-shadow var(--d-mid) var(--e-out);
+}
+
+.aic-launch:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(225, 19, 44, .44); }
+.aic-launch:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.aic-launch svg { width: 22px; height: 22px; flex: none; }
+.aic-launch[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .aic-launch {
+    bottom: calc(clamp(1rem, 2vw, 1.75rem) + 54px + .65rem);
+    height: 54px; width: 54px; padding: 0; justify-content: center;
+  }
+  .aic-launch__label { display: none; }
+}
+
+/* --- panel ---------------------------------------------------------------- */
+
+.aic-panel {
+  position: fixed;
+  right: clamp(1rem, 2vw, 1.75rem);
+  bottom: clamp(1rem, 2vw, 1.75rem);
+  z-index: var(--z-top);
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  max-width: calc(100vw - 2rem);
+  height: min(620px, calc(100vh - 3rem));
+  background: var(--navy-900);
+  color: var(--on-dark);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-3);
+  overflow: hidden;
+  transform-origin: bottom right;
+}
+
+.aic-panel[hidden] { display: none; }
+
+.aic-panel--in { animation: aic-rise var(--d-mid) var(--e-out) both; }
+
+@keyframes aic-rise {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Full-screen on phones, with the safe area respected so the composer is not
+   under the home indicator. */
+@media (max-width: 640px) {
+  .aic-panel {
+    right: 0; bottom: 0; left: 0; top: 0;
+    width: 100%; max-width: none; height: 100%;
+    border: 0; border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* --- header --------------------------------------------------------------- */
+
+.aic-head {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .9rem 1rem;
+  border-bottom: 1px solid var(--line-dark);
+  background: linear-gradient(180deg, var(--navy-800), var(--navy-900));
+  flex: none;
+}
+
+.aic-head__mark {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  background: var(--red-500); color: var(--white);
+  border-radius: var(--r-sm);
+  font-family: var(--font-display); font-size: .75rem; font-weight: 800; letter-spacing: .02em;
+}
+
+.aic-head__text { min-width: 0; flex: 1; }
+.aic-head__title { font-size: var(--t-small); font-weight: 700; letter-spacing: .01em; }
+.aic-head__sub { font-size: var(--t-eyebrow); color: var(--on-dark-soft); letter-spacing: var(--tr-wide); text-transform: uppercase; }
+
+.aic-x {
+  width: 36px; height: 36px; flex: none;
+  display: grid; place-items: center;
+  background: transparent; border: 1px solid var(--line-dark); border-radius: var(--r-sm);
+  color: var(--on-dark); cursor: pointer;
+  transition: background var(--d-fast) var(--e-out), border-color var(--d-fast) var(--e-out);
+}
+.aic-x:hover { background: rgba(255, 255, 255, .08); border-color: var(--line-dark-2); }
+.aic-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.aic-x svg { width: 16px; height: 16px; }
+
+/* --- log ------------------------------------------------------------------ */
+
+.aic-log {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: .75rem;
+  scrollbar-width: thin;
+}
+
+.aic-msg {
+  max-width: 88%;
+  padding: .7rem .85rem;
+  border-radius: var(--r-lg);
+  font-size: var(--t-small);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.aic-msg--them {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid var(--line-dark);
+  border-bottom-left-radius: var(--r-xs);
+}
+
+.aic-msg--me {
+  align-self: flex-end;
+  background: var(--red-500);
+  color: var(--white);
+  border-bottom-right-radius: var(--r-xs);
+}
+
+.aic-msg--note {
+  align-self: stretch; max-width: none;
+  background: rgba(225, 19, 44, .12);
+  border: 1px solid rgba(225, 19, 44, .35);
+  color: var(--on-dark);
+}
+
+/* --- welcome -------------------------------------------------------------- */
+
+.aic-welcome { padding: .5rem .25rem 0; }
+.aic-welcome__h { font-family: var(--font-display); font-size: var(--t-h4); line-height: var(--lh-snug); margin: 0 0 .35rem; }
+.aic-welcome__p { font-size: var(--t-small); color: var(--on-dark-soft); line-height: 1.55; margin: 0 0 .9rem; }
+
+.aic-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+
+.aic-chip {
+  padding: .5rem .75rem;
+  min-height: 36px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--r-pill);
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: var(--t-micro);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--d-fast) var(--e-out), border-color var(--d-fast) var(--e-out), transform var(--d-fast) var(--e-out);
+}
+.aic-chip:hover { background: rgba(255, 255, 255, .12); border-color: var(--line-dark-2); transform: translateY(-1px); }
+.aic-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* --- product cards -------------------------------------------------------- */
+
+.aic-cards { display: flex; flex-direction: column; gap: .5rem; align-self: stretch; }
+
+.aic-card {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: .75rem;
+  padding: .6rem;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--r-md);
+}
+
+.aic-card__img {
+  width: 64px; height: 64px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  background: var(--navy-700);
+}
+
+.aic-card__body { min-width: 0; }
+.aic-card__name { font-size: var(--t-small); font-weight: 700; line-height: 1.3; }
+.aic-card__meta { font-size: var(--t-eyebrow); color: var(--on-dark-soft); margin-top: .15rem; }
+.aic-card__actions { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
+
+.aic-mini {
+  padding: .3rem .6rem;
+  min-height: 30px;
+  display: inline-flex; align-items: center;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-dark);
+  background: transparent;
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: var(--t-eyebrow);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--d-fast) var(--e-out);
+}
+.aic-mini:hover { background: rgba(255, 255, 255, .1); }
+.aic-mini:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.aic-mini--red { background: var(--red-500); border-color: var(--red-500); }
+.aic-mini--red:hover { background: var(--red-400); }
+.aic-mini--wa { background: #1FA855; border-color: #1FA855; }
+.aic-mini--wa:hover { background: #24c163; }
+
+/* --- typing --------------------------------------------------------------- */
+
+.aic-typing { display: inline-flex; gap: 4px; align-items: center; padding: .8rem .9rem; }
+.aic-typing span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--on-dark-faint);
+  animation: aic-blink 1.3s var(--e-in-out) infinite both;
+}
+.aic-typing span:nth-child(2) { animation-delay: .18s; }
+.aic-typing span:nth-child(3) { animation-delay: .36s; }
+
+@keyframes aic-blink {
+  0%, 60%, 100% { opacity: .25; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+
+/* --- composer ------------------------------------------------------------- */
+
+.aic-form {
+  flex: none;
+  display: flex; gap: .5rem; align-items: flex-end;
+  padding: .75rem;
+  border-top: 1px solid var(--line-dark);
+  background: var(--navy-800);
+}
+
+.aic-input {
+  flex: 1;
+  resize: none;
+  max-height: 120px;
+  padding: .6rem .7rem;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--r-md);
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: var(--t-small);
+  line-height: 1.45;
+}
+.aic-input::placeholder { color: var(--on-dark-faint); }
+.aic-input:focus { outline: none; border-color: var(--line-dark-2); background: rgba(255, 255, 255, .1); }
+.aic-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.aic-send {
+  width: 40px; height: 40px; flex: none;
+  display: grid; place-items: center;
+  background: var(--red-500); border: 0; border-radius: var(--r-md);
+  color: var(--white); cursor: pointer;
+  transition: background var(--d-fast) var(--e-out), opacity var(--d-fast) var(--e-out);
+}
+.aic-send:hover:not(:disabled) { background: var(--red-400); }
+.aic-send:disabled { opacity: .45; cursor: not-allowed; }
+.aic-send:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.aic-send svg { width: 18px; height: 18px; }
+
+.aic-foot {
+  flex: none;
+  padding: 0 .75rem .6rem;
+  background: var(--navy-800);
+  font-size: 10px;
+  letter-spacing: var(--tr-wide);
+  text-transform: uppercase;
+  color: var(--on-dark-faint);
+  text-align: center;
+}
+
+/* Visible only to screen readers — announces state changes that are
+   otherwise conveyed by movement alone. */
+.aic-sr {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aic-panel--in { animation: none; }
+  .aic-typing span { animation: none; opacity: .6; }
+  .aic-launch, .aic-chip, .aic-mini, .aic-send, .aic-x { transition: none; }
+  .aic-launch:hover, .aic-chip:hover { transform: none; }
+}
