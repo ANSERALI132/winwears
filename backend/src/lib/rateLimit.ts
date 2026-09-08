@@ -1,9 +1,10 @@
 /**
  * Rate limits for anything a stranger can reach.
  *
- * Three tiers: generous for reads, tight for the public forms, tighter still
+ * Four tiers: generous for reads, tight for the public forms, tighter still
  * for the login endpoint, where the cost of an unthrottled attempt is a
- * guessed password.
+ * guessed password — and a separate one for the AI assistant, where the cost
+ * of an unthrottled request is measured in money.
  */
 import rateLimit, { type Options } from 'express-rate-limit';
 import { env } from '../env';
@@ -39,4 +40,18 @@ export const loginLimiter = rateLimit({
   limit: env.RATE_LIMIT_LOGIN_MAX,
   skipSuccessfulRequests: true,
   message: { error: { code: 'RATE_LIMITED', message: 'Too many sign-in attempts. Please try again shortly.' } },
+});
+
+/** Messages to the AI assistant. Every one is a paid API call, so this is the
+ *  tier that protects the bill rather than the database. The reply points at
+ *  WhatsApp because a throttled customer still deserves somewhere to go. */
+export const aiLimiter = rateLimit({
+  ...base,
+  limit: env.RATE_LIMIT_AI_MAX,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'You have sent a lot of messages. Please wait a few minutes, or continue on WhatsApp.',
+    },
+  },
 });

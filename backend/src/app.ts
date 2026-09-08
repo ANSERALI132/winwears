@@ -17,6 +17,7 @@ import { errorHandler, notFoundHandler } from './middleware/error';
 import { publicRouter } from './api/public';
 import { authRouter } from './api/auth';
 import { adminRouter } from './api/admin';
+import { aiRouter } from './api/ai';
 
 export function createApp(): express.Express {
   const app = express();
@@ -87,6 +88,9 @@ export function createApp(): express.Express {
 
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
+  /* Ahead of the catch-all public router: /api/ai carries its own rate limit,
+     priced for paid API calls rather than database reads. */
+  app.use('/api/ai', aiRouter);
   app.use('/api', publicRouter);
 
   /* Uploaded files, when the local storage driver is in use. */
