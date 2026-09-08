@@ -56,6 +56,7 @@
     { group: 'AI Assistant', items: [
       { path: '/ai', label: 'Overview', icon: 'overview' },
       { path: '/ai/conversations', label: 'Conversations', icon: 'messages' },
+      { path: '/ai/analytics', label: 'Analytics', icon: 'activity' },
       { path: '/ai/knowledge', label: 'Knowledge', icon: 'settings' },
     ] },
     { group: 'Site', items: [

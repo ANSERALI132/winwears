@@ -123,6 +123,18 @@ export const rememberRequirements: AITool<z.infer<typeof rememberInput>> = {
 
     await prisma.aIConversation.update({ where: { id: ctx.conversationId }, data });
 
+    /* The first thing a customer volunteers is the start of a quote, whether
+       or not one is ever submitted. Recorded once per conversation so the
+       funnel counts people, not keystrokes. */
+    const alreadyStarted = await prisma.aIEvent.count({
+      where: { conversationId: ctx.conversationId, eventType: 'QUOTE_STARTED' },
+    });
+    if (!alreadyStarted) {
+      await prisma.aIEvent.create({
+        data: { conversationId: ctx.conversationId, eventType: 'QUOTE_STARTED' },
+      });
+    }
+
     /* Told back to the model so it knows what it still needs, and does not
        ask twice for something already given. */
     const have = ['customerName', 'company', 'country', 'email', 'whatsapp', 'quantity', 'size']

@@ -97,13 +97,16 @@
 
   /** Fire-and-forget. The server cannot see a WhatsApp click, and a failed
    *  analytics write must never interrupt one. */
-  function track(event) {
+  function track(event, slug) {
     if (!state.sessionId) return;
+    var body = { sessionId: state.sessionId, event: event };
+    if (slug) body.slug = slug;
     try {
       fetch(API + '/event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: state.sessionId, event: event }),
+        body: JSON.stringify(body),
+        /* keepalive so the record survives the navigation it is reporting. */
         keepalive: true
       }).catch(function () {});
     } catch (err) { /* nothing to do */ }
@@ -273,6 +276,7 @@
       if (href) {
         var view = h('a', 'aic-mini', 'View product');
         view.href = href;
+        view.addEventListener('click', function () { track('PRODUCT_VIEWED', p.slug); });
         actions.appendChild(view);
       }
 

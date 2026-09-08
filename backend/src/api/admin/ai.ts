@@ -124,6 +124,115 @@ adminAiRouter.get(
   }),
 );
 
+/* ----------------------------------------------------------- analytics --- */
+
+interface DayRow { day: Date; count: bigint }
+interface SlugRow { slug: string; count: bigint }
+
+const analyticsQuery = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+
+adminAiRouter.get(
+  '/analytics',
+  asyncHandler(async (req, res) => {
+    const { days } = analyticsQuery.parse(req.query);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const [byType, daily, popular, conversations, withQuote] = await Promise.all([
+      prisma.aIEvent.groupBy({
+        by: ['eventType'],
+        where: { createdAt: { gte: since } },
+        _count: true,
+      }),
+
+      /* One row per day with at least one message, so the chart shows real
+         activity rather than a line drawn through invented zeroes. Gaps are
+         filled below, where it is obvious they are gaps. */
+      prisma.$queryRaw<DayRow[]>`
+        SELECT date_trunc('day', "createdAt") AS day, count(*)::bigint AS count
+        FROM "AIEvent"
+        WHERE "eventType" = 'MESSAGE_SENT' AND "createdAt" >= ${since}
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `,
+
+      /* Which balls the assistant recommends most. The slugs live in a JSON
+         array on the event, so they are unnested rather than counted per
+         event — one event recommending three products is three data points. */
+      prisma.$queryRaw<SlugRow[]>`
+        SELECT slug, count(*)::bigint AS count
+        FROM "AIEvent",
+             LATERAL jsonb_array_elements_text(metadata -> 'slugs') AS slug
+        WHERE "eventType" = 'PRODUCT_RECOMMENDED'
+          AND "createdAt" >= ${since}
+          AND metadata ? 'slugs'
+        GROUP BY slug
+        ORDER BY count DESC
+        LIMIT 10
+      `,
+
+      prisma.aIConversation.count({ where: { createdAt: { gte: since } } }),
+      prisma.aIConversation.count({
+        where: { createdAt: { gte: since }, quotes: { some: {} } },
+      }),
+    ]);
+
+    const eventCount = (type: string) =>
+      byType.find((r) => r.eventType === type)?._count ?? 0;
+
+    /* Fill the missing days so a fortnight of silence looks like silence
+       rather than like two adjacent points. */
+    const series: Array<{ date: string; messages: number }> = [];
+    const found = new Map(daily.map((d) => [d.day.toISOString().slice(0, 10), Number(d.count)]));
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const key = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      series.push({ date: key, messages: found.get(key) ?? 0 });
+    }
+
+    const names = popular.length
+      ? await prisma.product.findMany({
+          where: { slug: { in: popular.map((p) => p.slug) } },
+          select: { slug: true, productName: true },
+        })
+      : [];
+    const nameBySlug = new Map(names.map((n) => [n.slug, n.productName]));
+
+    res.json({
+      data: {
+        days,
+        /* The funnel, in the order it actually happens. Each stage counts
+           conversations rather than events, so one chatty visitor cannot
+           make the top of the funnel look wider than it is. */
+        funnel: [
+          { stage: 'Chats opened', count: eventCount('CHAT_OPENED') },
+          { stage: 'Conversations', count: conversations },
+          { stage: 'Quote started', count: eventCount('QUOTE_STARTED') },
+          { stage: 'Quote submitted', count: eventCount('QUOTE_SUBMITTED') },
+        ],
+        events: {
+          chatOpened: eventCount('CHAT_OPENED'),
+          messagesSent: eventCount('MESSAGE_SENT'),
+          productsRecommended: eventCount('PRODUCT_RECOMMENDED'),
+          productsViewed: eventCount('PRODUCT_VIEWED'),
+          quotesStarted: eventCount('QUOTE_STARTED'),
+          quotesSubmitted: eventCount('QUOTE_SUBMITTED'),
+          whatsappClicked: eventCount('WHATSAPP_CLICKED'),
+          escalations: eventCount('HUMAN_ESCALATION'),
+          completed: eventCount('CONVERSATION_COMPLETED'),
+        },
+        quoteRate: conversations > 0 ? Math.round((withQuote / conversations) * 1000) / 10 : null,
+        series,
+        popularProducts: popular.map((p) => ({
+          slug: p.slug,
+          name: nameBySlug.get(p.slug) ?? p.slug,
+          count: Number(p.count),
+        })),
+      },
+    });
+  }),
+);
+
 /* --------------------------------------------------------- conversations - */
 
 adminAiRouter.get(
@@ -230,6 +339,18 @@ adminAiRouter.patch(
       where: { id },
       data: { status: input.status },
     });
+
+    /* A conversation is finished when a person says it is, not when the chat
+       window closes — a visitor who wanders off has not completed anything. */
+    if ((input.status === 'CONVERTED' || input.status === 'CLOSED') && existing.status !== input.status) {
+      await prisma.aIEvent.create({
+        data: {
+          conversationId: id,
+          eventType: 'CONVERSATION_COMPLETED',
+          metadata: { outcome: input.status },
+        },
+      });
+    }
 
     await log({
       adminId: req.admin?.id,

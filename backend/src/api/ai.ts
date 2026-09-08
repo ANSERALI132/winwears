@@ -68,6 +68,10 @@ aiRouter.get(
 const eventSchema = z.object({
   sessionId: z.string().trim().min(8).max(128),
   event: z.enum(['CHAT_OPENED', 'WHATSAPP_CLICKED', 'PRODUCT_VIEWED']),
+  /* A slug and nothing else. The browser cannot attach arbitrary metadata —
+     that would make this endpoint a way to write whatever a caller liked into
+     the analytics table. */
+  slug: z.string().trim().max(120).optional(),
 });
 
 aiRouter.post(
@@ -81,7 +85,11 @@ aiRouter.post(
     });
     if (conversation) {
       await prisma.aIEvent.create({
-        data: { conversationId: conversation.id, eventType: body.event },
+        data: {
+          conversationId: conversation.id,
+          eventType: body.event,
+          ...(body.slug ? { metadata: { slugs: [body.slug] } } : {}),
+        },
       });
     }
     res.status(204).end();

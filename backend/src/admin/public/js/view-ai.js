@@ -105,6 +105,120 @@
     },
   });
 
+  /* ------------------------------------------------------------ analytics -- */
+
+  Admin.route('/ai/analytics', {
+    title: 'AI Analytics',
+    subtitle: 'What visitors do with the assistant',
+    render: function (mount) {
+      var days = 30;
+      var slot = h('div');
+
+      var toolbar = h('div.toolbar');
+      toolbar.appendChild(h('select', {
+        'aria-label': 'Period',
+        onchange: function (e) { days = Number(e.target.value); load(); },
+      }, [7, 30, 90].map(function (d) {
+        return h('option', { value: String(d), selected: d === 30 }, 'Last ' + d + ' days');
+      })));
+
+      var card = h('section.card');
+      card.appendChild(toolbar);
+      card.appendChild(slot);
+      mount.appendChild(card);
+
+      function load() {
+        ui.clear(slot).appendChild(ui.skeleton(4));
+        return api
+          .get('/api/admin/ai/analytics?days=' + days)
+          .then(function (res) {
+            var d = res.data;
+            ui.clear(slot);
+
+            /* --- funnel --- */
+            slot.appendChild(h('h3.card__subtitle', 'From opening the chat to sending a request'));
+            var widest = Math.max.apply(null, d.funnel.map(function (f) { return f.count; }).concat([1]));
+            var funnel = h('div.funnel');
+            d.funnel.forEach(function (stage) {
+              var row = h('div.funnel__row');
+              row.appendChild(h('div.funnel__label', stage.stage));
+              var track = h('div.funnel__track');
+              var bar = h('div.funnel__bar');
+              /* Width is the only thing set inline: it is data, not styling. */
+              bar.style.width = Math.round((stage.count / widest) * 100) + '%';
+              track.appendChild(bar);
+              row.appendChild(track);
+              row.appendChild(h('div.funnel__count', String(stage.count)));
+              funnel.appendChild(row);
+            });
+            slot.appendChild(funnel);
+            slot.appendChild(h('p.card__hint',
+              d.quoteRate === null
+                ? 'No conversations in this period yet.'
+                : d.quoteRate + '% of conversations in this period produced a quote request.'));
+
+            /* --- activity --- */
+            slot.appendChild(h('h3.card__subtitle', 'Messages per day'));
+            var peak = Math.max.apply(null, d.series.map(function (p) { return p.messages; }).concat([1]));
+            var chart = h('div.spark', { 'aria-hidden': 'true' });
+            d.series.forEach(function (point) {
+              var col = h('div.spark__col');
+              var bar = h('div.spark__bar');
+              bar.style.height = Math.max(2, Math.round((point.messages / peak) * 100)) + '%';
+              bar.title = point.date + ': ' + point.messages;
+              col.appendChild(bar);
+              chart.appendChild(col);
+            });
+            slot.appendChild(chart);
+            /* The chart is decorative; this is the accessible version. */
+            var total = d.series.reduce(function (sum, p) { return sum + p.messages; }, 0);
+            slot.appendChild(h('p.card__hint',
+              total + ' messages over ' + d.days + ' days, peaking at ' + peak + ' in a day.'));
+
+            /* --- counts --- */
+            slot.appendChild(h('h3.card__subtitle', 'Events'));
+            var grid = h('div.grid.grid--stats');
+            [
+              ['Chats opened', d.events.chatOpened],
+              ['Messages', d.events.messagesSent],
+              ['Products recommended', d.events.productsRecommended],
+              ['Products opened', d.events.productsViewed],
+              ['Quotes started', d.events.quotesStarted],
+              ['Quotes submitted', d.events.quotesSubmitted],
+              ['WhatsApp handoffs', d.events.whatsappClicked],
+              ['Escalations', d.events.escalations]
+            ].forEach(function (pair) {
+              var stat = h('div.card.stat');
+              stat.appendChild(h('div.stat__value', String(pair[1])));
+              stat.appendChild(h('div.stat__label', pair[0]));
+              grid.appendChild(stat);
+            });
+            slot.appendChild(grid);
+
+            /* --- popular products --- */
+            slot.appendChild(h('h3.card__subtitle', 'Most recommended footballs'));
+            if (!d.popularProducts.length) {
+              slot.appendChild(h('p.card__hint', 'Nothing recommended in this period yet.'));
+            } else {
+              var table = h('table.table');
+              table.appendChild(h('thead', h('tr', h('th', 'Football'), h('th', 'Times recommended'))));
+              var body = h('tbody');
+              d.popularProducts.forEach(function (p) {
+                body.appendChild(h('tr', h('td', p.name), h('td', String(p.count))));
+              });
+              table.appendChild(body);
+              slot.appendChild(table);
+            }
+          })
+          .catch(function (err) {
+            ui.clear(slot).appendChild(ui.errorState(err, load));
+          });
+      }
+
+      return load();
+    },
+  });
+
   /* ------------------------------------------------------- conversations -- */
 
   Admin.route('/ai/conversations', {

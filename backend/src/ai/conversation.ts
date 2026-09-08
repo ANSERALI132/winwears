@@ -247,6 +247,20 @@ export async function sendMessage(input: {
     data: { conversationId: conversation.id, eventType: 'MESSAGE_SENT' },
   });
 
+  /* Which balls the agent actually put in front of someone. Slugs only —
+     enough to rank what the assistant recommends without recording anything
+     about who saw it. */
+  const recommended = [...new Set(products.map((p) => (p as { slug?: string })?.slug).filter(Boolean))];
+  if (recommended.length) {
+    await prisma.aIEvent.create({
+      data: {
+        conversationId: conversation.id,
+        eventType: 'PRODUCT_RECOMMENDED',
+        metadata: { slugs: recommended } as Prisma.InputJsonValue,
+      },
+    });
+  }
+
   /* De-duplicate by slug: several tools in one turn often return the same
      ball, and the widget should show it once. */
   const seen = new Set<string>();
