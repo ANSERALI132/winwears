@@ -171,7 +171,7 @@ export async function sendMessage(input: {
 
     const results = [];
     for (const call of completion.toolCalls) {
-      const run = await runTool(call.name, call.input);
+      const run = await runTool(call.name, call.input, { conversationId: conversation.id });
 
       /* Anything a search surfaced becomes a card in the widget. Collected
          here rather than parsed out of the model's prose, so a card always

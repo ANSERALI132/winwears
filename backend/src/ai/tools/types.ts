@@ -10,6 +10,19 @@
 import type { z } from 'zod';
 import type { AIToolDefinition } from '../provider';
 
+/**
+ * Who is asking.
+ *
+ * Passed per call rather than held in a module variable: the tool loop awaits
+ * between calls, so a second visitor's message can interleave with the first,
+ * and shared mutable state would let one conversation write to another's
+ * record. It is also not a tool parameter, because the model must not be able
+ * to name a conversation other than its own.
+ */
+export interface ToolContext {
+  conversationId: string | null;
+}
+
 export interface AITool<Input = unknown> {
   definition: AIToolDefinition;
   /** Validates whatever the model produced. Rejection is reported back to the
@@ -20,7 +33,7 @@ export interface AITool<Input = unknown> {
    *  that differs from its output. Pinning the input to the output type would
    *  reject exactly the schemas that supply defaults. */
   schema: z.ZodType<Input, z.ZodTypeDef, unknown>;
-  run(input: Input): Promise<unknown>;
+  run(input: Input, ctx: ToolContext): Promise<unknown>;
 }
 
 /** Heterogeneous tools in one registry. The executor is the only caller and
