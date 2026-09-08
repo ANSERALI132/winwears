@@ -19,6 +19,11 @@
   var API = '/api/ai';
   var STORE_KEY = 'ww.ai.session';
 
+  /* Where this script was loaded from, captured at parse time — currentScript
+     is null once the callbacks below run. Pages in products/ load it with a
+     ../ prefix, so the stylesheet path is derived rather than assumed. */
+  var SELF = (document.currentScript && document.currentScript.src) || '';
+
   /* §10 — the openers a first-time visitor can tap instead of typing. */
   var QUICK = [
     'Which ball is right for me?',
@@ -468,9 +473,40 @@
 
   /* ---------------------------------------------------------------- boot -- */
 
+  /**
+   * Loads the widget's stylesheet, once, only if the widget is going to
+   * exist.
+   *
+   * It used to be a <link> in the head of all fifteen pages: 10KB of
+   * render-blocking CSS on every page load, for a panel that is invisible
+   * until someone clicks, and that does not render at all when no AI key is
+   * configured. Measured at 68ms in the critical path on localhost, and a
+   * whole extra round trip before first paint on a slow connection.
+   *
+   * Resolves when the sheet has applied, so the launcher is never painted
+   * unstyled.
+   */
+  function loadStyles() {
+    return new Promise(function (resolve) {
+      var href = SELF ? SELF.replace(/\/js\/ai-chat\.js.*$/, '/css/ai-chat.css') : '/assets/css/ai-chat.css';
+      if (document.querySelector('link[data-aic]')) return resolve();
+
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.setAttribute('data-aic', '');
+      /* Resolve either way: an unstyled launcher is a worse outcome than a
+         missing one, but a missing stylesheet should not mean no assistant. */
+      link.onload = function () { resolve(); };
+      link.onerror = function () { resolve(); };
+      document.head.appendChild(link);
+    });
+  }
+
   function start(status) {
     /* Nothing is drawn when the assistant is off. A launcher that apologises
-       is worse than no launcher. */
+       is worse than no launcher — and with nothing drawn, no stylesheet is
+       fetched either. */
     if (!status || !status.enabled) return;
 
     state.whatsappUrl = status.whatsappUrl || null;
@@ -478,10 +514,12 @@
 
     try { state.sessionId = sessionStorage.getItem(STORE_KEY); } catch (err) { /* private mode */ }
 
-    el.launch = buildLauncher();
-    el.panel = buildPanel();
-    document.body.appendChild(el.launch);
-    document.body.appendChild(el.panel);
+    return loadStyles().then(function () {
+      el.launch = buildLauncher();
+      el.panel = buildPanel();
+      document.body.appendChild(el.launch);
+      document.body.appendChild(el.panel);
+    });
   }
 
   /* --------------------------------------------------------------- api --- */
@@ -524,9 +562,12 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (payload) {
         var data = payload && payload.data;
-        start(data);
+        /* Availability is published before the widget finishes drawing, so a
+           product page can decide about its "Ask AI" button without waiting
+           for a stylesheet. */
         WWChat.available = Boolean(data && data.enabled);
         resolveReady(WWChat.available);
+        return start(data);
       })
       .catch(function () {
         /* No API reachable: the site works without us. */
@@ -534,6 +575,19 @@
       });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  /**
+   * Deferred to idle.
+   *
+   * Nothing here is needed for the page the visitor came to read, and the
+   * status request should not compete with the hero image or the 3D ball for
+   * the connection. The timeout is the fallback for browsers without
+   * requestIdleCallback, and the ceiling for a page that never goes idle.
+   */
+  function schedule() {
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(boot, { timeout: 2500 });
+    else setTimeout(boot, 1200);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule);
+  else schedule();
 })();
