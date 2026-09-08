@@ -124,6 +124,37 @@ on, and trusting it without a proxy lets anyone forge their own IP.
 `NODE_ENV=production` also turns on the `Secure` flag for the session cookie,
 so the admin dashboard needs HTTPS in production.
 
+### The AI assistant
+
+The assistant is optional and off by default. With no `AI_API_KEY` the site
+runs exactly as it did before it existed: the chat launcher never appears, the
+"Ask AI About This Ball" button is not added, and the widget's stylesheet is
+never even fetched. Nothing else on the site depends on it.
+
+To turn it on, set `AI_API_KEY` to a key from
+[console.anthropic.com](https://console.anthropic.com/settings/keys). The key
+is read server-side only and must never reach the browser or a commit.
+
+Every customer message is a paid API call, so five ceilings are enforced in
+code rather than left to the model:
+
+| Variable | Default | |
+|---|---|---|
+| `AI_MAX_TOKENS` | 1024 | Longest reply |
+| `AI_MAX_TOOL_ITERATIONS` | 6 | Tool round-trips per question |
+| `AI_MAX_MESSAGES_PER_CONVERSATION` | 40 | Messages before a chat closes |
+| `AI_MAX_INPUT_CHARS` | 2000 | Longest single message |
+| `RATE_LIMIT_AI_MAX` | 20 | Messages per visitor per window |
+
+`AI_ENABLED=false` switches it off without removing the key.
+
+The assistant answers only from what the database holds. Product facts come
+from tool results; business facts come from published `AIKnowledge` entries,
+managed at **/admin → AI Assistant → Knowledge**. An empty knowledge base is
+not a failure state — the assistant will say the answer is not confirmed and
+offer the WIN WEARS team, which is the intended behaviour when nobody has
+written the answer down.
+
 ---
 
 ## Layout
@@ -179,9 +210,17 @@ Public — no authentication.
 | GET | `/api/products/:slug` | One product, plus related |
 | POST | `/api/quotes` | RFQ, `multipart/form-data`, accepts a logo and a design file |
 | POST | `/api/contact` | Contact message |
+| GET | `/api/ai/status` | Whether the assistant is available, and its greeting |
+| POST | `/api/ai/chat` | One message in, one reply plus product cards out |
+| POST | `/api/ai/event` | Records a chat open, WhatsApp click or product view |
 
 `/api/products` accepts `q`, `category`, `construction`, `material`, `usage`,
 `size`, `customization`, `featured`, `sort`, `page`, `perPage`.
+
+`/api/ai/chat` issues the session id itself and never accepts one it did not
+generate: a conversation accumulates whatever contact details the customer
+offers, so a guessable or caller-chosen id would let a stranger read someone
+else's enquiry.
 
 Authentication.
 
@@ -223,6 +262,15 @@ Admin — session required; every mutation needs the `X-CSRF-Token` header.
 | GET | `/api/admin/activity` | |
 | GET | `/api/admin/portability/export` · `/template` | CSV |
 | POST | `/api/admin/portability/import` | `?dryRun=true` validates without writing |
+| GET | `/api/admin/ai/stats` | Assistant summary, including why it escalates |
+| GET | `/api/admin/ai/analytics` | Funnel, daily messages, popular products (`?days=`) |
+| GET | `/api/admin/ai/conversations` | Filter by status, score, country, escalation |
+| GET | `/api/admin/ai/conversations/:id` | Transcript, tool calls included |
+| PATCH | `/api/admin/ai/conversations/:id/status` | Lead status |
+| DELETE | `/api/admin/ai/conversations/:id` | Erases the conversation and its messages |
+| GET POST | `/api/admin/ai/knowledge` | List / create |
+| GET PUT DELETE | `/api/admin/ai/knowledge/:id` | |
+| GET | `/api/admin/ai/knowledge/categories` | Suggested groupings, plus any in use |
 
 Responses are `{ data, meta? }` on success and `{ error: { code, message,
 issues? } }` on failure.
@@ -252,6 +300,30 @@ issues? } }` on failure.
   is answered like a success and dropped.
 - **No secrets in the frontend.** Everything sensitive is read from the
   environment, and the environment is validated at boot.
+
+### The assistant, specifically
+
+- **The model never composes a query.** It chooses a tool name and supplies
+  arguments; the executor rejects any name not in its registry and validates
+  every argument against a Zod schema before a query runs. There is no path
+  from the model to arbitrary SQL.
+- **It cannot see what the site hides.** Every catalogue tool goes through the
+  same `publicOnly` helper the public site uses, so a draft or archived
+  product cannot be recommended in a chat window that a visitor could not
+  reach by browsing, and only `PUBLISHED` knowledge entries are retrieved.
+- **Conversation ids are server-issued** and 256 bits of randomness. A
+  conversation holds whatever contact details a customer offered, so a
+  caller-chosen id would be a way to read someone else's enquiry.
+- **Tool context is passed per call**, never held in a module variable: the
+  tool loop awaits between calls, so two visitors' messages interleave in one
+  process and shared state would let one conversation write into another's.
+- **Tool output is data, not instruction.** The system prompt says so, because
+  product copy and knowledge entries are admin-editable text arriving in the
+  model's context.
+- **Nothing internal reaches a customer.** The WhatsApp handoff carries only
+  what they told us — no ids, no lead score. Admin responses strip session
+  ids. Provider failures become one sentence and a WhatsApp button, with the
+  diagnosis in the server log.
 
 ---
 

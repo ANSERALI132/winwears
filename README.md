@@ -262,7 +262,7 @@ homepage; change or remove it in `frontend/index.html` if it is not accurate.
 
 ### Backend
 
-- **PostgreSQL + Prisma** — eleven models, indexed on every field the site
+- **PostgreSQL + Prisma** — fifteen models, indexed on every field the site
   filters or sorts by.
 - **Admin dashboard** — products, categories, features, specifications, a
   drag-and-drop image gallery, quotes, messages, settings, users and an
@@ -276,3 +276,29 @@ homepage; change or remove it in `frontend/index.html` if it is not accurate.
 - **Storage abstraction** — local disk out of the box; Cloudinary, S3, Supabase
   Storage and Vercel Blob are one driver each, selected by an environment
   variable.
+
+### AI customer support assistant
+
+Optional, and off unless you give it a key. It answers from the database
+rather than from what a model happens to believe: product facts come from the
+catalogue, business facts from knowledge entries you write in the admin, and
+anything it cannot find it declines to guess at, offering the WIN WEARS team
+instead.
+
+- Searches the real catalogue, recommends published products as cards, and
+  never surfaces a draft.
+- Collects a quote request conversationally and files it with a reference
+  like `WW-RFQ-2026-0001`, marked as coming from the assistant.
+- Hands over to WhatsApp with what the customer already said, so they do not
+  repeat themselves.
+- Escalates when it is out of its depth — and independently when a lead looks
+  serious, without waiting for the model to notice.
+- Admin screens for conversations, transcripts including tool calls, lead
+  status, a knowledge base, and analytics.
+
+**To switch it on:** set `AI_API_KEY` in `.env` to a key from
+[console.anthropic.com](https://console.anthropic.com/settings/keys). With it
+blank the site behaves exactly as it did before the assistant existed — no
+launcher, no extra requests, no stylesheet fetched. See
+[backend/README.md](backend/README.md) for the cost ceilings and how to write
+knowledge entries.
