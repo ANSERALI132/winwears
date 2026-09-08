@@ -16,7 +16,7 @@ import {
   searchProducts,
 } from './catalogue';
 import { createQuoteRequest, rememberRequirements } from './quote';
-import { generateWhatsappLink } from './handoff';
+import { escalateToHuman, generateWhatsappLink } from './handoff';
 import type { AIToolDefinition } from '../provider';
 import type { AnyAITool, ToolContext } from './types';
 
@@ -33,6 +33,7 @@ const REGISTRY: Record<string, AnyAITool> = {
   remember_requirements: rememberRequirements as AnyAITool,
   create_quote_request: createQuoteRequest as AnyAITool,
   generate_whatsapp_link: generateWhatsappLink as AnyAITool,
+  escalate_to_human: escalateToHuman as AnyAITool,
 };
 
 /** What the provider advertises to the model. */

@@ -257,6 +257,24 @@ export async function sendMessage(input: {
     return true;
   });
 
+  /**
+   * Whether the customer is shown the human-handoff block.
+   *
+   * Three independent routes, on purpose. The model calling escalate_to_human
+   * is the intended one, but a model that fails to notice it is out of its
+   * depth is exactly the case this needs to cover — so a conversation the
+   * tools already marked escalated, and one scored HIGH or URGENT, both raise
+   * it regardless of what the model decided. §16 lists "potentially
+   * high-value lead" as a trigger, and a serious buyer being offered a person
+   * one message early costs nothing; being offered one too late costs the
+   * order.
+   */
+  const escalated =
+    escalate ||
+    Boolean(updated.escalatedAt) ||
+    updated.leadScore === 'HIGH' ||
+    updated.leadScore === 'URGENT';
+
   /* Built from the conversation as it now stands, so the button reflects
      anything recorded during this very turn. */
   const settings = await getAllSettings();
@@ -271,7 +289,7 @@ export async function sendMessage(input: {
     sessionId: updated.sessionId,
     reply,
     products: cards.slice(0, 4),
-    escalate,
+    escalate: escalated,
     conversationId: updated.id,
     whatsappUrl: handoffLink(settings['contact.whatsappUrl'], handoffMessage(updated, withProduct)),
   };
