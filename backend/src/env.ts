@@ -104,6 +104,28 @@ const schema = z
        on its own is meaningless outside the browser that is already there. */
     ADMIN_URL: z.string().default('http://localhost:3000/admin'),
 
+    /* Notifications to the business's own WhatsApp, through Meta's Cloud API.
+       Off until the token, the phone number id and a destination are all set.
+       Note that this is the outbound channel — separate from the wa.me links
+       the site shows customers, which only open a chat for a person to use. */
+    WHATSAPP_TOKEN: z.string().optional(),
+    WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+    /* Where notifications go. The business's own number, in full
+       international form; punctuation is stripped. */
+    WHATSAPP_TO: z.string().optional(),
+    /* An approved template name. Without one, messages are plain text, which
+       WhatsApp only delivers within 24 hours of the recipient's last message
+       to the business number. */
+    WHATSAPP_TEMPLATE: z.string().optional(),
+    WHATSAPP_TEMPLATE_LANG: z.string().default('en'),
+    WHATSAPP_API_VERSION: z.string().default('v21.0'),
+    /* Which kinds reach the phone. Empty means all of them. This is one
+       shared number rather than one per person, so it is set here rather than
+       under anybody's own preferences — and it is worth narrowing, because a
+       phone that buzzes for every recorded payment is a phone somebody
+       silences. Example: WHATSAPP_KINDS=AI_ESCALATED,QC_FAILED */
+    WHATSAPP_KINDS: z.string().default(''),
+
     /* Serve the static site from this process too. Handy in development; in
        production a CDN or nginx usually does it instead. */
     SERVE_FRONTEND: z

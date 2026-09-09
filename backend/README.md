@@ -151,6 +151,44 @@ logged, never returned by an endpoint and never shown in the admin. There is a
 without mailing anybody, so a wrong password can be found without sending the
 whole team a test.
 
+### Notifications on WhatsApp
+
+Also optional, also off until configured.
+
+The `wa.me` links the site shows customers **cannot send anything on their
+own** — they open a chat and wait for a person. For a notification to arrive
+by itself it has to go through Meta's WhatsApp Cloud API, which means a Meta
+Business account, a WhatsApp Business phone number, a phone number ID and a
+permanent access token. There are libraries that drive WhatsApp Web instead
+and need none of that; they also break WhatsApp's terms and get numbers
+banned, so this uses the official API only.
+
+| Variable | | |
+|---|---|---|
+| `WHATSAPP_TOKEN` | — | Permanent access token from your Meta app |
+| `WHATSAPP_PHONE_NUMBER_ID` | — | The sending number's ID, from WhatsApp Manager |
+| `WHATSAPP_TO` | — | Where notifications go — your own number, full international form |
+| `WHATSAPP_TEMPLATE` | — | An approved template name. See the note below |
+| `WHATSAPP_TEMPLATE_LANG` | `en` | The template's language code |
+| `WHATSAPP_KINDS` | all | Comma list, e.g. `AI_ESCALATED,QC_FAILED` |
+| `WHATSAPP_API_VERSION` | `v21.0` | Graph API version |
+
+**The 24-hour window.** WhatsApp lets a business send free-form text only
+within 24 hours of the recipient's last message to it. A notification is
+business-initiated, so without `WHATSAPP_TEMPLATE` messages arrive only if you
+have messaged the business number that day. With an approved template — one
+body parameter, `{{1}}`, is all this needs — they always arrive. Both work;
+the difference is worth knowing before wondering why a message did not come.
+
+WhatsApp goes to one shared number rather than one per person, so
+`WHATSAPP_KINDS` is set here rather than under anybody's own preferences. A
+phone that buzzes for every recorded payment is a phone somebody silences, so
+it is worth narrowing.
+
+There is a **Check the settings** button under Notifications that reads the
+number back from Meta without messaging anybody. The token is never logged,
+never returned by an endpoint and never shown in the admin.
+
 ### The AI assistant
 
 The assistant is optional and off by default. With no `AI_API_KEY` the site

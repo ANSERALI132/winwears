@@ -13,6 +13,7 @@ import { csrfProtection, requireRole } from '../../middleware/auth';
 import { notFound } from '../../lib/errors';
 import { NOTIFICATION_KINDS } from '../../lib/notify';
 import { describeMail, verifyMail } from '../../lib/mailer';
+import { describeWhatsapp, verifyWhatsapp } from '../../lib/whatsappSend';
 import { pagination } from '../../validation/common';
 
 export const adminNotificationsRouter = Router();
@@ -133,6 +134,32 @@ adminNotificationsRouter.post(
   asyncHandler(async (_req, res) => {
     const result = await verifyMail();
     res.json({ data: { ...describeMail(), ...result } });
+  }),
+);
+
+/* -------------------------------------------------------------- whatsapp -- */
+
+/** Whether WhatsApp is switched on, where it sends, and which kinds reach it.
+ *  Never the token. */
+adminNotificationsRouter.get(
+  '/whatsapp',
+  asyncHandler(async (_req, res) => {
+    res.json({ data: describeWhatsapp() });
+  }),
+);
+
+/**
+ * Checks the credentials without messaging anybody.
+ *
+ * Reads the phone number back from Meta: a wrong token fails here, and nobody's
+ * phone buzzes to find that out.
+ */
+adminNotificationsRouter.post(
+  '/whatsapp/verify',
+  requireRole('ADMIN'),
+  asyncHandler(async (_req, res) => {
+    const result = await verifyWhatsapp();
+    res.json({ data: { ...describeWhatsapp(), ...result } });
   }),
 );
 

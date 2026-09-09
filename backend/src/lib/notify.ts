@@ -14,6 +14,7 @@ import type { NotificationKind } from '@prisma/client';
 import { prisma } from '../db';
 import { env } from '../env';
 import { mailConfigured, sendMail } from './mailer';
+import { sendWhatsapp, whatsappConfigured, whatsappWants } from './whatsappSend';
 
 /** Plain wording for each kind, used on the preferences screen. */
 export const NOTIFICATION_KINDS: Array<{ kind: NotificationKind; label: string; detail: string }> = [
@@ -106,6 +107,21 @@ async function emailOut(
 }
 
 /**
+ * The same notification, on WhatsApp.
+ *
+ * Sent once per event rather than once per recipient: this is one number the
+ * business shares, not an inbox each. Which kinds reach it is a business
+ * setting for the same reason — nobody's personal mute should decide whether
+ * a phone buzzes for everybody.
+ */
+async function whatsappOut(input: NotifyInput, href: string | null): Promise<void> {
+  if (!whatsappConfigured() || !whatsappWants(input.kind)) return;
+
+  const link = href ? `${env.ADMIN_URL.replace(/\/+$/, '')}/${href}` : env.ADMIN_URL;
+  await sendWhatsapp(input.title, input.body ?? null, link);
+}
+
+/**
  * Writes one notification per recipient.
  *
  * Muted kinds are dropped per person rather than for everybody: one person
@@ -139,11 +155,14 @@ export async function notify(input: NotifyInput): Promise<number> {
       })),
     });
 
-    /* Not awaited. An SMTP round trip must not sit inside the request that
-       caused it — a customer posting the contact form should not wait on our
-       mail server. Failures are logged by the mailer itself. */
+    /* Neither is awaited. A round trip to a mail server or to Meta must not
+       sit inside the request that caused it — a customer posting the contact
+       form should not wait on either. Both log their own failures. */
     void emailOut(input, recipients, href).catch((err) => {
       console.error('[notify] could not send mail', err);
+    });
+    void whatsappOut(input, href).catch((err) => {
+      console.error('[notify] could not send a WhatsApp message', err);
     });
 
     return recipients.length;

@@ -225,6 +225,7 @@
       card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/notifications' }, '← Back')));
       ui.clear(mount).appendChild(card);
       mount.appendChild(mailCard());
+      mount.appendChild(whatsappCard());
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(3));
@@ -306,6 +307,67 @@
           h('span.muted.tiny', { text: 'Connects and signs in only. It does not send anything to anybody.' })));
       })
       .catch(function () { ui.clear(slot).appendChild(h('p.muted', { text: 'Could not read the mail settings.' })); });
+
+    return card;
+  }
+
+  /* ----------------------------------------------------------- whatsapp -- */
+
+  function whatsappCard() {
+    var card = h('section.card');
+    card.appendChild(h('h2.card__title', 'On WhatsApp'));
+    var slot = h('div');
+    card.appendChild(slot);
+
+    ui.clear(slot).appendChild(ui.skeleton(2));
+    api.get('/api/admin/notifications/whatsapp')
+      .then(function (res) {
+        var w = res.data;
+        ui.clear(slot);
+
+        if (!w.configured) {
+          slot.appendChild(ui.notice('info',
+            'WhatsApp is switched off. Everything above still reaches you in the admin.'));
+          slot.appendChild(h('p.card__hint',
+            'A wa.me link cannot send anything on its own — it opens a chat and waits for a person. For a message to arrive by itself it has to go through Meta’s WhatsApp Cloud API, which needs a Meta Business account, a phone number ID and a permanent access token.'));
+          slot.appendChild(h('p.card__hint',
+            'Set WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_TO in the project’s .env file, then restart the server. See the backend README for the whole list.'));
+          return;
+        }
+
+        var facts = h('div.grid.grid--2');
+        function fact(name, value) {
+          facts.appendChild(h('div.field', h('div.field__label', { text: name }), h('div', { text: value })));
+        }
+        fact('Sends to', '+' + w.to);
+        fact('Kinds', w.kinds.length ? w.kinds.join(', ') : 'all of them');
+        fact('Delivery', w.usesTemplate ? 'Template “' + w.template + '”' : 'Plain text');
+        slot.appendChild(facts);
+
+        /* The thing that catches everybody out, said plainly. */
+        if (!w.usesTemplate) {
+          slot.appendChild(ui.notice('warn',
+            'Without an approved template, WhatsApp only delivers a business message within 24 hours of your last message to this number. Send it a message today and notifications arrive; leave it a day and they will not. Set WHATSAPP_TEMPLATE to a template Meta has approved to have them always arrive.'));
+        }
+
+        slot.appendChild(h('p.card__hint',
+          'This is one shared number, so which kinds reach it is set in the environment rather than under anybody’s own preferences.'));
+
+        var verify = h('button.btn.btn--sm', { type: 'button' }, 'Check the settings');
+        verify.addEventListener('click', function () {
+          verify.disabled = true;
+          api.post('/api/admin/notifications/whatsapp/verify', {})
+            .then(function (res2) {
+              ui.toast(res2.data.ok ? 'Meta accepted the credentials.' : res2.data.error,
+                res2.data.ok ? 'ok' : 'error');
+              verify.disabled = false;
+            })
+            .catch(function (err) { ui.toast(err.message, 'error'); verify.disabled = false; });
+        });
+        slot.appendChild(h('div.chip-row', verify,
+          h('span.muted.tiny', { text: 'Reads the number back from Meta. It does not message anybody.' })));
+      })
+      .catch(function () { ui.clear(slot).appendChild(h('p.muted', { text: 'Could not read the WhatsApp settings.' })); });
 
     return card;
   }
