@@ -49,6 +49,10 @@
       { path: '/products', label: 'Products', icon: 'products' },
       { path: '/categories', label: 'Categories', icon: 'categories' },
     ] },
+    { group: 'Customers', items: [
+      { path: '/crm', label: 'Companies', icon: 'users' },
+      { path: '/crm/leads', label: 'Pipeline', icon: 'activity' },
+    ] },
     { group: 'Enquiries', items: [
       { path: '/quotes', label: 'Quote Requests', icon: 'quotes', count: 'quotes' },
       { path: '/messages', label: 'Contact Messages', icon: 'messages', count: 'messages' },
