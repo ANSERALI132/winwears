@@ -28,6 +28,7 @@ import { adminAutomationRouter } from './automation';
 import { adminAnalyticsRouter } from './analytics';
 import { adminContentRouter } from './content';
 import { adminNotificationsRouter } from './notifications';
+import { adminAttachmentsRouter } from './attachments';
 
 export const adminRouter = Router();
 
@@ -60,3 +61,4 @@ adminRouter.use('/automation', adminAutomationRouter);
 adminRouter.use('/analytics', adminAnalyticsRouter);
 adminRouter.use('/content', adminContentRouter);
 adminRouter.use('/notifications', adminNotificationsRouter);
+adminRouter.use('/attachments', adminAttachmentsRouter);

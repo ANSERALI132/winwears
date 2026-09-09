@@ -3,5 +3,9 @@ dist/
 uploads/*
 !uploads/.gitkeep
 
+# Business documents — customers' artwork, purchase orders, certificates.
+# Never served publicly and never committed.
+uploads-private/
+
 # Local dev admin credentials — never commit
 ADMIN-LOGIN.local.txt

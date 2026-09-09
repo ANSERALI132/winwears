@@ -56,6 +56,7 @@
       { path: '/products', label: 'Products', icon: 'products' },
       { path: '/categories', label: 'Categories', icon: 'categories' },
       { path: '/content', label: 'Page Copy', icon: 'messages' },
+      { path: '/documents', label: 'Documents', icon: 'quotes' },
     ] },
     { group: 'Customers', items: [
       { path: '/crm', label: 'Companies', icon: 'users' },

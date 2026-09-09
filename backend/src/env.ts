@@ -31,6 +31,11 @@ const schema = z
     STORAGE_PROVIDER: z.enum(['local', 'cloudinary', 's3', 'supabase', 'vercel-blob']).default('local'),
     STORAGE_LOCAL_DIR: z.string().default('uploads'),
     STORAGE_PUBLIC_PATH: z.string().default('/uploads'),
+    /* Business documents — a customer's artwork, a signed purchase order —
+       live apart from product photographs and are never served statically.
+       They are read back only through an authenticated route, because an
+       unguessable URL is not the same thing as a private one. */
+    STORAGE_PRIVATE_DIR: z.string().default('uploads-private'),
     MAX_UPLOAD_MB: z.coerce.number().positive().default(8),
 
     CLOUDINARY_URL: z.string().optional(),

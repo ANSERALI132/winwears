@@ -346,6 +346,9 @@
         mount.appendChild(actions);
 
         mount.appendChild(renderDocument(q, false));
+        mount.appendChild(Admin.documentsCard('quotation', q.id, {
+          hint: 'Artwork the customer sent, a specification, anything this quotation was priced from.',
+        }));
       });
     },
   });

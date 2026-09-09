@@ -301,6 +301,9 @@
         mount.appendChild(stageCard(r, stages));
         mount.appendChild(outputCard(r, stages));
         mount.appendChild(inspectionsCard(r));
+        mount.appendChild(Admin.documentsCard('production run', r.id, {
+          hint: 'The artwork being worked to, a cutting sheet, a photograph from the floor.',
+        }));
         mount.appendChild(historyCard(r));
       });
     },

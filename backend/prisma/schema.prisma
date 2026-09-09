@@ -54,6 +54,7 @@ model User {
   contentEdits   ContentBlock[]  @relation("ContentEditor")
   notifications  Notification[]  @relation("NotifiedUser")
   notificationMutes NotificationMute[] @relation("NotificationMutes")
+  documents      Attachment[]    @relation("DocumentUploader")
   ruleAssignments AutomationRule[] @relation("RuleAssignee")
   authoredRules  AutomationRule[] @relation("RuleAuthor")
   assignedTasks  Task[]           @relation("TaskAssignee")
@@ -1899,4 +1900,45 @@ model NotificationMute {
   user   User             @relation("NotificationMutes", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, kind])
+}
+
+// ---------------------------------------------------------------- documents --
+//
+// A file attached to a business record: a customer's artwork on a quotation,
+// a signed purchase order on an order, a supplier certificate on a company.
+//
+// Stored apart from product photographs and never served statically. A
+// product image is meant to be seen by anybody; a customer's artwork is not,
+// and an unguessable URL is not the same thing as a private one.
+//
+// The record it belongs to is a name and an id rather than a foreign key per
+// type. A document can hang off any of nine things and that set will keep
+// growing; nine nullable columns of which eight are always null is a worse
+// shape than two that are always filled. The cost is that deleting an order
+// does not cascade to its documents, so the route does it deliberately.
+
+model Attachment {
+  id           String   @id @default(cuid())
+  /// What it is attached to: "order", "quotation", "company", and so on.
+  entity       String
+  entityId     String
+
+  /// What the person called it. Shown in lists; never used as a path.
+  filename     String
+  /// The handle the private store knows it by. Generated, never supplied.
+  storageKey   String   @unique
+  contentType  String
+  bytes        Int
+
+  /// An optional label, for when the filename is DSC_0042.pdf.
+  title        String?
+  notes        String?
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  uploadedBy   User?    @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId, createdAt])
+  @@index([createdAt])
 }

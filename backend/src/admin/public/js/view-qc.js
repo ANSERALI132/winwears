@@ -217,6 +217,9 @@
         mount.appendChild(h('a.btn.btn--sm', { href: '#/qc' }, 'â† All inspections'));
         mount.appendChild(summaryCard(i));
         mount.appendChild(readingsCard(i, checkpoints));
+        mount.appendChild(Admin.documentsCard('inspection', i.id, {
+          hint: 'Photographs of what was found, a lab report, a signed release.',
+        }));
         if (i.locked) mount.appendChild(decisionCard(i));
       });
     },

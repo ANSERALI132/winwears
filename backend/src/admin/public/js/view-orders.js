@@ -375,6 +375,9 @@
         mount.appendChild(renderDocument(o, false));
         mount.appendChild(productionCard(o));
         mount.appendChild(shipmentsCard(o));
+        mount.appendChild(Admin.documentsCard('order', o.id, {
+          hint: 'Their purchase order, artwork, a signed acceptance. Held privately — a link only works for somebody signed in here.',
+        }));
         mount.appendChild(paymentsCard(o));
         mount.appendChild(historyCard(o));
       });
