@@ -50,6 +50,16 @@ const INCLUDE = {
     orderBy: { createdAt: 'asc' },
     select: { id: true, reference: true, title: true, status: true, quantityPlanned: true },
   },
+  /* Likewise for what has gone out, so "where is it" is answered on the order
+     rather than by searching shipping for the order number. */
+  shipments: {
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true, reference: true, status: true, carrier: true,
+      trackingNumber: true, expectedAt: true, dispatchedAt: true,
+      _count: { select: { items: true } },
+    },
+  },
 } satisfies Prisma.OrderInclude;
 
 type Row = Prisma.OrderGetPayload<{ include: typeof INCLUDE }>;

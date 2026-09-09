@@ -374,6 +374,7 @@
 
         mount.appendChild(renderDocument(o, false));
         mount.appendChild(productionCard(o));
+        mount.appendChild(shipmentsCard(o));
         mount.appendChild(paymentsCard(o));
         mount.appendChild(historyCard(o));
       });
@@ -434,6 +435,39 @@
     table.appendChild(body);
     card.appendChild(table);
     card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/production/new' }, 'Plan another run')));
+    return card;
+  }
+
+  /* --------------------------------------------------------- shipments -- */
+
+  function shipmentsCard(o) {
+    var card = h('section.card');
+    card.appendChild(h('h2.card__title', 'Shipping'));
+
+    if (!o.shipments || !o.shipments.length) {
+      card.appendChild(ui.empty('Nothing shipped yet',
+        'A shipment is one consignment against this order. It can go in several — a container now and the balance later is normal.',
+        h('a.btn.btn--accent', { href: '#/shipments/new' }, 'Raise a shipment')));
+      return card;
+    }
+
+    var table = h('table.table');
+    table.appendChild(h('thead', h('tr',
+      h('th', 'Reference'), h('th', 'Lines'), h('th', 'Carrier'),
+      h('th', 'Tracking'), h('th', 'Status'), h('th', 'Dispatched'))));
+    var body = h('tbody');
+    o.shipments.forEach(function (s) {
+      body.appendChild(h('tr',
+        h('td', h('a', { href: '#/shipments/' + s.id }, s.reference)),
+        h('td', String(s._count ? s._count.items : 0)),
+        h('td', s.carrier || 'â€”'),
+        h('td', s.trackingNumber || 'â€”'),
+        h('td', ui.statusPill(s.status)),
+        h('td', s.dispatchedAt ? ui.date(s.dispatchedAt) : 'â€”')));
+    });
+    table.appendChild(body);
+    card.appendChild(table);
+    card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/shipments/new' }, 'Raise another shipment')));
     return card;
   }
 

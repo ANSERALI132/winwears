@@ -48,6 +48,8 @@ model User {
   qcDecisions  QcInspection[]   @relation("QcDecider")
   qcAuthored   QcInspection[]   @relation("QcAuthor")
   stockMoves   StockMovement[]  @relation("StockRecorder")
+  shipments    Shipment[]       @relation("ShipmentAuthor")
+  shipmentMoves ShipmentEvent[] @relation("ShipmentMovedBy")
 
   @@index([email])
 }
@@ -784,6 +786,7 @@ model Order {
   runs          ProductionRun[]
   inspections   QcInspection[]
   stockMoves    StockMovement[]
+  shipments     Shipment[]
 
   @@index([status])
   @@index([companyId])
@@ -806,6 +809,7 @@ model OrderItem {
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   runs         ProductionRun[]
+  shipped      ShipmentItem[]
 
   @@index([orderId, displayOrder])
 }
@@ -1277,6 +1281,120 @@ model StockMovement {
   @@index([kind])
   @@index([runId])
   @@index([orderId])
+}
+
+// -------------------------------------------------------------- shipping --
+//
+// A shipment is one consignment against one order. An order can go in several
+// — a container now and the balance when the second run finishes is normal,
+// not an edge case — so what is in each one is recorded line by line rather
+// than assumed to be "the order".
+//
+// Nothing here decides that stock has left the building. Dispatching a
+// shipment says the crates went on a lorry; taking finished goods off the
+// shelf is a stock movement somebody records, for the same reason moving a
+// production card does not make anything.
+
+enum ShipmentStatus {
+  /// Being picked and packed.
+  PREPARING
+  /// Packed, waiting on the carrier.
+  READY
+  /// Gone.
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+model Shipment {
+  id             String           @id @default(cuid())
+  /// Quotable to a customer chasing their delivery: WW-SH-2026-0001.
+  reference      String           @unique
+  status         ShipmentStatus   @default(PREPARING)
+
+  orderId        String
+
+  /// Free text, all of it. Which carriers WIN WEARS uses, what their services
+  /// are called and which Incoterm was agreed are facts about this business
+  /// and its contracts — a dropdown of guesses would be wrong for most of
+  /// them and authoritative-looking for all of them.
+  carrier        String?
+  service        String?
+  incoterm       String?
+
+  trackingNumber String?
+  /// Rendered as a link, so it is checked to be http or https before it is
+  /// stored. An admin-editable field that becomes an href is exactly where a
+  /// javascript: URL gets in.
+  trackingUrl    String?
+
+  /// Copied from the order when the shipment is raised, then editable: the
+  /// delivery address for a part shipment is often not the one on the order.
+  shipTo         String?          @db.Text
+
+  packages       Int              @default(0)
+  /// Kilos, as weighed. Null means nobody has weighed it, which is different
+  /// from zero.
+  weightKg       Decimal?         @db.Decimal(10, 3)
+  dimensions     String?
+
+  notes          String?          @db.Text
+  internalNotes  String?          @db.Text
+
+  /// What was promised, and what happened. Kept apart so "was it late" has an
+  /// answer that does not depend on somebody's memory.
+  expectedAt     DateTime?
+  dispatchedAt   DateTime?
+  deliveredAt    DateTime?
+  cancelReason   String?
+
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  order          Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdBy      User?            @relation("ShipmentAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  items          ShipmentItem[]
+  events         ShipmentEvent[]
+
+  @@index([status])
+  @@index([orderId])
+  @@index([dispatchedAt])
+  @@index([status, expectedAt])
+}
+
+/// How much of one order line is in this consignment. The sum across every
+/// shipment is what has actually gone, and it can never exceed what was sold.
+model ShipmentItem {
+  id           String     @id @default(cuid())
+  shipmentId   String
+  orderItemId  String
+  quantity     Int
+
+  shipment     Shipment   @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderItem    OrderItem  @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  /// One line per order line per shipment: two rows for the same line in one
+  /// consignment is a data entry slip, not two parcels.
+  @@unique([shipmentId, orderItemId])
+  @@index([orderItemId])
+}
+
+model ShipmentEvent {
+  id         String          @id @default(cuid())
+  shipmentId String
+  fromStatus ShipmentStatus?
+  toStatus   ShipmentStatus
+  byUserId   String?
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  shipment   Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  by         User?           @relation("ShipmentMovedBy", fields: [byUserId], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId, createdAt])
 }
 
 // ------------------------------------------------------------- ai support --

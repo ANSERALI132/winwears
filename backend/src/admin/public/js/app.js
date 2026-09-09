@@ -63,6 +63,7 @@
       { path: '/production', label: 'Manufacturing', icon: 'activity' },
       { path: '/qc', label: 'Quality Control', icon: 'overview' },
       { path: '/stock', label: 'Inventory', icon: 'products' },
+      { path: '/shipments', label: 'Shipping', icon: 'quotes' },
     ] },
     { group: 'AI Assistant', items: [
       { path: '/ai', label: 'Overview', icon: 'overview' },

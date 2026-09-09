@@ -7,13 +7,14 @@
  * to do. A quiet morning returns an empty list, which is the useful answer.
  *
  * Every figure here is counted from real rows. Nothing is estimated, and no
- * panel is invented for a module that does not exist yet: shipping is named
- * as not built rather than shown as a zero that looks like a system which is
- * not working.
+ * panel is invented for a module that does not exist: `notConfigured` names
+ * anything not yet built, so a missing module is never shown as a zero that
+ * looks like a system which is not working.
  *
- * Orders, production, quality control and stock are counted for real. A zero
- * there is a true zero — no orders — not a missing module, and the difference
- * matters to whoever is reading this at eight in the morning.
+ * Every operational module now reports for real, so that list is empty. A
+ * zero here is a true zero — no orders — and the difference between that and
+ * a missing module matters to whoever is reading this at eight in the
+ * morning.
  */
 import { Router } from 'express';
 import { prisma } from '../../db';
@@ -72,6 +73,8 @@ adminDashboardRouter.get(
       undecidedFailures,
       openInspections,
       stockItems,
+      overdueShipments,
+      readyToGo,
     ] = await Promise.all([
       prisma.lead.count({ where: { closedAt: null, nextFollowUpAt: { lt: now } } }),
       prisma.lead.count({ where: { closedAt: null, ownerId: null } }),
@@ -121,6 +124,12 @@ adminDashboardRouter.get(
         where: { active: true },
         select: { reorderLevel: true, movements: { select: { quantity: true } } },
       }),
+      /* Expected to have arrived and has not. The list somebody works from
+         when a customer rings about a delivery. */
+      prisma.shipment.count({
+        where: { expectedAt: { lt: now }, status: { notIn: ['DELIVERED', 'CANCELLED'] } },
+      }),
+      prisma.shipment.count({ where: { status: 'READY' } }),
     ]);
 
     const levels = stockItems.map((item) => levelOf(item.movements, item.reorderLevel));
@@ -199,12 +208,28 @@ adminDashboardRouter.get(
       href: '#/orders?status=CONFIRMED',
     });
     add({
+      id: 'overdue-shipments',
+      severity: 'urgent',
+      title: 'Shipments that should have arrived',
+      detail: 'Past the expected date and not delivered.',
+      count: overdueShipments,
+      href: '#/shipments?overdue=1',
+    });
+    add({
       id: 'impossible-stock',
       severity: 'urgent',
       title: 'Stock records showing less than nothing',
       detail: 'Something went out that never went in. The count is wrong.',
       count: impossibleStock,
       href: '#/stock',
+    });
+    add({
+      id: 'ready-to-go',
+      severity: 'attention',
+      title: 'Packed and waiting on a carrier',
+      detail: 'Ready to dispatch.',
+      count: readyToGo,
+      href: '#/shipments?status=READY',
     });
     add({
       id: 'low-stock',
@@ -284,9 +309,11 @@ adminDashboardRouter.get(
         pipeline: { open: openLeads, customers: companies },
         catalogue: { published: publishedProducts, drafts: draftProducts },
         factory: { openOrders, lateOrders, lateRuns, productionStages },
-        /* Named so the screen can say what it is *not* reporting on, rather
-           than leaving the owner to wonder where shipping went. */
-        notConfigured: ['shipping'],
+        /* Every operational module now reports for real, so there is nothing
+           left to disclaim. The field stays, because the next module built
+           will need it again — and an empty list is the honest way to say
+           "nothing is being hidden from you". */
+        notConfigured: [],
         generatedAt: now,
         since: dayAgo,
       },

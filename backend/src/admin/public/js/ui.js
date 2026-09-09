@@ -221,6 +221,11 @@
       PASSED: ['ok', 'Passed'],
       FAILED: ['archived', 'Failed'],
       CONCESSION: ['info', 'Passed on a concession'],
+      /* Shipping. */
+      PREPARING: ['draft', 'Being packed'],
+      READY: ['new', 'Ready to go'],
+      DISPATCHED: ['info', 'Dispatched'],
+      IN_TRANSIT: ['info', 'In transit'],
     };
     var hit = map[status] || ['', String(status || '—')];
     return h('span.pill', { class: hit[0] ? 'pill--' + hit[0] : '', text: hit[1] });
