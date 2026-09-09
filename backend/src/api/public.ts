@@ -18,6 +18,7 @@ import { upload } from '../middleware/upload';
 import { assertAllowed, ALLOWED_UPLOAD_TYPES } from '../lib/fileType';
 import { storage } from '../lib/storage';
 import { attachRfqToLead, resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
+import { pageExists } from '../lib/content';
 
 export const publicRouter = Router();
 
@@ -31,6 +32,38 @@ publicRouter.get(
     const settings = await getAllSettings();
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json({ data: toPublicContact(settings) });
+  }),
+);
+
+/* ------------------------------------------------------------- content ---- */
+
+/**
+ * Edited copy for one page.
+ *
+ * Returns only what has actually been changed, so a page nobody has edited
+ * gets an empty object and keeps the words it was built with. Cached the same
+ * way settings are: copy changes rarely, and every page asks for this before
+ * it can settle.
+ */
+publicRouter.get(
+  '/content/:page',
+  asyncHandler(async (req, res) => {
+    const page = String(req.params.page);
+    if (!pageExists(page)) {
+      /* An empty answer rather than a 404: a page asking for copy nobody has
+         defined is a page that should render, not one that should error. */
+      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+      res.json({ data: {} });
+      return;
+    }
+
+    const rows = await prisma.contentBlock.findMany({
+      where: { page },
+      select: { key: true, text: true },
+    });
+
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.json({ data: Object.fromEntries(rows.map((r) => [r.key, r.text])) });
   }),
 );
 

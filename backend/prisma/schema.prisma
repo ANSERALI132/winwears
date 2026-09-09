@@ -51,6 +51,7 @@ model User {
   shipments    Shipment[]       @relation("ShipmentAuthor")
   shipmentMoves ShipmentEvent[] @relation("ShipmentMovedBy")
   copilotThreads CopilotThread[] @relation("CopilotUser")
+  contentEdits   ContentBlock[]  @relation("ContentEditor")
   ruleAssignments AutomationRule[] @relation("RuleAssignee")
   authoredRules  AutomationRule[] @relation("RuleAuthor")
   assignedTasks  Task[]           @relation("TaskAssignee")
@@ -1799,4 +1800,34 @@ model Task {
   @@index([status, dueAt])
   @@index([assignedToId, status])
   @@index([entity, entityId])
+}
+
+// -------------------------------------------------------------------- cms --
+//
+// Editable copy for the public pages. One row per piece of text somebody has
+// actually changed: a block that has never been edited has no row, and the
+// page shows the words it was built with. That is why nothing is seeded here
+// and why an empty table leaves the site exactly as it was.
+//
+// The text is text. It is written to the page with textContent, never as
+// markup, so a heading cannot become a script tag however it is typed.
+
+model ContentBlock {
+  id        String   @id @default(cuid())
+  /// Which page, as named in lib/content.ts. Only keys that file knows about
+  /// can be saved: a block the site never reads is a block nobody can correct.
+  page      String
+  key       String
+  text      String   @db.Text
+
+  /// Who last changed it, so a sentence somebody queries can be traced to the
+  /// person who wrote it.
+  updatedById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  updatedBy User?    @relation("ContentEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([page, key])
+  @@index([page])
 }
