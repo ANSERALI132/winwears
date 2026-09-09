@@ -51,6 +51,11 @@ model User {
   shipments    Shipment[]       @relation("ShipmentAuthor")
   shipmentMoves ShipmentEvent[] @relation("ShipmentMovedBy")
   copilotThreads CopilotThread[] @relation("CopilotUser")
+  ruleAssignments AutomationRule[] @relation("RuleAssignee")
+  authoredRules  AutomationRule[] @relation("RuleAuthor")
+  assignedTasks  Task[]           @relation("TaskAssignee")
+  authoredTasks  Task[]           @relation("TaskAuthor")
+  completedTasks Task[]           @relation("TaskCompleter")
 
   @@index([email])
 }
@@ -1625,4 +1630,173 @@ model CopilotMessage {
   thread    CopilotThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
+}
+
+// ------------------------------------------------------------ automation --
+//
+// Rules that watch for a situation and put it in front of somebody. What they
+// produce is a task, an assignment or a follow-up date — never an outward
+// action and never a destructive one. Nothing here emails a customer, changes
+// a price, cancels an order or moves stock: those are decisions a person
+// makes, and an automation that quietly took them would be discovered by the
+// customer rather than by us.
+//
+// Triggers are typed rather than a free-form condition language. A general
+// rule engine is powerful and impossible to validate; a fixed list of
+// situations this business actually has, each with its own small set of
+// parameters, can be checked before it ever runs.
+
+enum AutomationTrigger {
+  /// A quote request nobody has answered.
+  RFQ_UNANSWERED
+  /// An open opportunity with no activity.
+  LEAD_IDLE
+  /// An order past the date we promised, still not shipped.
+  ORDER_LATE
+  /// Delivered or completed, and money still outstanding.
+  ORDER_UNPAID
+  /// A production run past its date and unfinished.
+  RUN_LATE
+  /// Stock at or below its reorder level.
+  STOCK_LOW
+  /// A consignment that should have arrived.
+  SHIPMENT_OVERDUE
+  /// An inspection that failed and nobody has decided about.
+  QC_FAILED
+}
+
+enum AutomationAction {
+  /// Put it on somebody's list. The action that suits every trigger.
+  CREATE_TASK
+  /// Give an unowned opportunity or enquiry an owner.
+  ASSIGN_OWNER
+  /// Set a follow-up date on an opportunity.
+  SET_FOLLOW_UP
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+  /// Looked at and judged not worth doing. Kept, because a rule that keeps
+  /// raising dismissed tasks is a rule that needs changing.
+  DISMISSED
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model AutomationRule {
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  trigger      AutomationTrigger
+  action       AutomationAction  @default(CREATE_TASK)
+
+  /// How long the situation must have persisted before the rule fires. Its
+  /// meaning depends on the trigger — hours unanswered, days idle, days past
+  /// a date — and the screen says which.
+  thresholdDays Int              @default(1)
+
+  /// What the task says, and how urgent it is. Kept on the rule rather than
+  /// generated, so the wording is the business's own.
+  taskTitle    String?
+  taskPriority TaskPriority      @default(NORMAL)
+  /// Days from firing until the task is due. Null means no date.
+  taskDueDays  Int?
+
+  /// Who the task goes to, or who becomes the owner. Null means unassigned,
+  /// which is itself worth reporting.
+  assigneeId   String?
+
+  active       Boolean           @default(true)
+
+  lastRunAt    DateTime?
+  /// How many times this rule has actually done something, as opposed to how
+  /// many times it has been checked.
+  firedCount   Int               @default(0)
+
+  createdById  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  assignee     User?             @relation("RuleAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy    User?             @relation("RuleAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  runs         AutomationRun[]
+  tasks        Task[]
+
+  @@index([trigger, active])
+  @@index([active])
+}
+
+/// Every time a rule was checked and what came of it. Kept because the
+/// question asked about an automation is always "why did it not fire", and a
+/// rule with no record of its own decisions cannot answer that.
+model AutomationRun {
+  id         String         @id @default(cuid())
+  ruleId     String
+  /// How many situations the rule matched, and how many were already in hand.
+  matched    Int            @default(0)
+  acted      Int            @default(0)
+  skipped    Int            @default(0)
+  /// Set when the check itself failed, rather than when it found nothing.
+  error      String?
+  ms         Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  rule       AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, createdAt])
+}
+
+/// Something for a person to do. Raised by a rule or by hand.
+model Task {
+  id           String          @id @default(cuid())
+  title        String
+  detail       String?         @db.Text
+  status       TaskStatus      @default(OPEN)
+  priority     TaskPriority    @default(NORMAL)
+
+  dueAt        DateTime?
+  assignedToId String?
+
+  /// What it is about, as a name and an id rather than nine nullable foreign
+  /// keys. A task can point at any record in the system and the set will keep
+  /// growing; nine columns of which eight are always null is a worse shape
+  /// than two that are always filled.
+  entity       String?
+  entityId     String?
+  /// Where to go and deal with it.
+  href         String?
+
+  ruleId       String?
+  createdById  String?
+
+  /// Holds the entity id while the task is open, and null once it is dealt
+  /// with. Paired with ruleId in a unique index, that is what stops a sweep
+  /// running every hour from raising the same task every hour — and because
+  /// Postgres treats nulls as distinct, a rule can raise the same task again
+  /// next month once this one is closed. A check-then-insert would race; an
+  /// index cannot.
+  openKey      String?
+
+  completedAt  DateTime?
+  completedById String?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  assignedTo   User?           @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy    User?           @relation("TaskAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  completedBy  User?           @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  rule         AutomationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@unique([ruleId, openKey])
+  @@index([status, dueAt])
+  @@index([assignedToId, status])
+  @@index([entity, entityId])
 }

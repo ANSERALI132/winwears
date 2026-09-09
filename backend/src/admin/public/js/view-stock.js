@@ -87,7 +87,7 @@
         h('label.check', low, h('span', 'Needs ordering')),
         h('label.check', retired, h('span', 'Include retired'))));
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -209,7 +209,7 @@
   Admin.route('/stock/new', {
     title: 'Add a stock item',
     subtitle: 'Something you hold stock of',
-    render: function (mount) { builder(mount, null); },
+    render: function (mount) { ui.clear(mount); builder(mount, null); },
   });
 
   Admin.route('/stock/:id/edit', {
@@ -510,7 +510,7 @@
           .catch(function (err) { ui.toast(err.message, 'error'); save.disabled = false; });
       });
       form.appendChild(h('div.card__foot', save, h('a.btn.btn--sm', { href: '#/stock' }, 'Cancel')));
-      mount.appendChild(form);
+      ui.clear(mount).appendChild(form);
       drawLines();
 
       api.get('/api/admin/stock/items?perPage=200').then(function (res) {
@@ -542,7 +542,7 @@
         'Optional. A single-site factory may never need more than one, so nothing is created for you — a warehouse hierarchy invented for a business with one room is furniture nobody asked for.'));
       var slot = h('div');
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
       mount.appendChild(newLocationCard(load));
 
       function load() {

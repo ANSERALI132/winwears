@@ -77,6 +77,13 @@ const schema = z
     AI_MAX_MESSAGES_PER_CONVERSATION: z.coerce.number().int().positive().default(40),
     AI_MAX_INPUT_CHARS: z.coerce.number().int().positive().default(2000),
 
+    /* How often the automation rules sweep for situations that have become
+       true with time — an order going past its date, stock falling below its
+       level. Set to 0 to stop the sweep entirely and run rules by hand.
+       Fifteen minutes is often enough that nothing sits unnoticed for long,
+       and rare enough that it is not a load on the database. */
+    AUTOMATION_SWEEP_MINUTES: z.coerce.number().int().min(0).max(1440).default(15),
+
     /* Serve the static site from this process too. Handy in development; in
        production a CDN or nginx usually does it instead. */
     SERVE_FRONTEND: z

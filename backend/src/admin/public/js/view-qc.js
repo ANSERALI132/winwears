@@ -64,7 +64,7 @@
       card.appendChild(toolbar);
       card.appendChild(h('div.chip-row', h('label.check', open, h('span', 'Still open'))));
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -175,7 +175,7 @@
           .catch(function (err) { ui.toast(err.message, 'error'); save.disabled = false; });
       });
       form.appendChild(h('div.card__foot', save, h('a.btn.btn--sm', { href: '#/qc' }, 'Cancel')));
-      mount.appendChild(form);
+      ui.clear(mount).appendChild(form);
 
       api.get('/api/admin/production/runs?perPage=100').then(function (res) {
         res.data.forEach(function (r) {
@@ -452,7 +452,7 @@
         'Weight, circumference, bounce and water absorption all have published standards, but which of them WIN WEARS tests and to what limits is yours to say. Nothing is filled in, because a number invented here would end up on a QC report nobody agreed to.'));
       var slot = h('div');
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
       mount.appendChild(newCheckpointCard(load));
 
       function load() {

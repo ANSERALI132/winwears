@@ -66,7 +66,7 @@
       card.appendChild(toolbar);
       card.appendChild(filters);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -318,7 +318,7 @@
   Admin.route('/orders/new', {
     title: 'New order',
     subtitle: 'Work the factory is committing to',
-    render: function (mount) { builder(mount, null); },
+    render: function (mount) { ui.clear(mount); builder(mount, null); },
   });
 
   Admin.route('/orders/:id/edit', {

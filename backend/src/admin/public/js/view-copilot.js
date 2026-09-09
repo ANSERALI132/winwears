@@ -67,7 +67,7 @@
       var log = h('div.chat-log');
       var card = h('section.card');
       card.appendChild(log);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       var question = h('textarea', {
         rows: 2,

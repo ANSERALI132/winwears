@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { env } from './env';
 import { prisma } from './db';
+import { startSweep, stopSweep } from './lib/sweep';
 
 async function main(): Promise<void> {
   /* Fail loudly at boot rather than on the first request. */
@@ -13,8 +14,13 @@ async function main(): Promise<void> {
     if (env.SERVE_FRONTEND) console.log(`  public site      http://localhost:${env.PORT}/`);
   });
 
+  /* Started after the server is listening: a sweep is background work and
+     must never delay the port opening. */
+  startSweep();
+
   const shutdown = (signal: string) => {
     console.log(`\n${signal} received, shutting down.`);
+    stopSweep();
     server.close(() => {
       void prisma.$disconnect().finally(() => process.exit(0));
     });

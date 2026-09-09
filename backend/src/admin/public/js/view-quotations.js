@@ -41,7 +41,7 @@
 
       card.appendChild(toolbar);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -275,7 +275,7 @@
   Admin.route('/quotations/new', {
     title: 'New quotation',
     subtitle: 'Build a priced document',
-    render: function (mount) { builder(mount, null); },
+    render: function (mount) { ui.clear(mount); builder(mount, null); },
   });
 
   Admin.route('/quotations/:id/edit', {

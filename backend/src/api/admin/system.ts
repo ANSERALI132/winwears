@@ -77,12 +77,17 @@ adminStatsRouter.get(
       where: { deletedAt: null, status: 'PUBLISHED', images: { none: {} } },
     });
 
+    /* The badge on the nav. Everybody's open tasks, not just the reader's:
+       an unassigned task nobody can see is a task nobody does. */
+    const tasksOpen = await prisma.task.count({ where: { status: 'OPEN' } });
+
     res.json({
       data: {
         products: { total: products, published, drafts, archived, featured, withoutImages },
         categories: { total: categories, active: activeCategories },
         quotes: { total: quotesTotal, new: quotesNew },
         messages: { total: messagesTotal, new: messagesNew },
+        tasks: { open: tasksOpen },
         images: { total: images },
         recentQuotes,
         recentActivity,

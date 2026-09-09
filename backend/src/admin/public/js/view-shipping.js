@@ -58,7 +58,7 @@
       card.appendChild(toolbar);
       card.appendChild(h('div.chip-row', h('label.check', overdue, h('span', 'Past its expected date'))));
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -200,7 +200,7 @@
   Admin.route('/shipments/new', {
     title: 'New shipment',
     subtitle: 'One consignment against one order',
-    render: function (mount) { builder(mount, null); },
+    render: function (mount) { ui.clear(mount); builder(mount, null); },
   });
 
   Admin.route('/shipments/:id/edit', {

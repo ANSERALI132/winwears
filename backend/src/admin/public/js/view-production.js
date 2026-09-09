@@ -80,7 +80,7 @@
       card.appendChild(toolbar);
       card.appendChild(filters);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       api.get('/api/admin/production/stages').then(function (res) {
         res.data.filter(function (s) { return s.active; }).forEach(function (s) {
@@ -245,7 +245,7 @@
   Admin.route('/production/new', {
     title: 'Plan a run',
     subtitle: 'What the factory is committing to make',
-    render: function (mount) { builder(mount, null); },
+    render: function (mount) { ui.clear(mount); builder(mount, null); },
   });
 
   Admin.route('/production/:id/edit', {
@@ -579,7 +579,7 @@
         'A hand-stitched ball and a thermo-bonded one do not go through the same steps, so nothing is filled in for you. Add the stages WIN WEARS actually works through, in the order they happen.'));
       var slot = h('div');
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
       mount.appendChild(newStageCard(load));
 
       function load() {

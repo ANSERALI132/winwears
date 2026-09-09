@@ -49,6 +49,7 @@
     { group: 'Command', items: [
       { path: '/', label: 'Overview', icon: 'overview' },
       { path: '/copilot', label: 'Copilot', icon: 'activity' },
+      { path: '/tasks', label: 'Tasks', icon: 'quotes', count: 'tasks' },
     ] },
     { group: 'Catalogue', items: [
       { path: '/products', label: 'Products', icon: 'products' },
@@ -78,6 +79,7 @@
       { path: '/ai/settings', label: 'AI Settings', icon: 'settings' },
     ] },
     { group: 'Site', items: [
+      { path: '/automation', label: 'Automation', icon: 'settings' },
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/users', label: 'Admin Users', icon: 'users', adminOnly: true },
       { path: '/activity', label: 'Activity Log', icon: 'activity' },
@@ -287,7 +289,11 @@
       .get('/api/admin/stats')
       .then(function (res) {
         var d = res.data;
-        Admin.state.counts = { quotes: d.quotes.new, messages: d.messages.new };
+        Admin.state.counts = {
+          quotes: d.quotes.new,
+          messages: d.messages.new,
+          tasks: d.tasks ? d.tasks.open : 0,
+        };
         document.querySelectorAll('[data-count]').forEach(function (badge) {
           var n = Admin.state.counts[badge.dataset.count] || 0;
           badge.textContent = String(n);
