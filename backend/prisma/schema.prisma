@@ -33,6 +33,8 @@ model User {
 
   sessions     Session[]
   activity     ActivityLog[]
+  ownedLeads   Lead[]           @relation("LeadOwner")
+  stageChanges LeadStageEvent[] @relation("StageMovedBy")
 
   @@index([email])
 }
@@ -71,6 +73,7 @@ model Category {
 
   products         Product[]
   aiConversations  AIConversation[]
+  leads            Lead[]
 
   @@index([active, displayOrder])
 }
@@ -136,6 +139,7 @@ model Product {
   images           ProductImage[]
   quotes           QuoteRequest[]
   aiConversations  AIConversation[]
+  leads            Lead[]
 
   @@index([categoryId])
   @@index([status])
@@ -225,6 +229,12 @@ model QuoteRequest {
   reference             String?     @unique
   source                QuoteSource @default(WEBSITE_FORM)
   aiConversationId      String?
+  /// Filled in when an enquiry is matched to an account. Nullable because a
+  /// request arrives before anyone has decided who it is from, and refusing
+  /// to store it until then would lose the enquiry.
+  companyId             String?
+  contactId             String?
+  leadId                String?
   name                  String
   company               String?
   country               String?
@@ -246,11 +256,19 @@ model QuoteRequest {
 
   product               Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   aiConversation        AIConversation? @relation(fields: [aiConversationId], references: [id], onDelete: SetNull)
+  /// `company` above is the name the customer typed; this is the account it
+  /// was matched to. Both are kept — the text is evidence, the link is a
+  /// judgement that can be corrected.
+  companyAccount        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactPerson         Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead                  Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([createdAt])
   @@index([email])
   @@index([source])
+  @@index([companyId])
+  @@index([leadId])
 }
 
 enum MessageStatus {
@@ -264,16 +282,25 @@ model ContactMessage {
   id        String        @id @default(cuid())
   name      String
   email     String
+  /// The company name as the sender typed it. Kept alongside companyId:
+  /// what they wrote is evidence, and matching it to an account is a
+  /// judgement that can be wrong and revisited.
   company   String?
   whatsapp  String?
   subject   String?
   message   String        @db.Text
   status    MessageStatus @default(NEW)
+  companyId String?
+  contactId String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  companyAccount Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactPerson  Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
   @@index([status])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 // --------------------------------------------------------------- settings --
@@ -303,6 +330,207 @@ model ActivityLog {
 
   @@index([createdAt])
   @@index([entity, entityId])
+}
+
+// --------------------------------------------------------------------- crm --
+//
+// The spine of the business: a company, the people at it, and the
+// opportunities they represent. Everything the site already collects —
+// quote requests, contact messages, assistant conversations — hangs off
+// these, so one buyer is one timeline rather than three unrelated rows.
+//
+// Deliberately not built yet: orders, production, inventory, suppliers,
+// shipping. Those models describe operations WIN WEARS has not configured,
+// and a schema full of tables nobody writes to is harder to change later,
+// not easier.
+
+/// What kind of buyer this is. Free-form segments were considered and
+/// rejected: a fixed list is what makes "show me every academy in the UK"
+/// answerable, and OTHER covers the rest without inventing a category.
+enum CompanySegment {
+  DISTRIBUTOR
+  CLUB
+  ACADEMY
+  SPORTS_BRAND
+  WHOLESALER
+  TOURNAMENT_ORGANIZER
+  RETAILER
+  OTHER
+}
+
+/// Where a company or lead came from. Recorded because "which source
+/// produces buyers" is a question the owner will ask, and it cannot be
+/// answered retrospectively.
+enum LeadSource {
+  WEBSITE_FORM
+  AI_ASSISTANT
+  WHATSAPP
+  EMAIL
+  REFERRAL
+  TRADE_SHOW
+  MANUAL
+  OTHER
+}
+
+/// The pipeline. Ordered as the business actually runs, so a Kanban board
+/// reads left to right without a lookup table.
+enum LeadStage {
+  NEW
+  QUALIFIED
+  CONTACTED
+  DISCOVERY
+  RFQ
+  QUOTATION
+  NEGOTIATION
+  SAMPLE
+  WON
+  LOST
+}
+
+model Company {
+  id           String          @id @default(cuid())
+  name         String
+  /// Stable handle for URLs and for matching an incoming enquiry to an
+  /// existing account without depending on exact capitalisation.
+  slug         String          @unique
+  country      String?
+  website      String?
+  segment      CompanySegment  @default(OTHER)
+  source       LeadSource      @default(OTHER)
+
+  /// Admin-created labels. A string array rather than a Tag table and two
+  /// joins: tags here are for filtering and colour, not for hanging data
+  /// off, and renaming one is a single updateMany.
+  tags         String[]        @default([])
+
+  notes        String?         @db.Text
+  /// Set from real activity, never guessed — the last time anything
+  /// actually happened with this account.
+  lastContactAt DateTime?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  contacts     Contact[]
+  leads        Lead[]
+  quotes       QuoteRequest[]
+  messages     ContactMessage[]
+  conversations AIConversation[]
+
+  @@index([segment])
+  @@index([country])
+  @@index([name])
+  @@index([lastContactAt])
+}
+
+/// A person at a company. §8: an account has an owner, a purchasing manager
+/// and a designer, and treating each as a separate company loses the fact
+/// that they are buying together.
+model Contact {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  /// Not unique: the same person can legitimately appear under two
+  /// companies, and a duplicate is better than a rejected enquiry.
+  email     String?
+  whatsapp  String?
+  phone     String?
+  jobTitle  String?
+  /// Who to contact by default when the company matters more than the person.
+  isPrimary Boolean  @default(false)
+  notes     String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+  quotes    QuoteRequest[]
+  messages  ContactMessage[]
+  conversations AIConversation[]
+
+  @@index([companyId])
+  @@index([email])
+  @@index([whatsapp])
+}
+
+/// One opportunity. A company can have several at once — a repeat customer
+/// negotiating one order while sampling another is normal.
+model Lead {
+  id            String      @id @default(cuid())
+  /// Human-quotable, like the RFQ reference: WW-LEAD-2026-0001.
+  reference     String?     @unique
+  title         String
+  companyId     String?
+  contactId     String?
+  stage         LeadStage   @default(NEW)
+  source        LeadSource  @default(OTHER)
+
+  /// Scored from signals the customer gave, by lib/leadScore.ts. Reuses the
+  /// assistant's enum rather than introducing a second four-value scale that
+  /// would drift from it.
+  score         AILeadScore @default(LOW)
+  /// A human disagreeing with the score wins, and the disagreement is kept
+  /// rather than overwriting it — §10 asks the AI to explain itself, and an
+  /// override is the most useful correction there is.
+  scoreOverride AILeadScore?
+  scoreReason   String?     @db.Text
+
+  /// What they want, as far as anyone knows.
+  productId     String?
+  categoryId    String?
+  quantity      Int?
+  size          String?
+  customizationRequired Boolean?
+  requirements  String?     @db.Text
+
+  /// Who is responsible. Null means nobody, which is itself worth reporting.
+  ownerId       String?
+  tags          String[]    @default([])
+
+  lastActivityAt DateTime?
+  nextFollowUpAt DateTime?
+  /// Set once, when the lead first reaches WON or LOST.
+  closedAt      DateTime?
+  lostReason    String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  company       Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  product       Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  owner         User?       @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  stageEvents   LeadStageEvent[]
+  quotes        QuoteRequest[]
+  conversations AIConversation[]
+
+  @@index([stage])
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([nextFollowUpAt])
+  @@index([stage, score, lastActivityAt])
+  @@index([createdAt])
+}
+
+/// Every stage movement, kept forever. §9 asks for movements to be logged;
+/// this is also the only way to answer how long a lead sat in negotiation,
+/// which is the question that follows.
+model LeadStageEvent {
+  id        String    @id @default(cuid())
+  leadId    String
+  fromStage LeadStage?
+  toStage   LeadStage
+  byUserId  String?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  by        User?     @relation("StageMovedBy", fields: [byUserId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
 }
 
 // ------------------------------------------------------------- ai support --
@@ -397,8 +625,20 @@ model AIConversation {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
+  /// Attached to an account once someone recognises who this was. A
+  /// conversation is anonymous until the visitor gives a name or an email,
+  /// so these stay null for most of them.
+  companyId    String?
+  contactId    String?
+  leadId       String?
+
   product      Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
   category     Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  /// `company` above is what the visitor said; this is the account it was
+  /// matched to.
+  companyAccount Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactPerson  Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
   messages     AIMessage[]
   events       AIEvent[]
   quotes       QuoteRequest[]
