@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { prisma } from '../../db';
 import { createQuoteWithReference } from '../../lib/reference';
 import { scoreLead } from '../../lib/leadScore';
+import { resolveIdentity, touchCompany, type ResolvedIdentity } from '../../lib/crm';
 import type { AITool, ToolContext } from './types';
 
 /* ---------------------------------------------------------- remember ----- */
@@ -198,6 +199,23 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
         })
       : null;
 
+    /* File it against an account, the same way the website form does, so a
+       lead that arrived through the assistant is not a second class of
+       record. A failure here must not lose the customer's request. */
+    let identity: ResolvedIdentity = { companyId: null, contactId: null, createdCompany: false, createdContact: false };
+    try {
+      identity = await resolveIdentity({
+        name: input.name,
+        email: input.email,
+        whatsapp: input.whatsapp ?? null,
+        companyName: input.company ?? null,
+        country: input.country ?? null,
+        source: 'AI_ASSISTANT',
+      });
+    } catch (err) {
+      console.error('[crm] could not resolve identity for an assistant quote request', err);
+    }
+
     const { reference } = await createQuoteWithReference({
       name: input.name,
       email: input.email,
@@ -212,8 +230,12 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
       message: input.message ?? null,
       source: 'AI_AGENT',
       aiConversationId: ctx.conversationId,
+      companyId: identity.companyId,
+      contactId: identity.contactId,
       status: 'NEW',
     });
+
+    await touchCompany(identity.companyId);
 
     if (ctx.conversationId) {
       const conversation = await prisma.aIConversation.findUnique({ where: { id: ctx.conversationId } });
@@ -223,6 +245,10 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
           status: 'QUALIFIED',
           customerName: input.name,
           email: input.email,
+          /* The conversation now belongs to a known account, so it shows up
+             on that customer's timeline rather than only in the AI screens. */
+          ...(identity.companyId ? { companyId: identity.companyId } : {}),
+          ...(identity.contactId ? { contactId: identity.contactId } : {}),
           ...(input.company ? { company: input.company } : {}),
           ...(input.country ? { country: input.country } : {}),
           ...(input.whatsapp ? { whatsapp: input.whatsapp } : {}),

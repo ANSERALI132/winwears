@@ -17,6 +17,7 @@ import { contactCreateSchema, quoteCreateSchema } from '../validation/enquiry';
 import { upload } from '../middleware/upload';
 import { assertAllowed, ALLOWED_UPLOAD_TYPES } from '../lib/fileType';
 import { storage } from '../lib/storage';
+import { resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
 
 export const publicRouter = Router();
 
@@ -229,6 +230,24 @@ publicRouter.post(
       productId = hit?.id ?? null;
     }
 
+    /* Attach the enquiry to an account, creating one if this is the first
+       time we have heard from them. Failing to file it must never lose the
+       enquiry itself, so the identity work is allowed to fail quietly and
+       the request is still stored. */
+    let identity: ResolvedIdentity = { companyId: null, contactId: null, createdCompany: false, createdContact: false };
+    try {
+      identity = await resolveIdentity({
+        name: input.name,
+        email: input.email,
+        whatsapp: input.whatsapp ?? null,
+        companyName: input.company ?? null,
+        country: input.country ?? null,
+        source: 'WEBSITE_FORM',
+      });
+    } catch (err) {
+      console.error('[crm] could not resolve identity for a quote request', err);
+    }
+
     const quote = await prisma.quoteRequest.create({
       data: {
         name: input.name,
@@ -244,9 +263,13 @@ publicRouter.post(
         message: input.message ?? null,
         logoFile: stored.logoFile ?? null,
         designFile: stored.designFile ?? null,
+        companyId: identity.companyId,
+        contactId: identity.contactId,
       },
       select: { id: true, createdAt: true },
     });
+
+    await touchCompany(identity.companyId);
 
     res.status(201).json({
       data: {
@@ -269,6 +292,19 @@ publicRouter.post(
       return;
     }
 
+    let identity: ResolvedIdentity = { companyId: null, contactId: null, createdCompany: false, createdContact: false };
+    try {
+      identity = await resolveIdentity({
+        name: input.name,
+        email: input.email,
+        whatsapp: input.whatsapp ?? null,
+        companyName: input.company ?? null,
+        source: 'WEBSITE_FORM',
+      });
+    } catch (err) {
+      console.error('[crm] could not resolve identity for a contact message', err);
+    }
+
     await prisma.contactMessage.create({
       data: {
         name: input.name,
@@ -277,9 +313,13 @@ publicRouter.post(
         whatsapp: input.whatsapp ?? null,
         subject: input.subject ?? null,
         message: input.message,
+        companyId: identity.companyId,
+        contactId: identity.contactId,
       },
       select: { id: true },
     });
+
+    await touchCompany(identity.companyId);
 
     res.status(201).json({
       data: { ok: true, message: 'Thank you — your message has reached us. We will be in touch shortly.' },

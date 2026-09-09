@@ -14,6 +14,7 @@ import { adminStatsRouter, adminSettingsRouter, adminUsersRouter, adminActivityR
 import { adminPortabilityRouter } from './portability';
 import { adminKnowledgeRouter } from './knowledge';
 import { adminAiRouter } from './ai';
+import { adminCrmRouter } from './crm';
 
 export const adminRouter = Router();
 
@@ -32,3 +33,4 @@ adminRouter.use('/portability', adminPortabilityRouter);
 /* Knowledge first: /ai/knowledge must not be swallowed by /ai. */
 adminRouter.use('/ai/knowledge', adminKnowledgeRouter);
 adminRouter.use('/ai', adminAiRouter);
+adminRouter.use('/crm', adminCrmRouter);
