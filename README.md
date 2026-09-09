@@ -199,9 +199,11 @@ dashboard needs HTTPS.
 `frontend/` can be served by the same process (`SERVE_FRONTEND=true`) or put on
 a CDN with `/api` and `/admin` proxied to the backend.
 
-Before going live, replace `https://winwears.com` with the real domain in
-`frontend/sitemap.xml`, `frontend/robots.txt`, the `<link rel="canonical">` tag
-on each page, and the `seo.siteUrl` setting in the admin.
+The site's canonical domain is `https://winwears.com`. It appears in
+`frontend/sitemap.xml`, `frontend/robots.txt`, the `<link rel="canonical">`
+tag on each page, and the `seo.siteUrl` setting in the admin — if it ever
+changes, all four need changing together, or search engines will be told two
+different things about which page is the real one.
 
 ---
 

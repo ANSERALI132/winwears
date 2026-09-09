@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Replace https://winwears.com with your live domain before submitting. -->
+<!--
+  The fixed pages. Individual products are not listed here: they are
+  served from one template driven by ?slug=, and the catalogue is edited in
+  /admin, so a hand-written list would be wrong the first time somebody adds
+  a ball. Generate that part from the database if the product pages need to
+  be indexed individually.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://winwears.com/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
   <url><loc>https://winwears.com/products</loc><priority>0.9</priority><changefreq>monthly</changefreq></url>
