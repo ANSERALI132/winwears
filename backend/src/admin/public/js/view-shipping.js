@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Shipping
+   Admin — Shipping
    Consignments, what is in them, and a packing list the browser can print.
    ========================================================================== */
 (function () {
@@ -36,7 +36,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Shipment, tracking, order or customerâ€¦', 'aria-label': 'Search shipments',
+        type: 'search', placeholder: 'Shipment, tracking, order or customer…', 'aria-label': 'Search shipments',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       var statusSelect = h('select', {
@@ -81,13 +81,13 @@
               var tr = h('tr');
               tr.appendChild(h('td', h('a', { href: '#/shipments/' + s.id }, s.reference)));
               tr.appendChild(h('td', h('a', { href: '#/orders/' + s.order.id }, s.order.number)));
-              tr.appendChild(h('td', s.order.company ? s.order.company.name : 'â€”'));
+              tr.appendChild(h('td', s.order.company ? s.order.company.name : '—'));
               tr.appendChild(h('td', s.items.length
                 ? String(s.items.length) + (s.orderFullyShipped ? '' : ' (part)')
                 : h('span.muted', { text: 'Empty' })));
-              tr.appendChild(h('td', s.carrier || 'â€”'));
+              tr.appendChild(h('td', s.carrier || '—'));
               tr.appendChild(h('td', ui.statusPill(s.status)));
-              tr.appendChild(h('td', s.expectedAt ? ui.date(s.expectedAt) : 'â€”'));
+              tr.appendChild(h('td', s.expectedAt ? ui.date(s.expectedAt) : '—'));
               body.appendChild(tr);
             });
             table.appendChild(body);
@@ -110,7 +110,7 @@
     form.appendChild(h('p.card__hint',
       'Carrier, service and Incoterm are free text on purpose — which ones WIN WEARS uses and what was agreed is a fact about your contracts, not something to pick from a list of guesses.'));
 
-    var orderSelect = h('select', {}, h('option', { value: '' }, 'Pick an orderâ€¦'));
+    var orderSelect = h('select', {}, h('option', { value: '' }, 'Pick an order…'));
     var carrier = h('input', { type: 'text', value: (existing && existing.carrier) || '', placeholder: 'DHL, a freight forwarder, your own van' });
     var service = h('input', { type: 'text', value: (existing && existing.service) || '', placeholder: 'Air freight, road, express' });
     var incoterm = h('input', { type: 'text', value: (existing && existing.incoterm) || '', placeholder: 'FOB, CIF, DAP' });
@@ -122,7 +122,7 @@
       type: 'number', min: 0, step: '0.001', placeholder: 'Not weighed',
       value: existing && existing.weightKg != null ? String(existing.weightKg) : '',
     });
-    var dimensions = h('input', { type: 'text', value: (existing && existing.dimensions) || '', placeholder: '2 pallets, 120 Ã— 100 Ã— 160cm' });
+    var dimensions = h('input', { type: 'text', value: (existing && existing.dimensions) || '', placeholder: '2 pallets, 120 × 100 × 160cm' });
     var expectedAt = h('input', {
       type: 'date',
       value: existing && existing.expectedAt ? new Date(existing.expectedAt).toISOString().slice(0, 10) : '',
@@ -425,10 +425,10 @@
         h('div.timeline__when', { text: ui.dateTime(e.createdAt) }),
         h('div.timeline__body',
           h('div.timeline__title', {
-            text: e.fromStatus ? label(e.fromStatus) + ' â†’ ' + label(e.toStatus) : label(e.toStatus),
+            text: e.fromStatus ? label(e.fromStatus) + ' → ' + label(e.toStatus) : label(e.toStatus),
           }),
           h('div.timeline__detail', {
-            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' â€” ' + e.note : ''),
+            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' — ' + e.note : ''),
           }))));
     });
     card.appendChild(list);

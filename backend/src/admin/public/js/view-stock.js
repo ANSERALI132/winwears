@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Inventory
+   Admin — Inventory
    Items, their ledger, and the movements that are the only way a level moves.
    ========================================================================== */
 (function () {
@@ -58,7 +58,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Name or codeâ€¦', 'aria-label': 'Search stock',
+        type: 'search', placeholder: 'Name or code…', 'aria-label': 'Search stock',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       toolbar.appendChild(h('select', {
@@ -253,7 +253,7 @@
 
   function summaryCard(item) {
     var card = h('section.card');
-    card.appendChild(h('h2.card__title', item.sku + ' â€” ' + item.name));
+    card.appendChild(h('h2.card__title', item.sku + ' — ' + item.name));
     if (item.description) card.appendChild(h('p.card__hint', item.description));
 
     var totals = h('div.totals');
@@ -398,13 +398,13 @@
         h('td', ui.date(m.occurredAt)),
         h('td', m.kindLabel),
         h('td', signed),
-        h('td', m.location ? m.location.name : 'â€”'),
+        h('td', m.location ? m.location.name : '—'),
         h('td', m.run
           ? h('a', { href: '#/production/' + m.run.id }, m.run.reference)
-          : (m.order ? h('a', { href: '#/orders/' + m.order.id }, m.order.number) : 'â€”')),
-        h('td', m.reference || 'â€”'),
-        h('td', m.recordedBy ? m.recordedBy.name : 'â€”'),
-        h('td', m.note || 'â€”')));
+          : (m.order ? h('a', { href: '#/orders/' + m.order.id }, m.order.number) : '—')),
+        h('td', m.reference || '—'),
+        h('td', m.recordedBy ? m.recordedBy.name : '—'),
+        h('td', m.note || '—')));
     });
     table.appendChild(body);
     card.appendChild(table);
@@ -461,7 +461,7 @@
               lines.splice(index, 1);
               drawLines();
             },
-          }, 'Ã—');
+          }, '×');
 
           row.appendChild(h('div.line__desc', picker));
           row.appendChild(quantity);
@@ -563,7 +563,7 @@
             res.data.forEach(function (l) {
               var tr = h('tr');
               tr.appendChild(h('td', l.name));
-              tr.appendChild(h('td', l.description || 'â€”'));
+              tr.appendChild(h('td', l.description || '—'));
               tr.appendChild(h('td', String(l._count ? l._count.movements : 0)));
               tr.appendChild(h('td', l.active ? 'Yes' : 'Retired'));
 

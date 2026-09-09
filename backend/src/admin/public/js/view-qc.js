@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Quality control
+   Admin — Quality control
    Inspections, the readings behind them, and the factory's own checkpoints.
    ========================================================================== */
 (function () {
@@ -18,7 +18,7 @@
    *  set any — and that blank is the point: the system has not invented one. */
   function limitText(c) {
     var unit = c.unit ? ' ' + c.unit : '';
-    if (c.minValue != null && c.maxValue != null) return c.minValue + ' â€“ ' + c.maxValue + unit;
+    if (c.minValue != null && c.maxValue != null) return c.minValue + ' – ' + c.maxValue + unit;
     if (c.minValue != null) return 'at least ' + c.minValue + unit;
     if (c.maxValue != null) return 'at most ' + c.maxValue + unit;
     return '';
@@ -42,7 +42,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Inspection, run, order or customerâ€¦', 'aria-label': 'Search inspections',
+        type: 'search', placeholder: 'Inspection, run, order or customer…', 'aria-label': 'Search inspections',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       var resultSelect = h('select', {
@@ -89,13 +89,13 @@
               tr.appendChild(h('td', h('a', { href: '#/qc/' + i.id }, i.reference)));
               tr.appendChild(h('td', i.run
                 ? h('a', { href: '#/production/' + i.run.id }, i.run.reference)
-                : (i.order ? h('a', { href: '#/orders/' + i.order.id }, i.order.number) : 'â€”')));
+                : (i.order ? h('a', { href: '#/orders/' + i.order.id }, i.order.number) : '—')));
               tr.appendChild(h('td', String(i.sampleSize)));
               tr.appendChild(h('td', i.results.length
                 ? (i.results.length - failed) + ' of ' + i.results.length + ' passed'
                 : h('span.muted', { text: 'None yet' })));
               tr.appendChild(h('td', outcomeCell(i)));
-              tr.appendChild(h('td', i.inspector ? i.inspector.name : 'â€”'));
+              tr.appendChild(h('td', i.inspector ? i.inspector.name : '—'));
               tr.appendChild(h('td', ui.date(i.inspectedAt)));
               body.appendChild(tr);
             });
@@ -307,9 +307,9 @@
         body.appendChild(h('tr',
           h('td', r.checkpoint.name + (r.checkpoint.critical ? ' (critical)' : '')),
           h('td', limitText(r.checkpoint) || h('span.muted', { text: 'None set' })),
-          h('td', r.value == null ? 'â€”' : String(r.value) + (r.checkpoint.unit ? ' ' + r.checkpoint.unit : '')),
+          h('td', r.value == null ? '—' : String(r.value) + (r.checkpoint.unit ? ' ' + r.checkpoint.unit : '')),
           h('td', verdictPill(r.passed)),
-          h('td', r.note || 'â€”')));
+          h('td', r.note || '—')));
       });
       table.appendChild(body);
       card.appendChild(table);

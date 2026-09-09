@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” shell, routing and the session gate
+   Admin — shell, routing and the session gate
    ========================================================================== */
 (function () {
   'use strict';
@@ -50,6 +50,7 @@
       { path: '/', label: 'Overview', icon: 'overview' },
       { path: '/copilot', label: 'Copilot', icon: 'activity' },
       { path: '/tasks', label: 'Tasks', icon: 'quotes', count: 'tasks' },
+      { path: '/reports', label: 'Reports', icon: 'activity' },
     ] },
     { group: 'Catalogue', items: [
       { path: '/products', label: 'Products', icon: 'products' },

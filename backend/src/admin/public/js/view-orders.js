@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Orders
+   Admin — Orders
    The list, the builder, the payment record, and an order confirmation the
    browser can print to PDF.
    ========================================================================== */
@@ -37,7 +37,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Order or PO number, customer, lineâ€¦', 'aria-label': 'Search orders',
+        type: 'search', placeholder: 'Order or PO number, customer, line…', 'aria-label': 'Search orders',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       toolbar.appendChild(h('select', {
@@ -88,13 +88,13 @@
             res.data.forEach(function (o) {
               var tr = h('tr');
               tr.appendChild(h('td', h('a', { href: '#/orders/' + o.id }, o.number)));
-              tr.appendChild(h('td', o.company ? o.company.name : (o.contact ? o.contact.name : 'â€”')));
+              tr.appendChild(h('td', o.company ? o.company.name : (o.contact ? o.contact.name : '—')));
               tr.appendChild(h('td', money(o.total, o.currency)));
               tr.appendChild(h('td', o.balance.balance > 0
                 ? money(o.balance.balance, o.currency)
                 : label(o.balance.label)));
               tr.appendChild(h('td', ui.statusPill(o.status)));
-              tr.appendChild(h('td', o.promisedAt ? ui.date(o.promisedAt) : 'â€”'));
+              tr.appendChild(h('td', o.promisedAt ? ui.date(o.promisedAt) : '—'));
               tr.appendChild(h('td', ui.date(o.createdAt)));
               body.appendChild(tr);
             });
@@ -172,7 +172,7 @@
         desc.addEventListener('input', function () { line.description = desc.value; });
 
         var picker = h('select', { 'aria-label': 'Use a catalogue product', disabled: pricingLocked },
-          h('option', { value: '' }, 'Free textâ€¦'));
+          h('option', { value: '' }, 'Free text…'));
         products.forEach(function (p) {
           picker.appendChild(h('option', { value: p.id, selected: line.productId === p.id }, p.productName));
         });
@@ -181,7 +181,7 @@
           line.productId = picker.value || null;
           /* The name is copied in as a starting description. The price is
              not: the catalogue is quote-only, and putting a number here that
-             nobody typed is exactly what Â§13 forbids. */
+             nobody typed is exactly what §13 forbids. */
           if (chosen && !desc.value.trim()) { desc.value = chosen.productName; line.description = chosen.productName; }
         });
 
@@ -197,7 +197,7 @@
             if (lines.length === 1) { ui.toast('An order needs at least one line.', 'error'); return; }
             lines.splice(index, 1); drawLines(); refreshTotals();
           },
-        }, 'Ã—');
+        }, '×');
 
         row.appendChild(h('div.line__desc', desc, picker));
         row.appendChild(qty);
@@ -460,10 +460,10 @@
       body.appendChild(h('tr',
         h('td', h('a', { href: '#/shipments/' + s.id }, s.reference)),
         h('td', String(s._count ? s._count.items : 0)),
-        h('td', s.carrier || 'â€”'),
-        h('td', s.trackingNumber || 'â€”'),
+        h('td', s.carrier || '—'),
+        h('td', s.trackingNumber || '—'),
         h('td', ui.statusPill(s.status)),
-        h('td', s.dispatchedAt ? ui.date(s.dispatchedAt) : 'â€”')));
+        h('td', s.dispatchedAt ? ui.date(s.dispatchedAt) : '—')));
     });
     table.appendChild(body);
     card.appendChild(table);
@@ -497,9 +497,9 @@
         var tr = h('tr');
         tr.appendChild(h('td', ui.date(p.receivedAt)));
         tr.appendChild(h('td', money(p.amount, o.currency)));
-        tr.appendChild(h('td', p.method || 'â€”'));
-        tr.appendChild(h('td', p.reference || 'â€”'));
-        tr.appendChild(h('td', p.recordedBy ? p.recordedBy.name : 'â€”'));
+        tr.appendChild(h('td', p.method || '—'));
+        tr.appendChild(h('td', p.reference || '—'));
+        tr.appendChild(h('td', p.recordedBy ? p.recordedBy.name : '—'));
         tr.appendChild(h('td', h('button.btn.btn--sm.btn--danger', {
           type: 'button',
           onclick: function () { removePayment(o, p); },
@@ -512,7 +512,7 @@
 
     var amount = h('input', { type: 'number', min: '0.01', step: '0.01', placeholder: '0.00' });
     var receivedAt = h('input', { type: 'date' });
-    var method = h('input', { type: 'text', placeholder: 'Bank transfer, letter of creditâ€¦' });
+    var method = h('input', { type: 'text', placeholder: 'Bank transfer, letter of credit…' });
     var reference = h('input', { type: 'text', placeholder: 'The bank reference' });
 
     var record = h('button.btn.btn--accent', { type: 'button' }, 'Record a payment');
@@ -573,10 +573,10 @@
         h('div.timeline__when', { text: ui.dateTime(e.createdAt) }),
         h('div.timeline__body',
           h('div.timeline__title', {
-            text: e.fromStatus ? label(e.fromStatus) + ' â†’ ' + label(e.toStatus) : label(e.toStatus),
+            text: e.fromStatus ? label(e.fromStatus) + ' → ' + label(e.toStatus) : label(e.toStatus),
           }),
           h('div.timeline__detail', {
-            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' â€” ' + e.note : ''),
+            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' — ' + e.note : ''),
           }))));
     });
     card.appendChild(list);
@@ -613,7 +613,7 @@
     },
   });
 
-  /** The order confirmation. Used on screen and when printing â€” one renderer,
+  /** The order confirmation. Used on screen and when printing — one renderer,
    *  so what somebody checks is what the customer receives. */
   function renderDocument(o, forPrint, site) {
     var doc = h('section.doc' + (forPrint ? ' doc--print' : ''));
@@ -727,7 +727,7 @@
       doc.appendChild(h('div.doc__notes', h('div.doc__label', 'Cancelled'), h('p', o.cancelReason)));
     }
 
-    /* Internal notes are never rendered here â€” this element is what the
+    /* Internal notes are never rendered here — this element is what the
        customer sees, whether printed or shown on a shared screen. */
     return doc;
   }

@@ -637,6 +637,17 @@ a.pulse__title:hover { text-decoration: underline; }
 .bar__fill { height: 100%; background: var(--accent); border-radius: 99px; }
 .bar__text { font-size: 11.5px; color: var(--text-2); white-space: nowrap; }
 
+/* --- charts ---------------------------------------------------------------
+   Drawn by hand as SVG: this project has no bundler and adds no CDN tags, and
+   a bar chart is thirty lines of maths. */
+
+.chart { display: block; width: 100%; height: auto; margin: 4px 0 2px; }
+.chart__grid { stroke: var(--line); stroke-width: 1; }
+.chart__tick, .chart__label { font-size: 10px; fill: var(--text-3); }
+.chart__bar { fill: var(--accent); }
+/* Rejects and other figures where a taller bar is worse. */
+.chart__bar--warn { fill: var(--warn, #b45309); }
+
 /* --- the copilot ----------------------------------------------------------
    A conversation, with what each answer was built from underneath it. */
 

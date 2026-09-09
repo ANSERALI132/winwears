@@ -3,7 +3,7 @@
  *
  * What the AI assistant is allowed to say about the business. Editing here is
  * how the business teaches the agent something, and unpublishing is how it
- * takes something back â€” the retrieval tool reads PUBLISHED rows only, so a
+ * takes something back — the retrieval tool reads PUBLISHED rows only, so a
  * policy that changes stops being quoted the moment it is unpublished.
  */
 import { Router } from 'express';

@@ -1,7 +1,7 @@
 /**
  * Everything under /api/admin.
  *
- * The guard is applied once, here, rather than per route file Ã¢â‚¬â€ one place to
+ * The guard is applied once, here, rather than per route file — one place to
  * read, and no way for a new endpoint to be added without it.
  */
 import { Router } from 'express';
@@ -25,6 +25,7 @@ import { adminStockRouter } from './stock';
 import { adminShippingRouter } from './shipping';
 import { adminCopilotRouter } from './copilot';
 import { adminAutomationRouter } from './automation';
+import { adminAnalyticsRouter } from './analytics';
 
 export const adminRouter = Router();
 
@@ -54,3 +55,4 @@ adminRouter.use('/stock', adminStockRouter);
 adminRouter.use('/shipments', adminShippingRouter);
 adminRouter.use('/copilot', adminCopilotRouter);
 adminRouter.use('/automation', adminAutomationRouter);
+adminRouter.use('/analytics', adminAnalyticsRouter);

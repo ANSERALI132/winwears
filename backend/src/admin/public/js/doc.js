@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” shared document helpers
+   Admin — shared document helpers
 
    Quotations and orders are the same document at two moments in its life: an
    offer, then a commitment. They format money the same way, label statuses
@@ -33,7 +33,7 @@
   }
 
   /* Mirrors lib/quotation.ts so the person typing sees the total move. The
-     server recomputes everything on save â€” this is a preview, never the
+     server recomputes everything on save — this is a preview, never the
      figure that is stored. */
   function previewTotals(items, discountType, discountInput, shipping, taxRate) {
     var minor = function (v) { return Math.round((Number(v) || 0) * 100); };

@@ -38,7 +38,7 @@ export const rememberRequirements: AITool<z.infer<typeof rememberInput>> = {
   definition: {
     name: 'remember_requirements',
     description:
-      'Record what the customer has told you about their requirement, as soon as they say it. Call this whenever they give a quantity, size, ball type, customization need, name, company, country, email or WhatsApp number. Pass only the fields they actually stated â€” never guess or fill in a plausible value.',
+      'Record what the customer has told you about their requirement, as soon as they say it. Call this whenever they give a quantity, size, ball type, customization need, name, company, country, email or WhatsApp number. Pass only the fields they actually stated — never guess or fill in a plausible value.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -170,7 +170,7 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
   definition: {
     name: 'create_quote_request',
     description:
-      'Submit the customer\'s quote request to the WIN WEARS team. Requires a name and an email address. Only call this once the customer has confirmed they want to send it â€” never to "save progress", which is what remember_requirements is for. Returns a reference number to give them.',
+      'Submit the customer\'s quote request to the WIN WEARS team. Requires a name and an email address. Only call this once the customer has confirmed they want to send it — never to "save progress", which is what remember_requirements is for. Returns a reference number to give them.',
     inputSchema: {
       type: 'object',
       properties: {

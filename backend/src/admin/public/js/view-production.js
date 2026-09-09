@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Manufacturing
+   Admin — Manufacturing
    Production runs, what came off the line, and the factory's own stages.
    ========================================================================== */
 (function () {
@@ -48,7 +48,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Run, order or customerâ€¦', 'aria-label': 'Search production runs',
+        type: 'search', placeholder: 'Run, order or customer…', 'aria-label': 'Search production runs',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
 
@@ -115,7 +115,7 @@
               tr.appendChild(h('td', progressBar(r.progress)));
               tr.appendChild(h('td', r.currentStage ? r.currentStage.name : h('span.muted', { text: 'Not started' })));
               tr.appendChild(h('td', ui.statusPill(r.status)));
-              tr.appendChild(h('td', r.plannedEnd ? ui.date(r.plannedEnd) : 'â€”'));
+              tr.appendChild(h('td', r.plannedEnd ? ui.date(r.plannedEnd) : '—'));
               body.appendChild(tr);
             });
             table.appendChild(body);
@@ -308,7 +308,7 @@
 
   function summaryCard(r) {
     var card = h('section.card');
-    card.appendChild(h('h2.card__title', r.reference + ' â€” ' + r.title));
+    card.appendChild(h('h2.card__title', r.reference + ' — ' + r.title));
 
     var facts = h('div.grid.grid--2');
     function fact(name, value) {
@@ -428,9 +428,9 @@
         tr.appendChild(h('td', ui.date(o.recordedAt)));
         tr.appendChild(h('td', String(o.quantityGood)));
         tr.appendChild(h('td', String(o.quantityRejected)));
-        tr.appendChild(h('td', o.stage ? o.stage.name : 'â€”'));
-        tr.appendChild(h('td', o.recordedBy ? o.recordedBy.name : 'â€”'));
-        tr.appendChild(h('td', o.note || 'â€”'));
+        tr.appendChild(h('td', o.stage ? o.stage.name : '—'));
+        tr.appendChild(h('td', o.recordedBy ? o.recordedBy.name : '—'));
+        tr.appendChild(h('td', o.note || '—'));
         tr.appendChild(h('td', h('button.btn.btn--sm.btn--danger', {
           type: 'button',
           onclick: function () { removeOutput(r, o); },
@@ -551,16 +551,16 @@
     r.events.forEach(function (e) {
       var what;
       if (e.toStatus) {
-        what = e.fromStatus ? label(e.fromStatus) + ' â†’ ' + label(e.toStatus) : label(e.toStatus);
+        what = e.fromStatus ? label(e.fromStatus) + ' → ' + label(e.toStatus) : label(e.toStatus);
       } else {
-        what = (e.fromStage ? e.fromStage.name : 'Not started') + ' â†’ ' + (e.toStage ? e.toStage.name : 'not started');
+        what = (e.fromStage ? e.fromStage.name : 'Not started') + ' → ' + (e.toStage ? e.toStage.name : 'not started');
       }
       list.appendChild(h('div.timeline__row',
         h('div.timeline__when', { text: ui.dateTime(e.createdAt) }),
         h('div.timeline__body',
           h('div.timeline__title', { text: what }),
           h('div.timeline__detail', {
-            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' â€” ' + e.note : ''),
+            text: (e.by ? e.by.name : 'Somebody no longer on the system') + (e.note ? ' — ' + e.note : ''),
           }))));
     });
     card.appendChild(list);
@@ -602,7 +602,7 @@
               var tr = h('tr');
               tr.appendChild(h('td', String(index + 1)));
               tr.appendChild(h('td', s.name));
-              tr.appendChild(h('td', s.description || 'â€”'));
+              tr.appendChild(h('td', s.description || '—'));
               tr.appendChild(h('td', String(s._count ? s._count.runs : 0)));
               tr.appendChild(h('td', s.active ? 'Yes' : 'Retired'));
 

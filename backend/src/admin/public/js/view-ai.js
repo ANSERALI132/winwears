@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” AI assistant
+   Admin — AI assistant
    Overview, the conversation viewer, and the knowledge base.
    ========================================================================== */
 (function () {
@@ -39,7 +39,7 @@
           ['Quote requests', d.quotesFromAi],
           ['Escalations', d.escalations],
           ['WhatsApp handoffs', d.whatsappClicks],
-          ['Conversion rate', d.conversionRate === null ? 'â€”' : d.conversionRate + '%']
+          ['Conversion rate', d.conversionRate === null ? '—' : d.conversionRate + '%']
         ].forEach(function (pair) {
           var card = h('div.card.stat');
           card.appendChild(h('div.stat__value', String(pair[1])));
@@ -90,11 +90,11 @@
             var tr = h('tr');
             tr.appendChild(h('td', h('a', { href: '#/ai/conversations/' + c.id },
               c.customerName || c.company || 'Anonymous')));
-            tr.appendChild(h('td', c.country || 'â€”'));
-            tr.appendChild(h('td', c.quantity ? String(c.quantity) : 'â€”'));
+            tr.appendChild(h('td', c.country || '—'));
+            tr.appendChild(h('td', c.quantity ? String(c.quantity) : '—'));
             tr.appendChild(h('td', ui.statusPill(c.leadScore)));
             tr.appendChild(h('td', ui.statusPill(c.status)));
-            tr.appendChild(h('td', c.lastMessageAt ? ui.dateTime(c.lastMessageAt) : 'â€”'));
+            tr.appendChild(h('td', c.lastMessageAt ? ui.dateTime(c.lastMessageAt) : '—'));
             rb.appendChild(tr);
           });
           rt.appendChild(rb);
@@ -362,7 +362,7 @@
 
       toolbar.appendChild(h('input', {
         type: 'search',
-        placeholder: 'Name, company, email, countryâ€¦',
+        placeholder: 'Name, company, email, country…',
         'aria-label': 'Search conversations',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
@@ -406,10 +406,10 @@
               var tr = h('tr');
               tr.appendChild(h('td', h('a', { href: '#/ai/conversations/' + c.id },
                 c.customerName || 'Anonymous')));
-              tr.appendChild(h('td', c.company || 'â€”'));
-              tr.appendChild(h('td', c.country || 'â€”'));
-              tr.appendChild(h('td', (c.product && c.product.productName) || (c.category && c.category.name) || 'â€”'));
-              tr.appendChild(h('td', c.quantity ? String(c.quantity) : 'â€”'));
+              tr.appendChild(h('td', c.company || '—'));
+              tr.appendChild(h('td', c.country || '—'));
+              tr.appendChild(h('td', (c.product && c.product.productName) || (c.category && c.category.name) || '—'));
+              tr.appendChild(h('td', c.quantity ? String(c.quantity) : '—'));
               tr.appendChild(h('td', ui.statusPill(c.leadScore)));
               tr.appendChild(h('td', ui.statusPill(c.status)));
               tr.appendChild(h('td', String(c.messageCount)));
@@ -439,7 +439,7 @@
       disabled: meta.page <= 1,
       onclick: function () { onGo(meta.page - 1); },
     }, 'Previous'));
-    wrap.appendChild(h('span.pager__label', 'Page ' + meta.page + ' of ' + meta.totalPages + ' â€” ' + meta.total + ' total'));
+    wrap.appendChild(h('span.pager__label', 'Page ' + meta.page + ' of ' + meta.totalPages + ' — ' + meta.total + ' total'));
     wrap.appendChild(h('button.btn.btn--sm', {
       type: 'button',
       disabled: meta.page >= meta.totalPages,
@@ -460,7 +460,7 @@
         var c = res.data;
         ui.clear(mount);
 
-        mount.appendChild(h('a.btn.btn--sm', { href: '#/ai/conversations' }, 'â† All conversations'));
+        mount.appendChild(h('a.btn.btn--sm', { href: '#/ai/conversations' }, '← All conversations'));
 
         var layout = h('div.split');
 
@@ -474,8 +474,8 @@
           var log = h('div.transcript');
           c.messages.forEach(function (m) {
             var row = h('div.transcript__row.transcript__row--' + m.role.toLowerCase());
-            var who = m.role === 'USER' ? 'Customer' : m.role === 'ASSISTANT' ? 'Assistant' : 'Tool Â· ' + (m.toolName || '');
-            row.appendChild(h('div.transcript__who', who + ' Â· ' + ui.dateTime(m.createdAt)));
+            var who = m.role === 'USER' ? 'Customer' : m.role === 'ASSISTANT' ? 'Assistant' : 'Tool · ' + (m.toolName || '');
+            row.appendChild(h('div.transcript__who', who + ' · ' + ui.dateTime(m.createdAt)));
             /* Tool results are JSON; shown in a pre so an admin can read what
                the answer was actually built from. */
             row.appendChild(m.role === 'TOOL'
@@ -548,7 +548,7 @@
           right.appendChild(h('h3.card__subtitle', 'Quote requests'));
           var ql = h('ul.plain-list');
           c.quotes.forEach(function (q) {
-            ql.appendChild(h('li', (q.reference || q.id) + ' Â· ' + label(q.status) + ' Â· ' + ui.date(q.createdAt)));
+            ql.appendChild(h('li', (q.reference || q.id) + ' · ' + label(q.status) + ' · ' + ui.date(q.createdAt)));
           });
           right.appendChild(ql);
         }
@@ -588,7 +588,7 @@
 
       toolbar.appendChild(h('input', {
         type: 'search',
-        placeholder: 'Search titles and contentâ€¦',
+        placeholder: 'Search titles and content…',
         'aria-label': 'Search knowledge',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
@@ -691,7 +691,7 @@
         var e = entry || {};
 
         var title = h('input', { type: 'text', name: 'title', value: e.title || '', required: true });
-        var category = h('input', { type: 'text', name: 'category', value: e.category || 'general', placeholder: 'manufacturing, shipping, paymentâ€¦' });
+        var category = h('input', { type: 'text', name: 'category', value: e.category || 'general', placeholder: 'manufacturing, shipping, payment…' });
         var content = h('textarea', { name: 'content', rows: 10, value: e.content || '' });
         var priority = h('input', { type: 'number', name: 'priority', min: 0, max: 100, value: String(e.priority || 0) });
         var status = h('select', { name: 'status' },

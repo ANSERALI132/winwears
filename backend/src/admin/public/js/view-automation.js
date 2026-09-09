@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Tasks and automation
+   Admin — Tasks and automation
    The list somebody works from, and the rules that fill it.
    ========================================================================== */
 (function () {
@@ -43,7 +43,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Search tasksâ€¦', 'aria-label': 'Search tasks',
+        type: 'search', placeholder: 'Search tasks…', 'aria-label': 'Search tasks',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       var statusSelect = h('select', {
@@ -119,7 +119,7 @@
                 ? (overdue(t)
                   ? h('strong', { text: ui.date(t.dueAt) })
                   : h('span', { text: ui.date(t.dueAt) }))
-                : 'â€”'));
+                : '—'));
               tr.appendChild(h('td', t.assignedTo ? t.assignedTo.name : h('span.muted', { text: 'Nobody' })));
               tr.appendChild(h('td', t.rule ? t.rule.name : h('span.muted', { text: 'By hand' })));
 
@@ -474,7 +474,7 @@
         h('td', ui.dateTime(r.createdAt)),
         h('td', r.error ? h('strong', { text: 'failed' }) : String(r.matched)),
         h('td', r.error ? h('span.muted', { text: r.error }) : String(r.acted)),
-        h('td', r.error ? 'â€”' : String(r.skipped)),
+        h('td', r.error ? '—' : String(r.skipped)),
         h('td', r.ms + 'ms')));
     });
     table.appendChild(body);

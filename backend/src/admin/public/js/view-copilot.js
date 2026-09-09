@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Copilot
+   Admin — Copilot
    Ask questions about the business. Every answer says what it was built from.
    ========================================================================== */
 (function () {
@@ -29,12 +29,12 @@
     var wrap = h('div.answer');
     String(text || '').split(/\n{2,}/).forEach(function (block) {
       var lines = block.split(/\n/).filter(function (l) { return l.trim(); });
-      var bullets = lines.filter(function (l) { return /^\s*[-*â€¢]\s+/.test(l); });
+      var bullets = lines.filter(function (l) { return /^\s*[-*•]\s+/.test(l); });
 
       if (bullets.length && bullets.length === lines.length) {
         var list = h('ul');
         lines.forEach(function (line) {
-          list.appendChild(h('li', { text: line.replace(/^\s*[-*â€¢]\s+/, '') }));
+          list.appendChild(h('li', { text: line.replace(/^\s*[-*•]\s+/, '') }));
         });
         wrap.appendChild(list);
         return;
@@ -71,7 +71,7 @@
 
       var question = h('textarea', {
         rows: 2,
-        placeholder: 'Ask about orders, production, quality, stock or shippingâ€¦',
+        placeholder: 'Ask about orders, production, quality, stock or shipping…',
         'aria-label': 'Your question',
       });
       var ask = h('button.btn.btn--accent', { type: 'button' }, 'Ask');
@@ -114,7 +114,7 @@
         question.value = '';
         bubble('user', h('p', { text: text }));
 
-        var thinking = bubble('assistant', h('p.muted', { text: 'Lookingâ€¦' }));
+        var thinking = bubble('assistant', h('p.muted', { text: 'Looking…' }));
 
         api.post('/api/admin/copilot/ask', { question: text, threadId: state.threadId || undefined })
           .then(function (res) {
@@ -225,7 +225,7 @@
               var tr = h('tr');
               tr.appendChild(h('td', h('a', { href: '#/copilot?thread=' + t.id }, t.title || 'Untitled')));
               tr.appendChild(h('td', String(t.messageCount)));
-              tr.appendChild(h('td', t.lastMessageAt ? ui.dateTime(t.lastMessageAt) : 'â€”'));
+              tr.appendChild(h('td', t.lastMessageAt ? ui.dateTime(t.lastMessageAt) : '—'));
               tr.appendChild(h('td.cell-actions', h('button.btn.btn--sm.btn--danger', {
                 type: 'button',
                 onclick: function () {

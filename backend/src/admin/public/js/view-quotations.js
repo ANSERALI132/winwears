@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin â€” Quotations
+   Admin — Quotations
    The list, the builder, and a document the browser can print to PDF.
    ========================================================================== */
 (function () {
@@ -29,7 +29,7 @@
       var slot = h('div');
 
       toolbar.appendChild(h('input', {
-        type: 'search', placeholder: 'Number, customer, lineâ€¦', 'aria-label': 'Search quotations',
+        type: 'search', placeholder: 'Number, customer, line…', 'aria-label': 'Search quotations',
         oninput: ui.debounce(function (e) { state.q = e.target.value.trim(); state.page = 1; load(); }, 300),
       }));
       toolbar.appendChild(h('select', {
@@ -63,11 +63,11 @@
             res.data.forEach(function (q) {
               var tr = h('tr');
               tr.appendChild(h('td', h('a', { href: '#/quotations/' + q.id }, q.number)));
-              tr.appendChild(h('td', q.company ? q.company.name : (q.contact ? q.contact.name : 'â€”')));
+              tr.appendChild(h('td', q.company ? q.company.name : (q.contact ? q.contact.name : '—')));
               tr.appendChild(h('td', String(q.items.length)));
               tr.appendChild(h('td', money(q.total, q.currency)));
               tr.appendChild(h('td', ui.statusPill(q.status)));
-              tr.appendChild(h('td', q.validUntil ? ui.date(q.validUntil) : 'â€”'));
+              tr.appendChild(h('td', q.validUntil ? ui.date(q.validUntil) : '—'));
               tr.appendChild(h('td', ui.date(q.createdAt)));
               body.appendChild(tr);
             });
@@ -140,7 +140,7 @@
         var desc = h('input', { type: 'text', value: line.description, placeholder: 'What is being quoted' });
         desc.addEventListener('input', function () { line.description = desc.value; });
 
-        var picker = h('select', { 'aria-label': 'Use a catalogue product' }, h('option', { value: '' }, 'Free textâ€¦'));
+        var picker = h('select', { 'aria-label': 'Use a catalogue product' }, h('option', { value: '' }, 'Free text…'));
         products.forEach(function (p) {
           picker.appendChild(h('option', { value: p.id, selected: line.productId === p.id }, p.productName));
         });
@@ -149,7 +149,7 @@
           line.productId = picker.value || null;
           /* The name is copied in as a starting description. The price is
              not: the catalogue is quote-only, and putting a number here that
-             nobody typed is exactly what Â§13 forbids. */
+             nobody typed is exactly what §13 forbids. */
           if (chosen && !desc.value.trim()) { desc.value = chosen.productName; line.description = chosen.productName; }
         });
 
@@ -165,7 +165,7 @@
             if (lines.length === 1) { ui.toast('A quotation needs at least one line.', 'error'); return; }
             lines.splice(index, 1); drawLines(); refreshTotals();
           },
-        }, 'Ã—');
+        }, '×');
 
         row.appendChild(h('div.line__desc', desc, picker));
         row.appendChild(qty);
@@ -287,8 +287,8 @@
         ui.clear(mount);
         if (res.data.status !== 'DRAFT') {
           mount.appendChild(ui.notice('info',
-            'This quotation has been sent, so it can no longer be changed. Raise a new one instead â€” the customer is holding this version.'));
-          mount.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + res.data.id }, 'â† Back'));
+            'This quotation has been sent, so it can no longer be changed. Raise a new one instead — the customer is holding this version.'));
+          mount.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + res.data.id }, '← Back'));
           return;
         }
         builder(mount, res.data);
@@ -307,7 +307,7 @@
       return api.get('/api/admin/quotations/' + encodeURIComponent(params.id)).then(function (res) {
         var q = res.data;
         ui.clear(mount);
-        mount.appendChild(h('a.btn.btn--sm', { href: '#/quotations' }, 'â† All quotations'));
+        mount.appendChild(h('a.btn.btn--sm', { href: '#/quotations' }, '← All quotations'));
 
         var actions = h('div.chip-row');
         actions.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + q.id + '/print' }, 'Print / save as PDF'));
@@ -367,7 +367,7 @@
         ui.clear(mount);
 
         var bar = h('div.chip-row.no-print');
-        bar.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + q.id }, 'â† Back'));
+        bar.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + q.id }, '← Back'));
         bar.appendChild(h('button.btn.btn--accent', {
           type: 'button', onclick: function () { window.print(); },
         }, 'Print / save as PDF'));
@@ -380,7 +380,7 @@
     },
   });
 
-  /** The document itself. Used on screen and when printing â€” one renderer, so
+  /** The document itself. Used on screen and when printing — one renderer, so
    *  what somebody checks is what the customer receives. */
   function renderDocument(q, forPrint, site) {
     var doc = h('section.doc' + (forPrint ? ' doc--print' : ''));
@@ -457,7 +457,7 @@
       doc.appendChild(h('div.doc__notes', h('div.doc__label', 'Notes'), h('p', q.notes)));
     }
 
-    /* Internal notes are never rendered here â€” this element is what the
+    /* Internal notes are never rendered here — this element is what the
        customer sees, whether printed or shown on a shared screen. */
     return doc;
   }
