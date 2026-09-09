@@ -22,6 +22,7 @@ import { runTool, toolDefinitions } from './tools';
 import { getAllSettings } from '../lib/settings';
 import { getAiConfig } from '../lib/aiSettings';
 import { handoffLink, handoffMessage } from '../lib/whatsapp';
+import { notify } from '../lib/notify';
 
 /**
  * How many past messages are replayed.
@@ -254,6 +255,21 @@ export async function sendMessage(input: {
   await prisma.aIEvent.create({
     data: { conversationId: conversation.id, eventType: 'MESSAGE_SENT' },
   });
+
+  /* Only the moment it first escalates. A customer who keeps talking after
+     asking for a person should not ring the bell on every message. */
+  if (escalate && !conversation.escalatedAt) {
+    await notify({
+      kind: 'AI_ESCALATED',
+      title: 'The assistant asked for a person',
+      body: updated.customerName
+        ? `${updated.customerName}${updated.company ? ` at ${updated.company}` : ''} is waiting.`
+        : 'A visitor is waiting for someone to pick this up.',
+      href: `#/ai/conversations/${conversation.id}`,
+      entity: 'conversation',
+      entityId: conversation.id,
+    });
+  }
 
   /* Which balls the agent actually put in front of someone. Slugs only —
      enough to rank what the assistant recommends without recording anything

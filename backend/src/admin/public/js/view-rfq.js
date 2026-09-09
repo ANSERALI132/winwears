@@ -36,7 +36,7 @@
       var toolbar = h('div.toolbar');
       var slot = h('div');
 
-      mount.appendChild(summarySlot);
+      ui.clear(mount).appendChild(summarySlot);
       mount.appendChild(card);
 
       toolbar.appendChild(h('input', {

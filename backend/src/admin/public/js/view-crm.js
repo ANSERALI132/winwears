@@ -66,7 +66,7 @@
 
       card.appendChild(toolbar);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(5));
@@ -331,7 +331,7 @@
     subtitle: 'Every open opportunity, by stage',
     render: function (mount) {
       var slot = h('div');
-      mount.appendChild(slot);
+      ui.clear(mount).appendChild(slot);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(3));

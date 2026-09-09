@@ -160,6 +160,8 @@
         burger,
         h('div.topbar__title', h('h1', { id: 'view-title', text: 'Overview' }), h('p', { id: 'view-sub' })),
         h('div', { id: 'view-actions', style: 'display:flex;gap:8px;flex-wrap:wrap' }),
+        /* Built after sign-in, because it is one person's own. */
+        Admin.notificationBell ? Admin.notificationBell() : null,
       ),
       h('main.view', { id: 'view' }),
     );

@@ -21,6 +21,7 @@ import { log } from '../../lib/audit';
 import { computeTotals, decimalToNumber } from '../../lib/quotation';
 import { allowedNext, balanceOf, canMove, nextOrderNumber, refusalFor } from '../../lib/order';
 import { moveLeadStage } from '../../lib/crm';
+import { notify } from '../../lib/notify';
 import {
   orderCreateSchema,
   orderFromQuotationSchema,
@@ -237,6 +238,16 @@ adminOrdersRouter.post(
       req.admin?.id ?? null,
     );
 
+    await notify({
+      kind: 'ORDER_CONFIRMED',
+      title: `Order ${created.number} confirmed`,
+      body: `${input.currency} ${totals.total.toFixed(2)}.`,
+      href: `#/orders/${created.id}`,
+      entity: 'order',
+      entityId: created.id,
+      exceptUserId: req.admin?.id ?? null,
+    });
+
     await log({
       adminId: req.admin?.id,
       action: 'created',
@@ -332,6 +343,16 @@ adminOrdersRouter.post(
         note: `Order ${created.number} raised from ${quotation.number}`,
       });
     }
+
+    await notify({
+      kind: 'ORDER_CONFIRMED',
+      title: `Order ${created.number} confirmed`,
+      body: `${quotation.currency} ${decimalToNumber(quotation.total).toFixed(2)} — from quotation ${quotation.number}.`,
+      href: `#/orders/${created.id}`,
+      entity: 'order',
+      entityId: created.id,
+      exceptUserId: req.admin?.id ?? null,
+    });
 
     await log({
       adminId: req.admin?.id,
@@ -550,6 +571,16 @@ adminOrdersRouter.post(
         note: input.note ?? null,
         recordedById: req.admin?.id ?? null,
       },
+    });
+
+    await notify({
+      kind: 'PAYMENT_RECEIVED',
+      title: `${existing.currency} ${input.amount.toFixed(2)} received`,
+      body: `Against order ${existing.number}.`,
+      href: `#/orders/${id}`,
+      entity: 'order',
+      entityId: id,
+      exceptUserId: req.admin?.id ?? null,
     });
 
     await log({

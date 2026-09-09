@@ -19,6 +19,7 @@ import { badRequest, conflict, notFound } from '../../lib/errors';
 import { log } from '../../lib/audit';
 import { slugify } from '../../lib/slug';
 import { hasCriticalFailure, judge, nextInspectionReference, summarise } from '../../lib/qc';
+import { notify } from '../../lib/notify';
 import {
   checkpointCreateSchema,
   checkpointUpdateSchema,
@@ -483,6 +484,21 @@ adminQcRouter.post(
           }),
         ]);
       }
+    }
+
+    if (result === 'FAILED') {
+      const critical = existing.results.some((r) => !r.passed && r.checkpoint.critical);
+      await notify({
+        kind: 'QC_FAILED',
+        title: `Inspection ${existing.reference} failed`,
+        body: critical
+          ? 'A critical checkpoint failed, so this cannot be let through on a concession.'
+          : 'It needs a decision before the batch goes anywhere.',
+        href: `#/qc/${id}`,
+        entity: 'inspection',
+        entityId: id,
+        exceptUserId: req.admin?.id ?? null,
+      });
     }
 
     await log({

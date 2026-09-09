@@ -19,6 +19,7 @@ import { assertAllowed, ALLOWED_UPLOAD_TYPES } from '../lib/fileType';
 import { storage } from '../lib/storage';
 import { attachRfqToLead, resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
 import { pageExists } from '../lib/content';
+import { notify } from '../lib/notify';
 
 export const publicRouter = Router();
 
@@ -326,6 +327,17 @@ publicRouter.post(
 
     await touchCompany(identity.companyId);
 
+    await notify({
+      kind: 'ENQUIRY_RECEIVED',
+      title: `Quote request from ${input.company || input.name}`,
+      body: [input.quantity ? `${input.quantity} units` : null, input.country]
+        .filter(Boolean)
+        .join(' · ') || null,
+      href: `#/rfq/${quote.id}`,
+      entity: 'quote request',
+      entityId: quote.id,
+    });
+
     res.status(201).json({
       data: {
         ok: true,
@@ -375,6 +387,14 @@ publicRouter.post(
     });
 
     await touchCompany(identity.companyId);
+
+    await notify({
+      kind: 'ENQUIRY_RECEIVED',
+      title: `Message from ${input.name}`,
+      body: input.subject || input.message.slice(0, 200),
+      href: '#/messages',
+      entity: 'contact message',
+    });
 
     res.status(201).json({
       data: { ok: true, message: 'Thank you — your message has reached us. We will be in touch shortly.' },

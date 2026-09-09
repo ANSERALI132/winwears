@@ -17,6 +17,7 @@
 import type { AutomationAction, AutomationRule, AutomationTrigger, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { levelOf } from './stock';
+import { notify } from './notify';
 
 /** One thing a rule matched: what it is, where to look at it, and what to
  *  call the task if one is raised. */
@@ -371,7 +372,7 @@ async function raiseTask(rule: AutomationRule, match: Match): Promise<boolean> {
   const title = (rule.taskTitle?.trim() || TRIGGERS[rule.trigger].title).slice(0, 200);
 
   try {
-    await prisma.task.create({
+    const task = await prisma.task.create({
       data: {
         title: `${title}: ${match.label}`.slice(0, 250),
         detail: `Raised by the rule "${rule.name}".`,
@@ -387,6 +388,22 @@ async function raiseTask(rule: AutomationRule, match: Match): Promise<boolean> {
         openKey: match.entityId,
       },
     });
+
+    /* Only the person it landed on. An unassigned task is on the list for
+       whoever picks it up, and telling everybody about it would make the bell
+       useless within a week. */
+    if (rule.assigneeId) {
+      await notify({
+        kind: 'TASK_ASSIGNED',
+        title: task.title,
+        body: `Raised by the rule "${rule.name}".`,
+        href: '#/tasks?mine=1',
+        entity: 'task',
+        entityId: task.id,
+        userIds: [rule.assigneeId],
+      });
+    }
+
     return true;
   } catch (err) {
     /* P2002 on (ruleId, openKey) means the task is already open. That is the

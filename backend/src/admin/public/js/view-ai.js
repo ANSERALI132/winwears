@@ -255,7 +255,7 @@
       var card = h('section.card');
       card.appendChild(toolbar);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(4));
@@ -381,7 +381,7 @@
 
       card.appendChild(toolbar);
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(5));
@@ -614,7 +614,7 @@
       card.appendChild(h('p.card__hint',
         'Only published entries are ever quoted to a customer. Unpublish to take something back without deleting the record of what it said.'));
       card.appendChild(slot);
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       api.get('/api/admin/ai/knowledge/categories').then(function (res) {
         res.data.forEach(function (c) { categorySelect.appendChild(h('option', { value: c }, c)); });

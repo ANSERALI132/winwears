@@ -203,7 +203,7 @@
       var slot = h('div');
       card.appendChild(slot);
       card.appendChild(h('div.card__foot', h('a.btn.btn--accent', { href: '#/copilot' }, 'Ask something new')));
-      mount.appendChild(card);
+      ui.clear(mount).appendChild(card);
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(3));

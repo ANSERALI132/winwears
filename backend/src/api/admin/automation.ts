@@ -18,6 +18,7 @@ import { badRequest, notFound } from '../../lib/errors';
 import { log } from '../../lib/audit';
 import { actionAllowed, actionsFor, findMatches, runRule, TRIGGERS } from '../../lib/automation';
 import { env } from '../../env';
+import { notify } from '../../lib/notify';
 import {
   ruleCreateSchema,
   ruleListQuery,
@@ -340,6 +341,20 @@ adminAutomationRouter.post(
       },
       include: TASK_INCLUDE,
     });
+
+    /* Somebody else's list, not your own: putting a note on your own list and
+       being told about it is noise. */
+    if (task.assignedToId && task.assignedToId !== req.admin?.id) {
+      await notify({
+        kind: 'TASK_ASSIGNED',
+        title: task.title,
+        body: req.admin ? `Assigned by ${req.admin.name}.` : null,
+        href: '#/tasks?mine=1',
+        entity: 'task',
+        entityId: task.id,
+        userIds: [task.assignedToId],
+      });
+    }
 
     res.status(201).json({ data: task });
   }),

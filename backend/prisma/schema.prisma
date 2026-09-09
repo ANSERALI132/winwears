@@ -52,6 +52,8 @@ model User {
   shipmentMoves ShipmentEvent[] @relation("ShipmentMovedBy")
   copilotThreads CopilotThread[] @relation("CopilotUser")
   contentEdits   ContentBlock[]  @relation("ContentEditor")
+  notifications  Notification[]  @relation("NotifiedUser")
+  notificationMutes NotificationMute[] @relation("NotificationMutes")
   ruleAssignments AutomationRule[] @relation("RuleAssignee")
   authoredRules  AutomationRule[] @relation("RuleAuthor")
   assignedTasks  Task[]           @relation("TaskAssignee")
@@ -1830,4 +1832,71 @@ model ContentBlock {
 
   @@unique([page, key])
   @@index([page])
+}
+
+// ----------------------------------------------------------- notifications --
+//
+// Telling a person something happened. Distinct from a task, which is
+// something to do: a notification is read and gone, a task stays until
+// somebody deals with it. Where both apply — a rule raising work for you —
+// the task is the record and the notification is only the tap on the
+// shoulder.
+//
+// These are written at the moment the thing happens, not found by a sweep.
+// That is the whole difference from automation, and it is why an escalation
+// reaches somebody in seconds rather than at the next quarter hour.
+
+enum NotificationKind {
+  /// Somebody, or a rule, put a task on your list.
+  TASK_ASSIGNED
+  /// A quote request or a contact message arrived.
+  ENQUIRY_RECEIVED
+  /// The assistant could not answer and offered a person.
+  AI_ESCALATED
+  /// An inspection failed.
+  QC_FAILED
+  /// An order was confirmed.
+  ORDER_CONFIRMED
+  /// Money arrived.
+  PAYMENT_RECEIVED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  kind      NotificationKind
+
+  title     String
+  body      String?
+  /// Where to go, inside the admin. Validated on the way in, because it
+  /// becomes an href and an admin-writable href is where a javascript: URL
+  /// would get in.
+  href      String?
+
+  /// What it is about, so a screen can group or deduplicate.
+  entity    String?
+  entityId  String?
+
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation("NotifiedUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The unread badge reads this constantly, and the list is always one
+  /// person's own newest first.
+  @@index([userId, readAt, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Which kinds a person wants. One row per person per kind they have turned
+/// off — an absent row means on, so a new kind reaches everybody rather than
+/// nobody, and nothing has to be created when an account is.
+model NotificationMute {
+  id     String           @id @default(cuid())
+  userId String
+  kind   NotificationKind
+
+  user   User             @relation("NotificationMutes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind])
 }

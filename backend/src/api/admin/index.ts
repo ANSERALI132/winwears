@@ -27,6 +27,7 @@ import { adminCopilotRouter } from './copilot';
 import { adminAutomationRouter } from './automation';
 import { adminAnalyticsRouter } from './analytics';
 import { adminContentRouter } from './content';
+import { adminNotificationsRouter } from './notifications';
 
 export const adminRouter = Router();
 
@@ -58,3 +59,4 @@ adminRouter.use('/copilot', adminCopilotRouter);
 adminRouter.use('/automation', adminAutomationRouter);
 adminRouter.use('/analytics', adminAnalyticsRouter);
 adminRouter.use('/content', adminContentRouter);
+adminRouter.use('/notifications', adminNotificationsRouter);

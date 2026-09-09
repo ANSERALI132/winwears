@@ -39,7 +39,7 @@
       head.appendChild(h('h1.hero__greeting', greeting() + ', ' + name));
       var headline = h('p.hero__line', 'Checking what needs you…');
       head.appendChild(headline);
-      mount.appendChild(head);
+      ui.clear(mount).appendChild(head);
 
       var prioritySlot = h('div');
       var statsSlot = h('div');
