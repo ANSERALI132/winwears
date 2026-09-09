@@ -15,6 +15,7 @@ import { adminPortabilityRouter } from './portability';
 import { adminKnowledgeRouter } from './knowledge';
 import { adminAiRouter } from './ai';
 import { adminCrmRouter } from './crm';
+import { adminDashboardRouter } from './dashboard';
 
 export const adminRouter = Router();
 
@@ -34,3 +35,4 @@ adminRouter.use('/portability', adminPortabilityRouter);
 adminRouter.use('/ai/knowledge', adminKnowledgeRouter);
 adminRouter.use('/ai', adminAiRouter);
 adminRouter.use('/crm', adminCrmRouter);
+adminRouter.use('/dashboard', adminDashboardRouter);

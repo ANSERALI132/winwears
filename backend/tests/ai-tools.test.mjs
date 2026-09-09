@@ -21,7 +21,10 @@ const { handoffMessage, handoffLink } = require(`${dist}lib/whatsapp.js`);
 const { ESCALATION_LINE } = require(`${dist}ai/tools/handoff.js`);
 
 const json = (r) => JSON.parse(r.content);
-const made = { conversations: [], quotes: [], knowledge: [] };
+/* Companies are in here because submitting a quote resolves the customer to
+   an account — the tool creates one as a side effect, and a test that leaves
+   a company behind on every run is a test that pollutes the CRM. */
+const made = { conversations: [], quotes: [], knowledge: [], companies: [] };
 const NO_CTX = { conversationId: null };
 
 async function newConversation(data = {}) {
@@ -163,7 +166,9 @@ check('and the model is told not to promise a response time',
 
 const quote = await prisma.quoteRequest.findFirst({ where: { reference: submitted.reference } });
 if (quote) made.quotes.push(quote.id);
+if (quote?.companyId) made.companies.push(quote.companyId);
 check('a real row exists', Boolean(quote));
+check('and it was filed against a customer account', Boolean(quote?.companyId));
 check('marked as coming from the assistant', quote?.source === 'AI_AGENT', quote?.source);
 check('linked to the conversation', quote?.aiConversationId === a.id);
 check('linked to the real product', quote?.productId === product.id);
@@ -176,6 +181,7 @@ check('an event is recorded',
 const second = json(await runTool('create_quote_request', { name: 'Second', email: 'two@example.com' }, ctxB));
 const secondRow = await prisma.quoteRequest.findFirst({ where: { reference: second.reference } });
 if (secondRow) made.quotes.push(secondRow.id);
+if (secondRow?.companyId) made.companies.push(secondRow.companyId);
 check('references do not collide', second.reference !== submitted.reference);
 
 /* ------------------------------------------------------------ escalation */
@@ -281,11 +287,15 @@ describe('cleanup');
 await prisma.quoteRequest.deleteMany({ where: { id: { in: made.quotes } } });
 await prisma.aIKnowledge.deleteMany({ where: { id: { in: made.knowledge } } });
 await prisma.aIConversation.deleteMany({ where: { id: { in: made.conversations } } });
+/* Last, because the enquiries above reference them. */
+await prisma.company.deleteMany({ where: { id: { in: made.companies } } });
 
 check('every quote this run created is gone',
   (await prisma.quoteRequest.count({ where: { id: { in: made.quotes } } })) === 0);
 check('every conversation this run created is gone',
   (await prisma.aIConversation.count({ where: { id: { in: made.conversations } } })) === 0);
+check('every customer account this run created is gone',
+  (await prisma.company.count({ where: { id: { in: made.companies } } })) === 0);
 check('the knowledge base is back to the size it started',
   (await prisma.aIKnowledge.count()) === startCount);
 

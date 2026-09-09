@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Admin — Overview
-   Every number here is a live count from the database. Nothing is estimated.
+   Admin — Command centre
+   The first screen. Answers "what needs my attention" and very little else.
    ========================================================================== */
 (function () {
   'use strict';
@@ -8,143 +8,151 @@
   var Admin = window.Admin;
   var h = Admin.ui.h;
   var ui = Admin.ui;
+  var api = Admin.api;
 
-  function stat(label, value, note, alert) {
-    return h(
-      'div.card.stat',
-      { class: alert ? 'stat--alert' : '' },
-      h('div.stat__label', { text: label }),
-      h('div.stat__value', { text: String(value) }),
-      note ? h('div.stat__note', { text: note }) : null,
-    );
+  /** The greeting is worked out in the browser, not on the server: it should
+   *  match the clock of the person reading it, not the machine's. */
+  function greeting() {
+    var hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  function relative(value) {
+    var then = new Date(value).getTime();
+    var mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    var hours = Math.round(mins / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.round(hours / 24);
+    return days + 'd ago';
   }
 
   Admin.route('/', {
-    title: 'Overview',
-    subtitle: 'Live figures from the catalogue and inbox',
+    title: 'Command centre',
+    subtitle: 'What needs attention today',
     render: function (mount) {
-      return Admin.api.get('/api/admin/stats').then(function (res) {
-        var d = res.data;
-        ui.clear(mount);
+      var head = h('section.hero');
+      var name = (Admin.state.user && Admin.state.user.name) || 'WIN WEARS';
+      head.appendChild(h('h1.hero__greeting', greeting() + ', ' + name));
+      var headline = h('p.hero__line', 'Checking what needs you…');
+      head.appendChild(headline);
+      mount.appendChild(head);
 
-        mount.appendChild(
-          h(
-            'div.grid.grid--stats',
-            stat('Total products', d.products.total, 'Excluding archived'),
-            stat('Published', d.products.published, 'Live on the website'),
-            stat('Drafts', d.products.drafts, 'Not yet visible'),
-            stat('Categories', d.categories.total, d.categories.active + ' active'),
-            stat('Quote requests', d.quotes.total, d.quotes.new + ' new', d.quotes.new > 0),
-            stat('Messages', d.messages.total, d.messages.new + ' unread', d.messages.new > 0),
-          ),
-        );
+      var prioritySlot = h('div');
+      var statsSlot = h('div');
+      var pulseSlot = h('section.card');
+      mount.appendChild(prioritySlot);
+      mount.appendChild(statsSlot);
+      mount.appendChild(pulseSlot);
 
-        /* The one thing worth interrupting for: a published product with no
-           photograph renders as an empty card on the public site. */
-        if (d.products.withoutImages > 0) {
-          mount.appendChild(
-            h(
-              'div',
-              { style: 'margin-top:14px' },
-              ui.notice(
-                'warn',
-                d.products.withoutImages +
-                  ' published product' +
-                  (d.products.withoutImages === 1 ? ' has' : 's have') +
-                  ' no image yet. They will show as blank cards on the website.',
-              ),
-            ),
-          );
-        }
+      function loadPulse() {
+        ui.clear(pulseSlot);
+        pulseSlot.appendChild(h('div.card__head', h('h2', { text: 'Live activity' })));
+        var body = h('div.card__body');
+        body.appendChild(ui.skeleton(4));
+        pulseSlot.appendChild(body);
 
-        var panels = h('div.grid.grid--2', { style: 'margin-top:14px' });
+        return api.get('/api/admin/dashboard/pulse')
+          .then(function (res) {
+            ui.clear(body);
+            if (!res.data.length) {
+              body.appendChild(ui.empty('Nothing has happened yet',
+                'Quote requests, messages, assistant conversations and pipeline moves appear here as they happen.'));
+              return;
+            }
+            var list = h('div.pulse');
+            res.data.forEach(function (e) {
+              var row = h('div.pulse__row.pulse__row--' + e.kind);
+              row.appendChild(h('div.pulse__when', relative(e.at)));
+              var bodyEl = h('div.pulse__body');
+              if (e.href) {
+                var a = h('a.pulse__title', e.title);
+                a.href = e.href;
+                bodyEl.appendChild(a);
+              } else {
+                bodyEl.appendChild(h('div.pulse__title', e.title));
+              }
+              if (e.detail) bodyEl.appendChild(h('div.pulse__detail', e.detail));
+              row.appendChild(bodyEl);
+              list.appendChild(row);
+            });
+            body.appendChild(list);
+          })
+          .catch(function (err) { ui.clear(body).appendChild(ui.errorState(err, loadPulse)); });
+      }
 
-        /* --- recent quotes --- */
-        var quoteBody = d.recentQuotes.length
-          ? h(
-              'div.table-wrap',
-              h(
-                'table',
-                h('thead', h('tr', h('th', 'Customer'), h('th', 'Country'), h('th', 'Status'), h('th', 'Received'))),
-                h(
-                  'tbody',
-                  d.recentQuotes.map(function (q) {
-                    return h(
-                      'tr',
-                      {
-                        style: 'cursor:pointer',
-                        onclick: function () { Admin.go('/quotes/' + q.id); },
-                      },
-                      h('td', h('strong', { text: q.name }), q.company ? h('div.muted', { text: q.company }) : null),
-                      h('td', { text: q.country || '—' }),
-                      h('td', ui.statusPill(q.status)),
-                      h('td.muted', { text: ui.date(q.createdAt) }),
-                    );
-                  }),
-                ),
-              ),
-            )
-          : ui.empty('No quote requests yet', 'Submissions from the website will appear here.');
+      function load() {
+        ui.clear(prioritySlot).appendChild(ui.skeleton(3));
 
-        panels.appendChild(
-          h(
-            'section.card',
-            h(
-              'div.card__head',
-              h('h2', { text: 'Latest quote requests' }),
-              h('a.btn.btn--sm', { href: '#/quotes' }, 'View all'),
-            ),
-            quoteBody,
-          ),
-        );
+        return api.get('/api/admin/dashboard')
+          .then(function (res) {
+            var d = res.data;
+            ui.clear(prioritySlot);
+            ui.clear(statsSlot);
 
-        /* --- recent activity --- */
-        var activityBody = d.recentActivity.length
-          ? h(
-              'div.card__body',
-              d.recentActivity.map(function (a) {
-                return h(
-                  'div',
-                  { style: 'display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)' },
-                  h('div', { style: 'flex:1;min-width:0' },
-                    h('div', { text: (a.admin ? a.admin.name : 'System') + ' ' + a.action + ' ' + a.entity }),
-                    a.summary ? h('div.muted.truncate', { text: a.summary }) : null),
-                  h('div.muted', { style: 'white-space:nowrap;font-size:12px', text: ui.date(a.createdAt) }),
-                );
-              }),
-            )
-          : ui.empty('Nothing yet', 'Changes made in this dashboard will be listed here.');
+            /* --- what needs attention --- */
+            var urgent = d.priorities.filter(function (p) { return p.severity === 'urgent'; });
+            var total = d.priorities.reduce(function (sum, p) { return sum + p.count; }, 0);
 
-        panels.appendChild(
-          h(
-            'section.card',
-            h(
-              'div.card__head',
-              h('h2', { text: 'Recent activity' }),
-              h('a.btn.btn--sm', { href: '#/activity' }, 'View all'),
-            ),
-            activityBody,
-          ),
-        );
+            headline.textContent = !d.priorities.length
+              ? 'Nothing is waiting on you. The catalogue is live and no enquiry is unanswered.'
+              : urgent.length
+                ? urgent.reduce(function (s, p) { return s + p.count; }, 0) + ' thing(s) need you now, ' + total + ' in total.'
+                : total + ' thing(s) could use a look. Nothing is urgent.';
 
-        mount.appendChild(panels);
+            if (d.priorities.length) {
+              var list = h('div.priorities');
+              d.priorities.forEach(function (p) {
+                var row = h('a.priority.priority--' + p.severity);
+                row.href = p.href;
+                row.appendChild(h('span.priority__count', String(p.count)));
+                var textCol = h('span.priority__text');
+                textCol.appendChild(h('span.priority__title', p.title));
+                textCol.appendChild(h('span.priority__detail', p.detail));
+                row.appendChild(textCol);
+                row.appendChild(h('span.priority__go', '→'));
+                list.appendChild(row);
+              });
+              prioritySlot.appendChild(list);
+            }
 
-        mount.appendChild(
-          h(
-            'div.card',
-            { style: 'margin-top:14px' },
-            h('div.card__head', h('h2', { text: 'Quick actions' })),
-            h(
-              'div.card__body',
-              { style: 'display:flex;gap:8px;flex-wrap:wrap' },
-              h('a.btn.btn--accent', { href: '#/products/new' }, 'Add product'),
-              h('a.btn', { href: '#/categories' }, 'Manage categories'),
-              h('a.btn', { href: '#/settings' }, 'Site settings'),
-              h('a.btn', { href: '/', target: '_blank', rel: 'noopener' }, 'View website'),
-            ),
-          ),
-        );
-      });
+            /* --- the week, and what the system is not tracking --- */
+            var grid = h('div.grid.grid--stats');
+            [
+              ['New leads this week', d.week.newLeads, '#/crm/leads'],
+              ['New customers this week', d.week.newCustomers, '#/crm'],
+              ['Quote requests this week', d.week.newQuoteRequests, '#/quotes'],
+              ['Open opportunities', d.pipeline.open, '#/crm/leads'],
+              ['Customers on record', d.pipeline.customers, '#/crm'],
+              ['Footballs published', d.catalogue.published, '#/products']
+            ].forEach(function (row) {
+              var card = h('a.card.stat');
+              card.href = row[2];
+              card.appendChild(h('div.stat__value', String(row[1])));
+              card.appendChild(h('div.stat__label', row[0]));
+              grid.appendChild(card);
+            });
+            statsSlot.appendChild(grid);
+
+            /* Saying what is *not* here matters as much as what is: an owner
+               who expects production figures should learn they were never
+               switched on, rather than assume the system is broken. */
+            if (d.notConfigured && d.notConfigured.length) {
+              statsSlot.appendChild(h('p.card__hint',
+                'Not tracked yet: ' + d.notConfigured.join(', ') +
+                '. Those modules are not switched on, so nothing about them is shown here rather than showing zeroes.'));
+            }
+          })
+          .catch(function (err) {
+            headline.textContent = 'Could not load the dashboard.';
+            ui.clear(prioritySlot).appendChild(ui.errorState(err, load));
+          });
+      }
+
+      return Promise.all([load(), loadPulse()]);
     },
   });
 })();
