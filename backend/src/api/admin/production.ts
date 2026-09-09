@@ -175,6 +175,15 @@ const INCLUDE = {
       by: { select: { id: true, name: true } },
     },
   },
+  /* So a supervisor sees quality control where the work is, rather than
+     searching inspections for the run reference. */
+  inspections: {
+    orderBy: { inspectedAt: 'desc' },
+    select: {
+      id: true, reference: true, result: true, overrideResult: true,
+      sampleSize: true, completedAt: true, inspectedAt: true,
+    },
+  },
 } satisfies Prisma.ProductionRunInclude;
 
 type Row = Prisma.ProductionRunGetPayload<{ include: typeof INCLUDE }>;

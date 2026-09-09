@@ -7,13 +7,13 @@
  * to do. A quiet morning returns an empty list, which is the useful answer.
  *
  * Every figure here is counted from real rows. Nothing is estimated, and no
- * panel is invented for a module that does not exist yet: quality control,
- * inventory and shipping are named as not built rather than shown as three
- * zeroes that look like a system which is not working.
+ * panel is invented for a module that does not exist yet: inventory and
+ * shipping are named as not built rather than shown as zeroes that look like
+ * a system which is not working.
  *
- * Orders and production are counted for real. A zero there is a true zero —
- * no orders — not a missing module, and the difference matters to whoever is
- * reading this at eight in the morning.
+ * Orders, production and quality control are counted for real. A zero there
+ * is a true zero — no orders — not a missing module, and the difference
+ * matters to whoever is reading this at eight in the morning.
  */
 import { Router } from 'express';
 import { prisma } from '../../db';
@@ -68,6 +68,8 @@ adminDashboardRouter.get(
       runsWithNoStage,
       productionStages,
       openOrders,
+      undecidedFailures,
+      openInspections,
     ] = await Promise.all([
       prisma.lead.count({ where: { closedAt: null, nextFollowUpAt: { lt: now } } }),
       prisma.lead.count({ where: { closedAt: null, ownerId: null } }),
@@ -104,6 +106,12 @@ adminDashboardRouter.get(
       prisma.productionRun.count({ where: { status: 'IN_PROGRESS', currentStageId: null } }),
       prisma.productionStage.count({ where: { active: true } }),
       prisma.order.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
+      /* Failed, completed, and nobody has said what happens next. Stock that
+         is sitting in the corner because a decision is outstanding. */
+      prisma.qcInspection.count({
+        where: { result: 'FAILED', overrideResult: null, NOT: { completedAt: null } },
+      }),
+      prisma.qcInspection.count({ where: { completedAt: null } }),
     ]);
 
     /* Ordered by how much it costs to ignore, not by how many there are.
@@ -126,6 +134,14 @@ adminDashboardRouter.get(
       detail: 'Not yet shipped. The customer already knows.',
       count: lateOrders,
       href: '#/orders?late=1',
+    });
+    add({
+      id: 'qc-failures',
+      severity: 'urgent',
+      title: 'Failed inspections with no decision',
+      detail: 'Stock nobody has said what to do with.',
+      count: undecidedFailures,
+      href: '#/qc?result=FAILED',
     });
     add({
       id: 'late-runs',
@@ -166,6 +182,14 @@ adminDashboardRouter.get(
       detail: 'Nothing has been scheduled against them yet.',
       count: unstartedOrders,
       href: '#/orders?status=CONFIRMED',
+    });
+    add({
+      id: 'open-inspections',
+      severity: 'attention',
+      title: 'Inspections started but not completed',
+      detail: 'Readings taken, no outcome recorded.',
+      count: openInspections,
+      href: '#/qc?open=1',
     });
     add({
       id: 'runs-no-stage',
@@ -230,8 +254,8 @@ adminDashboardRouter.get(
         catalogue: { published: publishedProducts, drafts: draftProducts },
         factory: { openOrders, lateOrders, lateRuns, productionStages },
         /* Named so the screen can say what it is *not* reporting on, rather
-           than leaving the owner to wonder where quality control went. */
-        notConfigured: ['quality control', 'inventory', 'shipping'],
+           than leaving the owner to wonder where inventory went. */
+        notConfigured: ['inventory', 'shipping'],
         generatedAt: now,
         since: dayAgo,
       },

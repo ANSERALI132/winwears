@@ -215,6 +215,12 @@
       /* Production runs. PLANNED is not DRAFT: the work is committed, it just
          has not begun. */
       PLANNED: ['new', 'Planned'],
+      /* Quality control. CONCESSION is deliberately not green: it means the
+         batch failed and somebody let it through, which is not a pass. */
+      PENDING: ['draft', 'Not judged yet'],
+      PASSED: ['ok', 'Passed'],
+      FAILED: ['archived', 'Failed'],
+      CONCESSION: ['info', 'Passed on a concession'],
     };
     var hit = map[status] || ['', String(status || '—')];
     return h('span.pill', { class: hit[0] ? 'pill--' + hit[0] : '', text: hit[1] });

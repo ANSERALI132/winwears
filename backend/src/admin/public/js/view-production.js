@@ -300,6 +300,7 @@
         mount.appendChild(summaryCard(r));
         mount.appendChild(stageCard(r, stages));
         mount.appendChild(outputCard(r, stages));
+        mount.appendChild(inspectionsCard(r));
         mount.appendChild(historyCard(r));
       });
     },
@@ -501,6 +502,38 @@
         .then(function () { ui.toast('Entry removed', 'ok'); Admin.refresh(); })
         .catch(function (err) { ui.toast(err.message, 'error'); });
     });
+  }
+
+  /* ------------------------------------------------------- inspections -- */
+
+  function inspectionsCard(r) {
+    var card = h('section.card');
+    card.appendChild(h('h2.card__title', 'Quality control'));
+
+    if (!r.inspections || !r.inspections.length) {
+      card.appendChild(ui.empty('Nothing inspected yet',
+        'An inspection checks a sample of this run against your own checkpoints. It is separate from the counts above: output says what was made, an inspection judges it.',
+        h('a.btn.btn--accent', { href: '#/qc/new' }, 'Inspect this run')));
+      return card;
+    }
+
+    var table = h('table.table');
+    table.appendChild(h('thead', h('tr',
+      h('th', 'Reference'), h('th', 'Sample'), h('th', 'Outcome'), h('th', 'When'))));
+    var body = h('tbody');
+    r.inspections.forEach(function (i) {
+      body.appendChild(h('tr',
+        h('td', h('a', { href: '#/qc/' + i.id }, i.reference)),
+        h('td', String(i.sampleSize)),
+        h('td', i.completedAt
+          ? ui.statusPill(i.overrideResult || i.result)
+          : h('span.muted', { text: 'Open' })),
+        h('td', ui.date(i.inspectedAt))));
+    });
+    table.appendChild(body);
+    card.appendChild(table);
+    card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/qc/new' }, 'Inspect it again')));
+    return card;
   }
 
   /* ----------------------------------------------------------- history -- */

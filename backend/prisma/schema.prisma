@@ -44,6 +44,9 @@ model User {
   authoredRuns ProductionRun[]  @relation("RunAuthor")
   runChanges   ProductionEvent[] @relation("RunMovedBy")
   outputsSeen  ProductionOutput[] @relation("OutputRecorder")
+  inspections  QcInspection[]   @relation("Inspector")
+  qcDecisions  QcInspection[]   @relation("QcDecider")
+  qcAuthored   QcInspection[]   @relation("QcAuthor")
 
   @@index([email])
 }
@@ -777,6 +780,7 @@ model Order {
   payments      OrderPayment[]
   events        OrderEvent[]
   runs          ProductionRun[]
+  inspections   QcInspection[]
 
   @@index([status])
   @@index([companyId])
@@ -884,6 +888,7 @@ model ProductionStage {
   movedFrom    ProductionEvent[] @relation("StageFrom")
   movedTo      ProductionEvent[] @relation("StageTo")
   outputs      ProductionOutput[]
+  inspections  QcInspection[]
 
   @@index([displayOrder])
   @@index([active])
@@ -935,6 +940,7 @@ model ProductionRun {
 
   events         ProductionEvent[]
   outputs        ProductionOutput[]
+  inspections    QcInspection[]
 
   @@index([status])
   @@index([orderId])
@@ -991,6 +997,152 @@ model ProductionEvent {
   by          User?             @relation("RunMovedBy", fields: [byUserId], references: [id], onDelete: SetNull)
 
   @@index([runId, createdAt])
+}
+
+// ------------------------------------------------------- quality control --
+//
+// An inspection is a sample checked against this factory's own checkpoints.
+// It is deliberately separate from production output: output counts what was
+// made, an inspection judges a sample of it, and folding the two together
+// would either double-count the units or lose the judgement.
+//
+// No checkpoint and no tolerance is seeded. A ball's weight, circumference,
+// bounce and water absorption all have published standards, but which of them
+// WIN WEARS tests, to what limits, and which are pass-or-fail is a fact about
+// this factory. Inventing numbers here would put figures on a QC report that
+// nobody at WIN WEARS ever agreed to, which is worse than an empty screen.
+
+/// What kind of thing a checkpoint asks for.
+enum QcCheckKind {
+  /// A number, optionally with limits — weight in grams, circumference in cm.
+  MEASUREMENT
+  /// A yes or no from the person holding the ball — stitching sound, print
+  /// aligned, no visible blemish.
+  OBSERVATION
+}
+
+enum QcResultKind {
+  PENDING
+  PASSED
+  FAILED
+  /// Failed on something, and a person decided to let it through anyway.
+  /// Kept distinct from PASSED, because "we shipped it knowing" is the
+  /// sentence somebody needs to find later.
+  CONCESSION
+}
+
+model QcCheckpoint {
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  description  String?
+  kind         QcCheckKind  @default(OBSERVATION)
+
+  /// Grams, centimetres, percent — whatever WIN WEARS measures in. Free text
+  /// because a unit list is a guess about what this factory tests.
+  unit         String?
+  /// Acceptable range. Null means nobody has set a limit, and then the
+  /// inspector's own pass or fail stands — the system does not invent a
+  /// threshold and then judge a ball against it.
+  minValue     Decimal?     @db.Decimal(12, 3)
+  maxValue     Decimal?     @db.Decimal(12, 3)
+
+  /// A failure here fails the whole inspection outright. Anything else can be
+  /// let through on a concession by a person who puts their name to it.
+  critical     Boolean      @default(false)
+
+  displayOrder Int          @default(0)
+  /// Retired checkpoints stay, so an old inspection still says what it tested.
+  active       Boolean      @default(true)
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  results      QcResult[]
+
+  @@index([displayOrder])
+  @@index([active])
+}
+
+model QcInspection {
+  id            String          @id @default(cuid())
+  /// Quotable on a report: WW-QC-2026-0001.
+  reference     String          @unique
+
+  /// What was inspected. A run for work in progress, an order for a final
+  /// check before it ships. Both optional, because a factory also inspects
+  /// stock that is not yet promised to anyone.
+  runId         String?
+  orderId       String?
+  stageId       String?
+
+  /// How many were pulled and looked at, and how they came out. Counted by
+  /// the inspector, never derived from the checkpoint results: a sample can
+  /// fail on one ball out of twenty.
+  sampleSize    Int             @default(0)
+  quantityPassed Int            @default(0)
+  quantityFailed Int            @default(0)
+
+  /// Computed from the checkpoint results when the inspection is completed.
+  result        QcResultKind    @default(PENDING)
+  /// Set when a person overrules the computed result. The reason is required
+  /// with it — an unexplained override is the thing nobody can answer for.
+  overrideResult QcResultKind?
+  overrideReason String?        @db.Text
+  decidedById   String?
+
+  inspectorId   String?
+  inspectedAt   DateTime        @default(now())
+  /// Locked once completed. An inspection that can be edited afterwards is
+  /// not evidence of anything.
+  completedAt   DateTime?
+
+  notes         String?         @db.Text
+
+  createdById   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  run           ProductionRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+  order         Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  stage         ProductionStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  inspector     User?           @relation("Inspector", fields: [inspectorId], references: [id], onDelete: SetNull)
+  decidedBy     User?           @relation("QcDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  createdBy     User?           @relation("QcAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  results       QcResult[]
+
+  @@index([result])
+  @@index([runId])
+  @@index([orderId])
+  @@index([inspectedAt])
+  @@index([result, inspectedAt])
+}
+
+/// One checkpoint's outcome within one inspection.
+model QcResult {
+  id           String       @id @default(cuid())
+  inspectionId String
+  checkpointId String
+
+  /// What was measured, for a MEASUREMENT checkpoint.
+  value        Decimal?     @db.Decimal(12, 3)
+  /// Whether it passed. Computed from the limits when there are limits, and
+  /// taken from the inspector when there are not.
+  passed       Boolean
+  /// Why it failed, in the inspector's words. The most useful field on the
+  /// whole record when the same fault turns up again next month.
+  note         String?
+
+  createdAt    DateTime     @default(now())
+
+  inspection   QcInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checkpoint   QcCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Restrict)
+
+  /// One result per checkpoint per inspection: a second reading of the same
+  /// check is a correction, not another data point to average.
+  @@unique([inspectionId, checkpointId])
+  @@index([checkpointId])
 }
 
 // ------------------------------------------------------------- ai support --
