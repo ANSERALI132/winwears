@@ -20,6 +20,7 @@ import { AIProviderError, type AITurn } from './provider';
 import { buildSystemPrompt } from './prompt';
 import { runTool, toolDefinitions } from './tools';
 import { getAllSettings } from '../lib/settings';
+import { getAiConfig } from '../lib/aiSettings';
 import { handoffLink, handoffMessage } from '../lib/whatsapp';
 
 /**
@@ -117,6 +118,13 @@ export async function sendMessage(input: {
     throw new ChatUnavailable('The assistant is not configured.', 'disabled');
   }
 
+  /* Read before any work is done, so switching the assistant off in /admin
+     stops the next message rather than the one after it. */
+  const config = await getAiConfig();
+  if (!config.enabled) {
+    throw new ChatUnavailable('The assistant is switched off.', 'disabled');
+  }
+
   const conversation = await resolveConversation(input.sessionId);
 
   if (conversation.messageCount >= env.AI_MAX_MESSAGES_PER_CONVERSATION) {
@@ -150,7 +158,7 @@ export async function sendMessage(input: {
       system,
       turns,
       tools: toolDefinitions,
-      maxTokens: env.AI_MAX_TOKENS,
+      maxTokens: config.maxTokens,
     });
 
     inputTokens += completion.usage.inputTokens;

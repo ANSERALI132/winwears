@@ -50,7 +50,39 @@ export const SETTING_DEFAULTS: SettingDefinition[] = [
   },
   { key: 'seo.siteUrl', group: 'seo', label: 'Canonical site URL', value: 'https://winwears.com' },
   { key: 'homepage.featuredLimit', group: 'homepage', label: 'Featured products on the homepage', value: '6' },
+
+  /* --- the AI assistant -----------------------------------------------
+     Shown on their own admin screen rather than in the general settings
+     list, because a boolean and a select do not belong in a column of text
+     boxes. The API key is deliberately absent: it is read from the
+     environment and must never be editable, or readable, from a browser. */
+  { key: 'ai.enabled', group: 'ai', label: 'Assistant enabled', value: 'true' },
+  { key: 'ai.greeting', group: 'ai', label: 'Greeting headline', value: 'How can we help?' },
+  {
+    key: 'ai.subtitle',
+    group: 'ai',
+    label: 'Greeting subtitle',
+    value: 'Ask about footballs, customization, bulk orders or request a quote.',
+  },
+  {
+    key: 'ai.escalationMessage',
+    group: 'ai',
+    label: 'What the assistant says when handing over',
+    value: "I'd be happy to connect you with the WIN WEARS team for an accurate answer.",
+  },
+  {
+    key: 'ai.extraInstructions',
+    group: 'ai',
+    label: 'Additional instructions',
+    value: '',
+  },
+  { key: 'ai.model', group: 'ai', label: 'Model', value: '' },
+  { key: 'ai.maxTokens', group: 'ai', label: 'Longest reply (tokens)', value: '' },
 ];
+
+/** Settings the general /admin/settings screen should not render, because
+ *  they have a screen of their own with controls that suit them. */
+export const SETTING_GROUPS_ELSEWHERE = new Set(['ai']);
 
 export async function getAllSettings(): Promise<Record<string, string>> {
   const rows = await prisma.setting.findMany();

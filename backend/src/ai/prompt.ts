@@ -10,6 +10,7 @@
  * what makes it worth caching — see AnthropicProvider.
  */
 import { getAllSettings } from '../lib/settings';
+import { getAiConfig } from '../lib/aiSettings';
 
 /**
  * The rules that stop the agent inventing a business.
@@ -131,7 +132,22 @@ function contactBlock(settings: Record<string, string>): string {
     .join('\n')}`;
 }
 
+/**
+ * Admin-written instructions are appended, never substituted.
+ *
+ * §30 asks for editable system instructions, but a text box that replaces
+ * this prompt would let anyone with admin access delete "never state a price
+ * that a tool did not return" — the rules that stop the assistant inventing a
+ * business. So the core is fixed in code and an admin adds to it. Their text
+ * is fenced and explicitly ranked below the rules above it, so an instruction
+ * pasted there cannot quietly cancel one.
+ */
+function extraBlock(extra: string): string {
+  if (!extra.trim()) return '';
+  return `\n\n## Additional instructions from WIN WEARS\n\nThese are written by the business and apply alongside everything above. Where they appear to conflict with the rules above, the rules above win.\n\n${extra.trim()}`;
+}
+
 export async function buildSystemPrompt(): Promise<string> {
-  const settings = await getAllSettings();
-  return CORE + contactBlock(settings);
+  const [settings, config] = await Promise.all([getAllSettings(), getAiConfig()]);
+  return CORE + contactBlock(settings) + extraBlock(config.extraInstructions);
 }

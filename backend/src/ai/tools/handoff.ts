@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { prisma } from '../../db';
 import { getAllSettings } from '../../lib/settings';
+import { getAiConfig } from '../../lib/aiSettings';
 import { handoffLink, handoffMessage } from '../../lib/whatsapp';
 import type { AITool } from './types';
 
@@ -104,8 +105,10 @@ const escalateInput = z.object({
   detail: z.string().trim().max(300).optional(),
 });
 
-/** The sentence §16 specifies, kept here so every handover reads the same
- *  whatever the model would otherwise have improvised. */
+/** The sentence §16 specifies. Still one fixed line rather than something the
+ *  model improvises per conversation — an admin can reword it in
+ *  /admin → AI Assistant → Settings, and this is what they get if they have
+ *  not. */
 export const ESCALATION_LINE =
   "I'd be happy to connect you with the WIN WEARS team for an accurate answer.";
 
@@ -153,9 +156,11 @@ export const escalateToHuman: AITool<z.infer<typeof escalateInput>> = {
       });
     }
 
+    const { escalationMessage } = await getAiConfig();
+
     return {
       escalated: true,
-      say: ESCALATION_LINE,
+      say: escalationMessage,
       tellCustomer:
         'Say that line, then stop. The interface shows the WhatsApp and quote buttons. Do not attempt an answer anyway, do not guess, and do not write out a URL or phone number.',
     };

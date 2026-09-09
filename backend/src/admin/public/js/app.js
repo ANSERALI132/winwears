@@ -58,6 +58,7 @@
       { path: '/ai/conversations', label: 'Conversations', icon: 'messages' },
       { path: '/ai/analytics', label: 'Analytics', icon: 'activity' },
       { path: '/ai/knowledge', label: 'Knowledge', icon: 'settings' },
+      { path: '/ai/settings', label: 'AI Settings', icon: 'settings' },
     ] },
     { group: 'Site', items: [
       { path: '/settings', label: 'Settings', icon: 'settings' },

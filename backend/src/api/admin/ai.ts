@@ -12,8 +12,10 @@ import { z } from 'zod';
 import { prisma } from '../../db';
 import { asyncHandler } from '../../middleware/error';
 import { csrfProtection } from '../../middleware/auth';
-import { notFound } from '../../lib/errors';
+import { forbidden, notFound } from '../../lib/errors';
 import { log } from '../../lib/audit';
+import { getAllSettings, writeSettings } from '../../lib/settings';
+import { getAiConfig, getAiEnvironmentFacts, SELECTABLE_MODELS } from '../../lib/aiSettings';
 import { pagination, optionalText } from '../../validation/common';
 
 export const adminAiRouter = Router();
@@ -121,6 +123,81 @@ adminAiRouter.get(
         recent,
       },
     });
+  }),
+);
+
+/* ------------------------------------------------------------ settings --- */
+
+adminAiRouter.get(
+  '/settings',
+  asyncHandler(async (_req, res) => {
+    const [config, settings] = await Promise.all([getAiConfig(), getAllSettings()]);
+    res.json({
+      data: {
+        /* What an admin may change. */
+        values: {
+          'ai.enabled': settings['ai.enabled'] ?? 'true',
+          'ai.greeting': settings['ai.greeting'] ?? '',
+          'ai.subtitle': settings['ai.subtitle'] ?? '',
+          'ai.escalationMessage': settings['ai.escalationMessage'] ?? '',
+          'ai.extraInstructions': settings['ai.extraInstructions'] ?? '',
+          'ai.model': settings['ai.model'] ?? '',
+          'ai.maxTokens': settings['ai.maxTokens'] ?? '',
+        },
+        /* What is actually in force once the environment is taken into
+           account, so the screen can show the difference rather than imply
+           a blank field means "off". */
+        effective: {
+          enabled: config.enabled,
+          model: config.model,
+          maxTokens: config.maxTokens,
+        },
+        models: SELECTABLE_MODELS,
+        /* Read-only. Facts about the deployment, never a secret: whether a
+           key exists, not what it is. */
+        environment: getAiEnvironmentFacts(),
+      },
+    });
+  }),
+);
+
+const settingsUpdate = z.object({
+  values: z.record(z.string(), z.string().max(8000)),
+});
+
+adminAiRouter.put(
+  '/settings',
+  asyncHandler(async (req, res) => {
+    /* ADMIN only. An EDITOR can write knowledge entries, which are quoted as
+       fact — but changing the assistant's instructions, its model or its
+       spend per reply is a different kind of decision. */
+    if (req.admin?.role !== 'ADMIN') {
+      throw forbidden('Only an administrator can change the assistant settings.');
+    }
+
+    const input = settingsUpdate.parse(req.body);
+
+    /* Only ai.* keys, whatever was posted: this endpoint must not become a
+       second way to rewrite the site's contact details. writeSettings
+       already ignores unknown keys; this narrows it to this screen's own. */
+    const values: Record<string, string> = {};
+    for (const [key, value] of Object.entries(input.values)) {
+      if (key.startsWith('ai.')) values[key] = value;
+    }
+
+    const written = await writeSettings(values);
+
+    await log({
+      adminId: req.admin?.id,
+      action: 'updated',
+      entity: 'ai_settings',
+      /* Key names, not values — an instruction block does not belong in the
+         activity log, and neither does a greeting nobody needs to re-read. */
+      summary: written.join(', '),
+    });
+
+    const config = await getAiConfig();
+    res.json({ data: { written, effective: { enabled: config.enabled, model: config.model, maxTokens: config.maxTokens } } });
   }),
 );
 

@@ -15,6 +15,7 @@ import { aiProvider } from '../ai';
 import { AIProviderError } from '../ai/provider';
 import { ChatUnavailable, sendMessage } from '../ai/conversation';
 import { getAllSettings } from '../lib/settings';
+import { getAiConfig } from '../lib/aiSettings';
 import { prisma } from '../db';
 
 export const aiRouter = Router();
@@ -39,15 +40,19 @@ const chatSchema = z.object({
 aiRouter.get(
   '/status',
   asyncHandler(async (_req, res) => {
-    const settings = await getAllSettings();
+    const [settings, config] = await Promise.all([getAllSettings(), getAiConfig()]);
+    /* Short cache: switching the assistant off in /admin should take effect
+       within a minute, not on the next deploy. */
     res.set('Cache-Control', 'public, max-age=60');
     res.json({
       data: {
-        enabled: aiProvider.configured,
+        /* Both must hold: a key must exist, and an admin must not have
+           switched it off. */
+        enabled: aiProvider.configured && config.enabled,
         /* Never the model id or provider name — that is operator
            information, and the admin screen is where it belongs. */
-        greeting: 'How can we help?',
-        subtitle: 'Ask about footballs, customization, bulk orders or request a quote.',
+        greeting: config.greeting,
+        subtitle: config.subtitle,
         whatsappUrl: settings['contact.whatsappUrl'] ?? null,
         maxLength: env.AI_MAX_INPUT_CHARS,
       },

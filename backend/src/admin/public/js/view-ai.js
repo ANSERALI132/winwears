@@ -105,6 +105,136 @@
     },
   });
 
+  /* ------------------------------------------------------------- settings -- */
+
+  Admin.route('/ai/settings', {
+    title: 'AI Settings',
+    subtitle: 'How the assistant behaves, and what it costs',
+    render: function (mount) {
+      mount.appendChild(ui.skeleton(4));
+
+      return api.get('/api/admin/ai/settings').then(function (res) {
+        var d = res.data;
+        var isAdmin = Admin.state.user && Admin.state.user.role === 'ADMIN';
+        ui.clear(mount);
+
+        if (!isAdmin) {
+          mount.appendChild(ui.notice('info',
+            'Only an administrator can change these. Knowledge entries, which are what the assistant quotes as fact, are editable by editors.'));
+        }
+
+        /* --- state of play --- */
+        var state = h('section.card');
+        state.appendChild(h('h2.card__title', 'Right now'));
+
+        var env = d.environment;
+        var lines = [
+          ['Assistant', d.effective.enabled ? 'On — answering customers' : 'Off — visitors are offered WhatsApp instead'],
+          ['API key', env.keyConfigured ? 'Configured' : 'Not set — the assistant cannot answer until one is added to .env'],
+          ['Provider', env.provider],
+          ['Model in use', d.effective.model],
+          ['Longest reply', d.effective.maxTokens + ' tokens']
+        ];
+        var dl = h('dl.detail');
+        lines.forEach(function (pair) {
+          dl.appendChild(h('dt', pair[0]));
+          dl.appendChild(h('dd', String(pair[1])));
+        });
+        state.appendChild(dl);
+
+        if (!env.keyConfigured) {
+          state.appendChild(ui.notice('warn',
+            'No API key is configured. Everything below can be set, but the assistant will keep offering WhatsApp until AI_API_KEY is added to .env on the server. The key is never editable from here.'));
+        }
+        mount.appendChild(state);
+
+        /* --- editable --- */
+        var form = h('form.card');
+        form.appendChild(h('h2.card__title', 'Settings'));
+
+        var v = d.values;
+
+        var enabled = h('input', { type: 'checkbox', name: 'ai.enabled', checked: v['ai.enabled'] !== 'false', disabled: !isAdmin });
+        var greeting = h('input', { type: 'text', value: v['ai.greeting'] || '', disabled: !isAdmin });
+        var subtitle = h('input', { type: 'text', value: v['ai.subtitle'] || '', disabled: !isAdmin });
+        var escalation = h('input', { type: 'text', value: v['ai.escalationMessage'] || '', disabled: !isAdmin });
+        var extra = h('textarea', { rows: 6, value: v['ai.extraInstructions'] || '', disabled: !isAdmin });
+        var maxTokens = h('input', { type: 'number', min: 128, max: 8192, value: v['ai.maxTokens'] || '', disabled: !isAdmin });
+
+        var model = h('select', { disabled: !isAdmin },
+          h('option', { value: '', selected: !v['ai.model'] }, 'Use the server setting (' + env.envModel + ')'),
+          d.models.map(function (m) {
+            return h('option', { value: m.id, selected: v['ai.model'] === m.id }, m.label);
+          }));
+
+        form.appendChild(h('div.field',
+          h('label.check', enabled, h('span', { text: 'Assistant enabled' })),
+          h('p.field__hint', { text: 'Unticking this is maintenance mode: the chat launcher disappears and visitors are offered WhatsApp. Nothing is deleted.' })));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Greeting headline' }), greeting,
+          h('p.field__hint', { text: 'The first line a visitor sees when they open the chat.' })));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Greeting subtitle' }), subtitle));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Handover message' }), escalation,
+          h('p.field__hint', { text: 'Said whenever the assistant cannot answer and offers the WIN WEARS team instead.' })));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Additional instructions' }), extra,
+          h('p.field__hint', { text: 'Added to the assistant’s instructions — house style, things to emphasise, questions to route to a person. These are added to the built-in rules, not a replacement for them: the rules that stop it inventing prices, MOQs and certifications cannot be edited away from here.' })));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Model' }), model,
+          h('p.field__hint', { text: 'Cheaper models cost less per message but are weaker at multi-turn requirement gathering and at knowing when to hand over.' })));
+
+        form.appendChild(h('div.field', h('label.field__label', { text: 'Longest reply (tokens)' }), maxTokens,
+          h('p.field__hint', { text: 'Blank uses the server setting (' + env.envMaxTokens + '). Roughly four characters per token.' })));
+
+        var save = h('button.btn.btn--accent', { type: 'submit', disabled: !isAdmin }, 'Save settings');
+        form.appendChild(h('div.card__foot', save));
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          save.disabled = true;
+
+          api
+            .put('/api/admin/ai/settings', {
+              values: {
+                'ai.enabled': enabled.checked ? 'true' : 'false',
+                'ai.greeting': greeting.value.trim(),
+                'ai.subtitle': subtitle.value.trim(),
+                'ai.escalationMessage': escalation.value.trim(),
+                'ai.extraInstructions': extra.value.trim(),
+                'ai.model': model.value,
+                'ai.maxTokens': maxTokens.value.trim(),
+              },
+            })
+            .then(function () { ui.toast('Settings saved', 'ok'); location.reload(); })
+            .catch(function (err) { ui.toast(err.message, 'error'); save.disabled = false; });
+        });
+
+        mount.appendChild(form);
+
+        /* --- read-only --- */
+        var infra = h('section.card');
+        infra.appendChild(h('h2.card__title', 'Set on the server'));
+        infra.appendChild(h('p.card__hint',
+          'These are wired in when the server starts, so a box here would do nothing until the next restart. Change them in .env and restart.'));
+
+        var idl = h('dl.detail');
+        [
+          ['Tool round-trips per question', env.maxToolIterations],
+          ['Messages per conversation', env.maxMessagesPerConversation],
+          ['Longest customer message', env.maxInputChars + ' characters'],
+          ['Rate limit', env.rateLimitPerWindow + ' messages per ' + env.rateLimitWindowMinutes + ' minutes, per visitor']
+        ].forEach(function (pair) {
+          idl.appendChild(h('dt', pair[0]));
+          idl.appendChild(h('dd', String(pair[1])));
+        });
+        infra.appendChild(idl);
+        mount.appendChild(infra);
+      });
+    },
+  });
+
   /* ------------------------------------------------------------ analytics -- */
 
   Admin.route('/ai/analytics', {

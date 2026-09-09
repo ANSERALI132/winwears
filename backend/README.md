@@ -148,6 +148,22 @@ code rather than left to the model:
 
 `AI_ENABLED=false` switches it off without removing the key.
 
+Everything an operator should be able to change without a deploy lives at
+**/admin → AI Assistant → AI Settings**: an on/off switch, the greeting, the
+handover message, the model, the reply length, and a box for additional
+instructions. Two deliberate limits there:
+
+- **The API key is not editable and not readable.** The screen says whether
+  one is configured, never what it is.
+- **Additional instructions are added to the assistant's rules, not
+  substituted for them.** A text box that replaced the system prompt would
+  let anyone with admin access delete "never state a price a tool did not
+  return". The rules that stop it inventing a business stay in code.
+
+The per-request ceilings and the rate limit stay in `.env` because they are
+wired into middleware when the server starts; the screen shows them read-only
+rather than offering a box that would quietly do nothing until a restart.
+
 The assistant answers only from what the database holds. Product facts come
 from tool results; business facts come from published `AIKnowledge` entries,
 managed at **/admin → AI Assistant → Knowledge**. An empty knowledge base is
@@ -307,6 +323,8 @@ Admin — session required; every mutation needs the `X-CSRF-Token` header.
 | GET POST | `/api/admin/ai/knowledge` | List / create |
 | GET PUT DELETE | `/api/admin/ai/knowledge/:id` | |
 | GET | `/api/admin/ai/knowledge/categories` | Suggested groupings, plus any in use |
+| GET | `/api/admin/ai/settings` | Assistant configuration; never returns the API key |
+| PUT | `/api/admin/ai/settings` | ADMIN only; `ai.*` keys only |
 
 Responses are `{ data, meta? }` on success and `{ error: { code, message,
 issues? } }` on failure.

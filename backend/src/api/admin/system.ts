@@ -7,7 +7,12 @@ import { asyncHandler } from '../../middleware/error';
 import { csrfProtection, requireRole } from '../../middleware/auth';
 import { badRequest, conflict, notFound } from '../../lib/errors';
 import { hashPassword } from '../../lib/auth';
-import { getAllSettings, SETTING_DEFAULTS, writeSettings } from '../../lib/settings';
+import {
+  getAllSettings,
+  SETTING_DEFAULTS,
+  SETTING_GROUPS_ELSEWHERE,
+  writeSettings,
+} from '../../lib/settings';
 import { activityListQuery, settingsUpdateSchema, userCreateSchema, userUpdateSchema } from '../../validation/admin';
 import { log } from '../../lib/audit';
 
@@ -95,7 +100,14 @@ adminSettingsRouter.get(
     res.json({
       data: {
         values,
-        definitions: SETTING_DEFAULTS.map((d) => ({ key: d.key, group: d.group, label: d.label, default: d.value })),
+        /* The AI group is left out: it has its own screen, where a boolean is
+           a checkbox and a model is a select rather than another text box. */
+        definitions: SETTING_DEFAULTS.filter((d) => !SETTING_GROUPS_ELSEWHERE.has(d.group)).map((d) => ({
+          key: d.key,
+          group: d.group,
+          label: d.label,
+          default: d.value,
+        })),
       },
     });
   }),
