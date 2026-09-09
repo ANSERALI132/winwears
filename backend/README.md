@@ -157,6 +157,42 @@ written the answer down.
 
 ---
 
+## Tests
+
+```bash
+npm start          # in one terminal — the tests talk to a running server
+npm test           # in another
+```
+
+Three suites, run as separate processes so one crashing does not take the
+others with it:
+
+| | |
+|---|---|
+| `ai-tools.test.mjs` | The tools, against the real database — what the assistant can and cannot reach |
+| `ai-api.test.mjs` | The HTTP surface, as a stranger and then as an admin |
+| `ai-scenarios.test.mjs` | The §44 conversations and the hallucination cases |
+
+No test framework: the runner is about eighty lines, and the project has one
+build step and no bundler. The tests use the real database and the real
+server on purpose — what is worth checking is that Prisma, Postgres, Express
+and the tools agree with each other, which a mocked test cannot tell you.
+Everything they create is deleted again, and the harness refuses to run at
+all unless `DATABASE_URL` points at localhost.
+
+**The scenario suite needs a real `AI_API_KEY`** and costs a few cents per
+run. Without one it skips and says so, rather than passing quietly and
+implying the model was checked. It is the only suite that exercises the
+model's judgement — whether it searches before answering, whether it invents
+a certification, whether a hostile knowledge entry can redirect it — as
+opposed to the plumbing around it.
+
+Running the whole suite twice inside fifteen minutes exhausts the AI rate
+limit, which is shared with real visitors. Those checks then skip with a note
+rather than failing; restart the server to reset the window.
+
+---
+
 ## Layout
 
 ```

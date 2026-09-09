@@ -18,6 +18,7 @@
     "create-admin": "node scripts/with-env.mjs tsx prisma/create-admin.ts",
     "studio": "node scripts/with-env.mjs prisma studio",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node scripts/with-env.mjs node tests/run.mjs",
     "migrate:reset": "node scripts/with-env.mjs prisma migrate reset"
   },
   "prisma": {
