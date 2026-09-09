@@ -26,7 +26,11 @@ export type AuditAction =
      back out because it was entered wrongly, is the kind of change somebody
      asks about months later, and "updated" would not tell them anything. */
   | 'payment_recorded'
-  | 'payment_removed';
+  | 'payment_removed'
+  /* Units off the line, and a miscount taken back out. Same reasoning as a
+     payment: it is not a field being edited, it is a count somebody asserted. */
+  | 'output_recorded'
+  | 'output_removed';
 
 export async function log(entry: {
   adminId?: string | null;

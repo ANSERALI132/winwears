@@ -44,6 +44,12 @@ const INCLUDE = {
   quotation: { select: { id: true, number: true, status: true } },
   request: { select: { id: true, reference: true } },
   createdBy: { select: { id: true, name: true } },
+  /* So the order can say what the factory is doing about it, rather than
+     leaving somebody to search production for the order number. */
+  runs: {
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, reference: true, title: true, status: true, quantityPlanned: true },
+  },
 } satisfies Prisma.OrderInclude;
 
 type Row = Prisma.OrderGetPayload<{ include: typeof INCLUDE }>;

@@ -212,6 +212,9 @@
       DELIVERED: ['ok', 'Delivered'],
       ON_HOLD: ['draft', 'On hold'],
       CANCELLED: ['archived', 'Cancelled'],
+      /* Production runs. PLANNED is not DRAFT: the work is committed, it just
+         has not begun. */
+      PLANNED: ['new', 'Planned'],
     };
     var hit = map[status] || ['', String(status || '—')];
     return h('span.pill', { class: hit[0] ? 'pill--' + hit[0] : '', text: hit[1] });

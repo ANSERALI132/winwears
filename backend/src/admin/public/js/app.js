@@ -60,6 +60,7 @@
     ] },
     { group: 'Production', items: [
       { path: '/orders', label: 'Orders', icon: 'quotes' },
+      { path: '/production', label: 'Manufacturing', icon: 'activity' },
     ] },
     { group: 'AI Assistant', items: [
       { path: '/ai', label: 'Overview', icon: 'overview' },

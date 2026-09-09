@@ -7,10 +7,13 @@
  * to do. A quiet morning returns an empty list, which is the useful answer.
  *
  * Every figure here is counted from real rows. Nothing is estimated, and no
- * panel is invented for a module the business has not started using: there
- * are no orders, no production runs and no shipments in this database, so
- * this reports none rather than showing four zeroes that look like a system
- * that is not working.
+ * panel is invented for a module that does not exist yet: quality control,
+ * inventory and shipping are named as not built rather than shown as three
+ * zeroes that look like a system which is not working.
+ *
+ * Orders and production are counted for real. A zero there is a true zero —
+ * no orders — not a missing module, and the difference matters to whoever is
+ * reading this at eight in the morning.
  */
 import { Router } from 'express';
 import { prisma } from '../../db';
@@ -59,6 +62,12 @@ adminDashboardRouter.get(
       draftProducts,
       publishedProducts,
       companies,
+      lateOrders,
+      unstartedOrders,
+      lateRuns,
+      runsWithNoStage,
+      productionStages,
+      openOrders,
     ] = await Promise.all([
       prisma.lead.count({ where: { closedAt: null, nextFollowUpAt: { lt: now } } }),
       prisma.lead.count({ where: { closedAt: null, ownerId: null } }),
@@ -76,6 +85,25 @@ adminDashboardRouter.get(
       prisma.product.count({ where: { status: 'DRAFT', deletedAt: null } }),
       prisma.product.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
       prisma.company.count(),
+      /* Promised in the past and still not out of the door. The most
+         expensive thing on this page to ignore: the customer already knows. */
+      prisma.order.count({
+        where: {
+          promisedAt: { lt: now },
+          status: { in: ['CONFIRMED', 'IN_PRODUCTION', 'QUALITY_CHECK', 'READY_TO_SHIP', 'ON_HOLD'] },
+        },
+      }),
+      /* Confirmed a week ago with no production run against them. Not late
+         yet, which is exactly why it is worth saying now. */
+      prisma.order.count({
+        where: { status: 'CONFIRMED', createdAt: { lt: weekAgo }, runs: { none: {} } },
+      }),
+      prisma.productionRun.count({
+        where: { plannedEnd: { lt: now }, status: { in: ['PLANNED', 'IN_PROGRESS', 'ON_HOLD'] } },
+      }),
+      prisma.productionRun.count({ where: { status: 'IN_PROGRESS', currentStageId: null } }),
+      prisma.productionStage.count({ where: { active: true } }),
+      prisma.order.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
     ]);
 
     /* Ordered by how much it costs to ignore, not by how many there are.
@@ -90,6 +118,22 @@ adminDashboardRouter.get(
       detail: 'Nobody has moved these on since they arrived.',
       count: staleQuotes,
       href: '#/quotes',
+    });
+    add({
+      id: 'late-orders',
+      severity: 'urgent',
+      title: 'Orders past the date we promised',
+      detail: 'Not yet shipped. The customer already knows.',
+      count: lateOrders,
+      href: '#/orders?late=1',
+    });
+    add({
+      id: 'late-runs',
+      severity: 'urgent',
+      title: 'Production runs past their date',
+      detail: 'Still open on the floor.',
+      count: lateRuns,
+      href: '#/production?late=1',
     });
     add({
       id: 'escalations',
@@ -114,6 +158,22 @@ adminDashboardRouter.get(
       detail: 'Arrived and not yet actioned.',
       count: newQuotes - staleQuotes,
       href: '#/quotes',
+    });
+    add({
+      id: 'orders-not-started',
+      severity: 'attention',
+      title: 'Orders confirmed a week ago with no production planned',
+      detail: 'Nothing has been scheduled against them yet.',
+      count: unstartedOrders,
+      href: '#/orders?status=CONFIRMED',
+    });
+    add({
+      id: 'runs-no-stage',
+      severity: 'attention',
+      title: 'Runs in progress with no stage set',
+      detail: 'Work is happening but nobody can see where it is.',
+      count: runsWithNoStage,
+      href: '#/production?status=IN_PROGRESS',
     });
     add({
       id: 'unread-messages',
@@ -168,9 +228,10 @@ adminDashboardRouter.get(
         },
         pipeline: { open: openLeads, customers: companies },
         catalogue: { published: publishedProducts, drafts: draftProducts },
+        factory: { openOrders, lateOrders, lateRuns, productionStages },
         /* Named so the screen can say what it is *not* reporting on, rather
-           than leaving the owner to wonder where production went. */
-        notConfigured: ['orders', 'production', 'quality control', 'inventory', 'shipping'],
+           than leaving the owner to wonder where quality control went. */
+        notConfigured: ['quality control', 'inventory', 'shipping'],
         generatedAt: now,
         since: dayAgo,
       },

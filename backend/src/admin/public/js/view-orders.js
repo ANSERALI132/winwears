@@ -373,6 +373,7 @@
         mount.appendChild(actions);
 
         mount.appendChild(renderDocument(o, false));
+        mount.appendChild(productionCard(o));
         mount.appendChild(paymentsCard(o));
         mount.appendChild(historyCard(o));
       });
@@ -405,6 +406,35 @@
         .then(function () { ui.toast('Order cancelled', 'ok'); Admin.refresh(); })
         .catch(function (err) { ui.toast(err.message, 'error'); });
     });
+  }
+
+  /* -------------------------------------------------------- production -- */
+
+  function productionCard(o) {
+    var card = h('section.card');
+    card.appendChild(h('h2.card__title', 'Production'));
+
+    if (!o.runs || !o.runs.length) {
+      card.appendChild(ui.empty('Nothing scheduled against this order',
+        'A production run says what the factory is actually making for it, and how far along that is.',
+        h('a.btn.btn--accent', { href: '#/production/new' }, 'Plan a run')));
+      return card;
+    }
+
+    var table = h('table.table');
+    table.appendChild(h('thead', h('tr', h('th', 'Run'), h('th', 'What'), h('th', 'Quantity'), h('th', 'Status'))));
+    var body = h('tbody');
+    o.runs.forEach(function (r) {
+      body.appendChild(h('tr',
+        h('td', h('a', { href: '#/production/' + r.id }, r.reference)),
+        h('td', r.title),
+        h('td', String(r.quantityPlanned)),
+        h('td', ui.statusPill(r.status))));
+    });
+    table.appendChild(body);
+    card.appendChild(table);
+    card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/production/new' }, 'Plan another run')));
+    return card;
   }
 
   /* ---------------------------------------------------------- payments -- */

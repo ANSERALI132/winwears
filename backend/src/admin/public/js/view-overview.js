@@ -127,7 +127,11 @@
               ['Quote requests this week', d.week.newQuoteRequests, '#/quotes'],
               ['Open opportunities', d.pipeline.open, '#/crm/leads'],
               ['Customers on record', d.pipeline.customers, '#/crm'],
-              ['Footballs published', d.catalogue.published, '#/products']
+              ['Footballs published', d.catalogue.published, '#/products'],
+              /* A true zero, not a missing module. The factory figures only
+                 appear once orders exist, so an empty factory does not fill
+                 this row with zeroes that read as a broken system. */
+              ['Orders open', d.factory ? d.factory.openOrders : 0, '#/orders']
             ].forEach(function (row) {
               var card = h('a.card.stat');
               card.href = row[2];

@@ -628,6 +628,15 @@ a.pulse__title:hover { text-decoration: underline; }
 .totals__row { display: flex; justify-content: space-between; font-size: 13.5px; padding: 3px 0; }
 .totals__row--grand { border-top: 1px solid var(--line-2); margin-top: 6px; padding-top: 8px; font-weight: 600; font-size: 15px; }
 
+/* --- progress -------------------------------------------------------------
+   How far a production run has got. The number is always beside the bar: a
+   bar alone tells you roughly, and "roughly" is not a quantity to ship on. */
+
+.bar__wrap { display: flex; align-items: center; gap: 9px; min-width: 150px; }
+.bar { flex: 1; height: 7px; min-width: 60px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+.bar__fill { height: 100%; background: var(--accent); border-radius: 99px; }
+.bar__text { font-size: 11.5px; color: var(--text-2); white-space: nowrap; }
+
 /* --- the document ---------------------------------------------------------
    One renderer for screen and print, so what somebody checks on screen is
    what the customer receives. */

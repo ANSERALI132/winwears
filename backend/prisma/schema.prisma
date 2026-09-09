@@ -40,6 +40,10 @@ model User {
   orders       Order[]          @relation("OrderAuthor")
   orderChanges OrderEvent[]     @relation("OrderStatusBy")
   paymentsSeen OrderPayment[]   @relation("PaymentRecorder")
+  ownedRuns    ProductionRun[]  @relation("RunOwner")
+  authoredRuns ProductionRun[]  @relation("RunAuthor")
+  runChanges   ProductionEvent[] @relation("RunMovedBy")
+  outputsSeen  ProductionOutput[] @relation("OutputRecorder")
 
   @@index([email])
 }
@@ -147,6 +151,7 @@ model Product {
   leads            Lead[]
   quotationItems   QuotationItem[]
   orderItems       OrderItem[]
+  productionRuns   ProductionRun[]
 
   @@index([categoryId])
   @@index([status])
@@ -771,6 +776,7 @@ model Order {
   items         OrderItem[]
   payments      OrderPayment[]
   events        OrderEvent[]
+  runs          ProductionRun[]
 
   @@index([status])
   @@index([companyId])
@@ -792,6 +798,7 @@ model OrderItem {
 
   order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  runs         ProductionRun[]
 
   @@index([orderId, displayOrder])
 }
@@ -835,6 +842,155 @@ model OrderEvent {
   by         User?        @relation("OrderStatusBy", fields: [byUserId], references: [id], onDelete: SetNull)
 
   @@index([orderId, createdAt])
+}
+
+// -------------------------------------------------------- manufacturing --
+//
+// A production run is the factory's answer to an order line: this many of
+// this, moving through these stages, by this date. The order says what was
+// sold; the run says what is actually being made.
+//
+// Stages are rows rather than an enum. A hand-stitched ball and a
+// thermo-bonded one do not go through the same steps, and a factory that
+// changes its process should not need a code change and a migration to say
+// so. WIN WEARS defines its own; nothing is invented here.
+
+/// Where a run has got to.
+enum ProductionStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+/// One step in this factory's process — cutting, printing, stitching,
+/// whatever WIN WEARS actually does. Defined in the admin, never seeded:
+/// a made-up list of stages would read as though somebody had surveyed the
+/// factory floor.
+model ProductionStage {
+  id           String            @id @default(cuid())
+  name         String
+  slug         String            @unique
+  description  String?
+  displayOrder Int               @default(0)
+  /// Retired stages stay, so a finished run still says where it went.
+  active       Boolean           @default(true)
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  runs         ProductionRun[]
+  movedFrom    ProductionEvent[] @relation("StageFrom")
+  movedTo      ProductionEvent[] @relation("StageTo")
+  outputs      ProductionOutput[]
+
+  @@index([displayOrder])
+  @@index([active])
+}
+
+model ProductionRun {
+  id             String            @id @default(cuid())
+  /// Human-quotable on the factory floor: WW-PR-2026-0001.
+  reference      String            @unique
+  title          String
+  status         ProductionStatus  @default(PLANNED)
+
+  /// Usually an order line. Optional, because a factory also makes stock,
+  /// and a run with nowhere to point is better than a fake order to hang
+  /// it on.
+  orderId        String?
+  orderItemId    String?
+  productId      String?
+
+  quantityPlanned Int
+
+  /// Where it is now. Null before it starts, and null is honest: a run that
+  /// has not begun is not sitting in the first stage.
+  currentStageId String?
+
+  ownerId        String?
+
+  plannedStart   DateTime?
+  plannedEnd     DateTime?
+  /// Stamped by the first move into IN_PROGRESS and by completion, not
+  /// typed in — the dates that matter for "was it late" are the ones the
+  /// system observed.
+  actualStart    DateTime?
+  actualEnd      DateTime?
+
+  notes          String?           @db.Text
+  cancelReason   String?
+
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  order          Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem      OrderItem?        @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  product        Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  currentStage   ProductionStage?  @relation(fields: [currentStageId], references: [id], onDelete: SetNull)
+  owner          User?             @relation("RunOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy      User?             @relation("RunAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  events         ProductionEvent[]
+  outputs        ProductionOutput[]
+
+  @@index([status])
+  @@index([orderId])
+  @@index([currentStageId])
+  @@index([plannedEnd])
+  @@index([status, plannedEnd])
+  @@index([createdAt])
+}
+
+/// Units that came off the line. The same rule as a payment against an
+/// order: progress is counted from what was recorded, never inferred from a
+/// stage. A run sitting in "packing" is not evidence that anything is packed.
+model ProductionOutput {
+  id           String           @id @default(cuid())
+  runId        String
+  /// Which stage produced them, when the factory cares to record it.
+  stageId      String?
+  /// Units that passed.
+  quantityGood Int              @default(0)
+  /// Units that did not. Kept apart from good so a run that made its number
+  /// twice over because half of it failed cannot look like a run that went
+  /// well.
+  quantityRejected Int          @default(0)
+  note         String?
+  recordedAt   DateTime         @default(now())
+  recordedById String?
+
+  createdAt    DateTime         @default(now())
+
+  run          ProductionRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  stage        ProductionStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  recordedBy   User?            @relation("OutputRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([runId, recordedAt])
+}
+
+/// Every stage and status movement, kept forever. "How long did it sit in
+/// stitching" is the question asked when an order runs late, and a single
+/// currentStageId cannot answer it.
+model ProductionEvent {
+  id          String            @id @default(cuid())
+  runId       String
+  fromStageId String?
+  toStageId   String?
+  fromStatus  ProductionStatus?
+  toStatus    ProductionStatus?
+  byUserId    String?
+  note        String?
+  createdAt   DateTime          @default(now())
+
+  run         ProductionRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  fromStage   ProductionStage?  @relation("StageFrom", fields: [fromStageId], references: [id], onDelete: SetNull)
+  toStage     ProductionStage?  @relation("StageTo", fields: [toStageId], references: [id], onDelete: SetNull)
+  by          User?             @relation("RunMovedBy", fields: [byUserId], references: [id], onDelete: SetNull)
+
+  @@index([runId, createdAt])
 }
 
 // ------------------------------------------------------------- ai support --
