@@ -55,6 +55,7 @@
     ] },
     { group: 'Enquiries', items: [
       { path: '/rfq', label: 'Quote Requests', icon: 'quotes', count: 'quotes' },
+      { path: '/quotations', label: 'Quotations', icon: 'quotes' },
       { path: '/messages', label: 'Contact Messages', icon: 'messages', count: 'messages' },
     ] },
     { group: 'AI Assistant', items: [
