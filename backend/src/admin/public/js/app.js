@@ -58,6 +58,9 @@
       { path: '/quotations', label: 'Quotations', icon: 'quotes' },
       { path: '/messages', label: 'Contact Messages', icon: 'messages', count: 'messages' },
     ] },
+    { group: 'Production', items: [
+      { path: '/orders', label: 'Orders', icon: 'quotes' },
+    ] },
     { group: 'AI Assistant', items: [
       { path: '/ai', label: 'Overview', icon: 'overview' },
       { path: '/ai/conversations', label: 'Conversations', icon: 'messages' },

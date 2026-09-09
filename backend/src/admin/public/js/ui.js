@@ -202,6 +202,16 @@
       CONTACTED: ['info', 'Contacted'],
       IN_PROGRESS: ['draft', 'In progress'],
       COMPLETED: ['ok', 'Completed'],
+      /* Orders. Without these the pill would print the raw enum, underscores
+         and all, at the one moment somebody is scanning a list for trouble. */
+      CONFIRMED: ['new', 'Confirmed'],
+      IN_PRODUCTION: ['info', 'In production'],
+      QUALITY_CHECK: ['info', 'Quality check'],
+      READY_TO_SHIP: ['info', 'Ready to ship'],
+      SHIPPED: ['info', 'Shipped'],
+      DELIVERED: ['ok', 'Delivered'],
+      ON_HOLD: ['draft', 'On hold'],
+      CANCELLED: ['archived', 'Cancelled'],
     };
     var hit = map[status] || ['', String(status || '—')];
     return h('span.pill', { class: hit[0] ? 'pill--' + hit[0] : '', text: hit[1] });

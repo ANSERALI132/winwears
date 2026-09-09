@@ -34,6 +34,9 @@ const INCLUDE = {
   lead: { select: { id: true, reference: true, stage: true } },
   request: { select: { id: true, reference: true } },
   createdBy: { select: { id: true, name: true } },
+  /* So a screen can say "this became order WW-SO-2026-0004" rather than
+     offering a Convert button that the server is going to refuse. */
+  order: { select: { id: true, number: true, status: true } },
 } satisfies Prisma.QuotationInclude;
 
 /** Decimals out, numbers in — the browser should never have to parse

@@ -12,51 +12,10 @@
 
   var STATUSES = ['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED'];
 
-  function label(v) {
-    if (!v) return 'â€”';
-    return String(v).charAt(0) + String(v).slice(1).toLowerCase().replace(/_/g, ' ');
-  }
-
-  /** Formats money for display only. The server owns the arithmetic; this
-   *  just puts a currency in front of a number the server calculated. */
-  function money(amount, currency) {
-    var n = Number(amount) || 0;
-    try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(n);
-    } catch (err) {
-      /* An unrecognised three-letter code should not blank the total. */
-      return (currency || '') + ' ' + n.toFixed(2);
-    }
-  }
-
-  /* Mirrors lib/quotation.ts so the person typing sees the total move. The
-     server recomputes everything on save â€” this is a preview, never the
-     figure that is stored. */
-  function previewTotals(items, discountType, discountInput, shipping, taxRate) {
-    var minor = function (v) { return Math.round((Number(v) || 0) * 100); };
-    var major = function (m) { return Math.round(m) / 100; };
-
-    var subtotal = items.reduce(function (sum, i) {
-      return sum + Math.max(0, Math.trunc(Number(i.quantity) || 0)) * minor(i.unitPrice);
-    }, 0);
-
-    var discount = 0;
-    if (discountType === 'PERCENT') {
-      discount = Math.round((subtotal * Math.min(100, Math.max(0, Number(discountInput) || 0))) / 100);
-    } else if (discountType === 'AMOUNT') {
-      discount = Math.max(0, minor(discountInput));
-    }
-    discount = Math.min(discount, subtotal);
-
-    var ship = Math.max(0, minor(shipping));
-    var net = subtotal - discount;
-    var tax = Math.round(((net + ship) * Math.min(100, Math.max(0, Number(taxRate) || 0))) / 100);
-
-    return {
-      subtotal: major(subtotal), discount: major(discount), shipping: major(ship),
-      tax: major(tax), total: major(net + ship + tax),
-    };
-  }
+  /* Shared with orders, which is the same document later in its life. */
+  var label = Admin.doc.label;
+  var money = Admin.doc.money;
+  var previewTotals = Admin.doc.previewTotals;
 
   /* ----------------------------------------------------------- the list -- */
 
@@ -355,6 +314,25 @@
         if (q.status === 'DRAFT') {
           actions.appendChild(h('a.btn.btn--sm', { href: '#/quotations/' + q.id + '/edit' }, 'Edit'));
         }
+        /* The point of an accepted quotation. Converting copies the figures
+           the customer agreed to, so it happens here rather than by retyping
+           them into a blank order. */
+        if (q.order) {
+          actions.appendChild(h('a.btn.btn--sm', { href: '#/orders/' + q.order.id }, 'Order ' + q.order.number));
+        } else if (q.status === 'ACCEPTED') {
+          actions.appendChild(h('button.btn.btn--accent.btn--sm', {
+            type: 'button',
+            onclick: function () {
+              api.post('/api/admin/orders/from-quotation/' + q.id, {})
+                .then(function (res) {
+                  ui.toast('Order ' + res.data.number + ' raised', 'ok');
+                  location.hash = '#/orders/' + res.data.id;
+                })
+                .catch(function (err) { ui.toast(err.message, 'error'); });
+            },
+          }, 'Convert to an order'));
+        }
+
         STATUSES.filter(function (s) { return s !== q.status && s !== 'EXPIRED'; }).forEach(function (s) {
           actions.appendChild(h('button.btn.btn--sm', {
             type: 'button',

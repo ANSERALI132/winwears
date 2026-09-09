@@ -21,7 +21,12 @@ export type AuditAction =
   | 'exported'
   | 'uploaded'
   | 'signed_in'
-  | 'signed_out';
+  | 'signed_out'
+  /* Money is not a field being updated. An amount arriving, or being taken
+     back out because it was entered wrongly, is the kind of change somebody
+     asks about months later, and "updated" would not tell them anything. */
+  | 'payment_recorded'
+  | 'payment_removed';
 
 export async function log(entry: {
   adminId?: string | null;

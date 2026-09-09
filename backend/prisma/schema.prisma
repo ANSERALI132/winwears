@@ -37,6 +37,9 @@ model User {
   stageChanges LeadStageEvent[] @relation("StageMovedBy")
   assignedRfqs QuoteRequest[]   @relation("RfqAssignee")
   quotations   Quotation[]      @relation("QuotationAuthor")
+  orders       Order[]          @relation("OrderAuthor")
+  orderChanges OrderEvent[]     @relation("OrderStatusBy")
+  paymentsSeen OrderPayment[]   @relation("PaymentRecorder")
 
   @@index([email])
 }
@@ -143,6 +146,7 @@ model Product {
   aiConversations  AIConversation[]
   leads            Lead[]
   quotationItems   QuotationItem[]
+  orderItems       OrderItem[]
 
   @@index([categoryId])
   @@index([status])
@@ -288,6 +292,7 @@ model QuoteRequest {
   lead                  Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   assignedTo            User?           @relation("RfqAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   quotations            Quotation[]
+  orders                Order[]
 
   @@index([status])
   @@index([createdAt])
@@ -444,6 +449,7 @@ model Company {
   leads        Lead[]
   quotes       QuoteRequest[]
   quotations   Quotation[]
+  orders       Order[]
   messages     ContactMessage[]
   conversations AIConversation[]
 
@@ -477,6 +483,7 @@ model Contact {
   leads     Lead[]
   quotes    QuoteRequest[]
   quotations Quotation[]
+  orders    Order[]
   messages  ContactMessage[]
   conversations AIConversation[]
 
@@ -537,6 +544,7 @@ model Lead {
   stageEvents   LeadStageEvent[]
   quotes        QuoteRequest[]
   quotations    Quotation[]
+  orders        Order[]
   conversations AIConversation[]
 
   @@index([stage])
@@ -638,6 +646,7 @@ model Quotation {
   request       QuoteRequest?   @relation(fields: [requestId], references: [id], onDelete: SetNull)
   createdBy     User?           @relation("QuotationAuthor", fields: [createdById], references: [id], onDelete: SetNull)
   items         QuotationItem[]
+  order         Order?
 
   @@index([status])
   @@index([companyId])
@@ -664,6 +673,168 @@ model QuotationItem {
   product      Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([quotationId, displayOrder])
+}
+
+// --------------------------------------------------------------- orders --
+//
+// What an accepted quotation becomes. The quotation is an offer; the order is
+// the commitment, and from here the questions stop being "what would this
+// cost" and start being "when does it ship and has the deposit landed".
+//
+// Prices are copied from the accepted quotation and not recalculated from the
+// catalogue. That is the one place copying a price is right: it is the price
+// the customer agreed to, and quoting them a different one later is exactly
+// the failure the pricing rule exists to prevent.
+
+/// Where an order has got to. Production and shipping will each want more
+/// detail than this when they are built; this stays the one-line answer to
+/// "where is my order", which is the question a customer actually asks.
+enum OrderStatus {
+  CONFIRMED
+  IN_PRODUCTION
+  QUALITY_CHECK
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  /// Quoted to the customer and printed on the paperwork: WW-SO-2026-0001.
+  number        String        @unique
+  status        OrderStatus   @default(CONFIRMED)
+
+  companyId     String?
+  contactId     String?
+  leadId        String?
+  /// One order per quotation. A second order against the same accepted
+  /// quotation is almost always somebody clicking Convert twice, and the
+  /// database should refuse it rather than the screen remembering not to.
+  quotationId   String?       @unique
+  requestId     String?
+
+  /// The customer's own purchase order reference. They will use it in every
+  /// email about this order and will not know ours.
+  poNumber      String?
+
+  currency      String        @default("USD")
+
+  /// Carried from the quotation the customer accepted, then frozen. Nothing
+  /// here is estimated or recalculated.
+  subtotal      Decimal       @default(0) @db.Decimal(12, 2)
+  discountType  DiscountType  @default(NONE)
+  discountInput Decimal       @default(0) @db.Decimal(12, 2)
+  discountValue Decimal       @default(0) @db.Decimal(12, 2)
+  shipping      Decimal       @default(0) @db.Decimal(12, 2)
+  taxRate       Decimal       @default(0) @db.Decimal(5, 2)
+  taxValue      Decimal       @default(0) @db.Decimal(12, 2)
+  total         Decimal       @default(0) @db.Decimal(12, 2)
+
+  paymentTerms  String?
+  packaging     String?
+
+  /// What the customer asked for and what we committed to. Kept apart because
+  /// the gap between them is the thing worth reporting on, and collapsing
+  /// them into one date loses whether a late order was ever promised on time.
+  requiredBy    DateTime?
+  promisedAt    DateTime?
+
+  /// Free text. A delivery address is a block that gets printed on a label,
+  /// and structuring it now would be inventing a shape for the shipping
+  /// module before anyone has said what it needs.
+  shipTo        String?       @db.Text
+
+  /// Shown on the paperwork.
+  notes         String?       @db.Text
+  /// Never rendered on anything a customer sees.
+  internalNotes String?       @db.Text
+
+  createdById   String?
+  confirmedAt   DateTime      @default(now())
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  company       Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead          Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  quotation     Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  request       QuoteRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  createdBy     User?         @relation("OrderAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  items         OrderItem[]
+  payments      OrderPayment[]
+  events        OrderEvent[]
+
+  @@index([status])
+  @@index([companyId])
+  @@index([leadId])
+  @@index([createdAt])
+  @@index([promisedAt])
+  @@index([status, promisedAt])
+}
+
+model OrderItem {
+  id           String   @id @default(cuid())
+  orderId      String
+  productId    String?
+  description  String
+  quantity     Int
+  unitPrice    Decimal  @db.Decimal(12, 2)
+  lineTotal    Decimal  @db.Decimal(12, 2)
+  displayOrder Int      @default(0)
+
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, displayOrder])
+}
+
+/// Money that actually arrived. Never inferred from a status, never assumed
+/// from payment terms: "50% deposit" is what was agreed, not evidence that
+/// half the money is in the bank.
+model OrderPayment {
+  id           String   @id @default(cuid())
+  orderId      String
+  amount       Decimal  @db.Decimal(12, 2)
+  /// Free text: bank transfer, letter of credit, whatever was used.
+  method       String?
+  /// The bank's reference, so a line on a statement can be found again.
+  reference    String?
+  receivedAt   DateTime @default(now())
+  note         String?
+  recordedById String?
+
+  createdAt    DateTime @default(now())
+
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recordedBy   User?    @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId, receivedAt])
+}
+
+/// Every status movement, kept forever Ã¢â‚¬â€ the same reason LeadStageEvent
+/// exists. "When did this go into production" is unanswerable from a single
+/// status column, and it is the question asked when an order runs late.
+model OrderEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  byUserId   String?
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  by         User?        @relation("OrderStatusBy", fields: [byUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
 }
 
 // ------------------------------------------------------------- ai support --

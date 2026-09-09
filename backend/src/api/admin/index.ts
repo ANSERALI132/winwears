@@ -18,6 +18,7 @@ import { adminCrmRouter } from './crm';
 import { adminDashboardRouter } from './dashboard';
 import { adminRfqRouter } from './rfq';
 import { adminQuotationsRouter } from './quotations';
+import { adminOrdersRouter } from './orders';
 
 export const adminRouter = Router();
 
@@ -40,3 +41,4 @@ adminRouter.use('/crm', adminCrmRouter);
 adminRouter.use('/dashboard', adminDashboardRouter);
 adminRouter.use('/rfq', adminRfqRouter);
 adminRouter.use('/quotations', adminQuotationsRouter);
+adminRouter.use('/orders', adminOrdersRouter);
