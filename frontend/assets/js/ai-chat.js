@@ -119,10 +119,18 @@
 
   /** Builds a WhatsApp link that reports its own click before following.
    *  The href is set normally, so it still works with JavaScript disabled
-   *  and a middle-click opens the real destination. */
+   *  and a middle-click opens the real destination.
+   *
+   *  Returns null when the configured URL is not a plain http(s) address.
+   *  The value arrives from the server but originates in an admin-editable
+   *  setting, and "our own server sent it" is not the same as safe — a
+   *  javascript: URL saved there would otherwise run in every visitor's
+   *  browser. */
   function whatsappLink(label) {
+    var href = safeHref(state.whatsappUrl);
+    if (!href) return null;
     var a = h('a', 'aic-mini aic-mini--wa', label);
-    a.href = state.whatsappUrl;
+    a.href = href;
     a.target = '_blank';
     a.rel = 'noopener';
     a.addEventListener('click', function () { track('WHATSAPP_CLICKED'); });
@@ -292,7 +300,8 @@
       });
       actions.appendChild(quote);
 
-      if (state.whatsappUrl) actions.appendChild(whatsappLink('WhatsApp'));
+      var waBtn = whatsappLink('WhatsApp');
+      if (waBtn) actions.appendChild(waBtn);
 
       body.appendChild(actions);
       card.appendChild(body);
@@ -304,13 +313,16 @@
   }
 
   /** The human-handoff block. Shown whenever the server says it cannot help,
-   *  so a dead end always has a way out of it. */
+   *  so a dead end always has a way out of it.
+   *
+   *  The quote link is shown even when the WhatsApp URL is unusable: a
+   *  misconfigured setting should cost the customer one route out, not both. */
   function addHandoff() {
-    if (!state.whatsappUrl) return;
+    var wa = whatsappLink('WhatsApp WIN WEARS');
     var wrap = h('div', 'aic-cards');
     var row = h('div', 'aic-card__actions');
 
-    row.appendChild(whatsappLink('WhatsApp WIN WEARS'));
+    if (wa) row.appendChild(wa);
 
     var rq = h('a', 'aic-mini', 'Request a quote');
     rq.href = '/request-quote.html';

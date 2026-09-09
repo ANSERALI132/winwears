@@ -58,14 +58,23 @@ export function handoffMessage(
 export function handoffLink(whatsappUrl: string | undefined, message: string): string | null {
   if (!whatsappUrl) return null;
 
+  let url: URL;
   try {
-    const url = new URL(whatsappUrl);
-    /* encodeURIComponent, not the URLSearchParams default: wa.me wants %20
-       for spaces and newlines encoded, and the "+" form arrives literally. */
-    return `${url.origin}${url.pathname}?text=${encodeURIComponent(message)}`;
+    url = new URL(whatsappUrl);
   } catch {
-    /* A malformed setting should not break the handoff — the plain link is
-       still better than nothing. */
-    return whatsappUrl;
+    /* A setting that is not a URL at all cannot become a link. Returning it
+       unchanged, as this used to, handed the browser whatever string an
+       admin had typed. */
+    return null;
   }
+
+  /* Only real web addresses leave here. The setting is admin-editable, and
+     javascript: is a valid URL as far as the parser is concerned — the
+     browser would run it. The widget checks this again at the point it sets
+     the href; this is the half that stops it being sent at all. */
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+
+  /* encodeURIComponent, not the URLSearchParams default: wa.me wants %20
+     for spaces and newlines encoded, and the "+" form arrives literally. */
+  return `${url.origin}${url.pathname}?text=${encodeURIComponent(message)}`;
 }
