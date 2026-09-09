@@ -47,6 +47,7 @@ model User {
   inspections  QcInspection[]   @relation("Inspector")
   qcDecisions  QcInspection[]   @relation("QcDecider")
   qcAuthored   QcInspection[]   @relation("QcAuthor")
+  stockMoves   StockMovement[]  @relation("StockRecorder")
 
   @@index([email])
 }
@@ -155,6 +156,7 @@ model Product {
   quotationItems   QuotationItem[]
   orderItems       OrderItem[]
   productionRuns   ProductionRun[]
+  stockItems       StockItem[]
 
   @@index([categoryId])
   @@index([status])
@@ -781,6 +783,7 @@ model Order {
   events        OrderEvent[]
   runs          ProductionRun[]
   inspections   QcInspection[]
+  stockMoves    StockMovement[]
 
   @@index([status])
   @@index([companyId])
@@ -941,6 +944,7 @@ model ProductionRun {
   events         ProductionEvent[]
   outputs        ProductionOutput[]
   inspections    QcInspection[]
+  stockMoves     StockMovement[]
 
   @@index([status])
   @@index([orderId])
@@ -1143,6 +1147,136 @@ model QcResult {
   /// check is a correction, not another data point to average.
   @@unique([inspectionId, checkpointId])
   @@index([checkpointId])
+}
+
+// ------------------------------------------------------------- inventory --
+//
+// Stock is a ledger, not a number. Every level on every screen is the sum of
+// the movements underneath it, so a level and its history can never disagree
+// — and when somebody asks why there are 40 fewer bladders than last week,
+// the answer is on the record rather than in somebody's memory.
+//
+// A stored quantity that gets incremented is the same mistake as a stored
+// "deposit paid" on an order: two copies of one fact, and the first correction
+// makes them differ.
+
+enum StockKind {
+  /// Bought in and consumed — panels, bladders, thread, ink, cartons.
+  MATERIAL
+  /// Made here and sold.
+  FINISHED
+}
+
+/// Why stock moved. The direction is fixed by the kind rather than by whoever
+/// is typing, so an issue can never be entered as an increase.
+enum StockMoveKind {
+  /// In from a supplier.
+  RECEIPT
+  /// Out to the factory floor.
+  ISSUE
+  /// In from a production run.
+  PRODUCTION
+  /// Back in — unused material, or a customer return.
+  RETURN
+  /// Out for good: scrapped, damaged, failed inspection.
+  WRITE_OFF
+  /// A stocktake correction, and the only kind that may go either way. It
+  /// always carries a reason, because "the count was wrong" needs to say how.
+  ADJUSTMENT
+}
+
+/// Somewhere stock sits. Defined in the admin — a single-site factory may
+/// only ever need one, and inventing a warehouse hierarchy for a business
+/// that has one room would be furniture nobody asked for.
+model StockLocation {
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  description  String?
+  displayOrder Int             @default(0)
+  active       Boolean         @default(true)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  movements    StockMovement[]
+
+  @@index([displayOrder])
+  @@index([active])
+}
+
+model StockItem {
+  id            String          @id @default(cuid())
+  name          String
+  /// The factory's own code for it. Unique, because two items sharing a code
+  /// is how the wrong material gets issued.
+  sku           String          @unique
+  description   String?
+  kind          StockKind       @default(MATERIAL)
+
+  /// Metres, kilos, each, rolls — whatever this is counted in. Free text,
+  /// because a fixed list is a guess about what WIN WEARS buys.
+  unit          String?
+
+  /// The catalogue product this is, for finished goods. Optional: plenty of
+  /// finished stock is a size or colour the website does not list separately.
+  productId     String?
+
+  /// Warn below this. Null means nobody has set one, and then nothing is
+  /// flagged — the system does not decide for a factory what "running low"
+  /// means for its own materials.
+  reorderLevel  Decimal?        @db.Decimal(14, 3)
+
+  active        Boolean         @default(true)
+  notes         String?         @db.Text
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  product       Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  movements     StockMovement[]
+
+  @@index([kind])
+  @@index([active])
+  @@index([name])
+}
+
+/// One movement in or out. Never edited and never deleted once written: a
+/// ledger somebody can go back and tidy is not a ledger. A mistake is
+/// corrected by an adjustment that says what it is correcting.
+model StockMovement {
+  id           String         @id @default(cuid())
+  itemId       String
+  locationId   String?
+  kind         StockMoveKind
+
+  /// Signed, and the sign is set from the kind rather than from the form.
+  /// Summing this column is the whole of the stock level.
+  quantity     Decimal        @db.Decimal(14, 3)
+
+  /// What it was for. A run when material goes to the floor or finished goods
+  /// come off it; an order when stock is picked for a customer.
+  runId        String?
+  orderId      String?
+
+  /// A supplier's delivery note, an invoice number, a stocktake sheet.
+  reference    String?
+  note         String?
+
+  occurredAt   DateTime       @default(now())
+  recordedById String?
+  createdAt    DateTime       @default(now())
+
+  item         StockItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location     StockLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  run          ProductionRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  order        Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  recordedBy   User?          @relation("StockRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([itemId, occurredAt])
+  @@index([kind])
+  @@index([runId])
+  @@index([orderId])
 }
 
 // ------------------------------------------------------------- ai support --

@@ -21,6 +21,7 @@ import { adminQuotationsRouter } from './quotations';
 import { adminOrdersRouter } from './orders';
 import { adminProductionRouter } from './production';
 import { adminQcRouter } from './qc';
+import { adminStockRouter } from './stock';
 
 export const adminRouter = Router();
 
@@ -46,3 +47,4 @@ adminRouter.use('/quotations', adminQuotationsRouter);
 adminRouter.use('/orders', adminOrdersRouter);
 adminRouter.use('/production', adminProductionRouter);
 adminRouter.use('/qc', adminQcRouter);
+adminRouter.use('/stock', adminStockRouter);

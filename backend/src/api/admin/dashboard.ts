@@ -7,17 +7,18 @@
  * to do. A quiet morning returns an empty list, which is the useful answer.
  *
  * Every figure here is counted from real rows. Nothing is estimated, and no
- * panel is invented for a module that does not exist yet: inventory and
- * shipping are named as not built rather than shown as zeroes that look like
- * a system which is not working.
+ * panel is invented for a module that does not exist yet: shipping is named
+ * as not built rather than shown as a zero that looks like a system which is
+ * not working.
  *
- * Orders, production and quality control are counted for real. A zero there
- * is a true zero — no orders — not a missing module, and the difference
+ * Orders, production, quality control and stock are counted for real. A zero
+ * there is a true zero — no orders — not a missing module, and the difference
  * matters to whoever is reading this at eight in the morning.
  */
 import { Router } from 'express';
 import { prisma } from '../../db';
 import { asyncHandler } from '../../middleware/error';
+import { levelOf } from '../../lib/stock';
 
 export const adminDashboardRouter = Router();
 
@@ -70,6 +71,7 @@ adminDashboardRouter.get(
       openOrders,
       undecidedFailures,
       openInspections,
+      stockItems,
     ] = await Promise.all([
       prisma.lead.count({ where: { closedAt: null, nextFollowUpAt: { lt: now } } }),
       prisma.lead.count({ where: { closedAt: null, ownerId: null } }),
@@ -112,7 +114,20 @@ adminDashboardRouter.get(
         where: { result: 'FAILED', overrideResult: null, NOT: { completedAt: null } },
       }),
       prisma.qcInspection.count({ where: { completedAt: null } }),
+      /* Levels are the sum of a ledger, so low stock cannot be counted in
+         SQL without raw aggregation. The materials list is small enough that
+         summing it here is cheaper than the complexity of doing otherwise. */
+      prisma.stockItem.findMany({
+        where: { active: true },
+        select: { reorderLevel: true, movements: { select: { quantity: true } } },
+      }),
     ]);
+
+    const levels = stockItems.map((item) => levelOf(item.movements, item.reorderLevel));
+    const lowStock = levels.filter((l) => l.low).length;
+    /* Less than nothing on the shelf is not a shortage, it is a count that is
+       wrong — and that is a different job for a different person. */
+    const impossibleStock = levels.filter((l) => l.negative).length;
 
     /* Ordered by how much it costs to ignore, not by how many there are.
        A customer waiting a day outranks a product with no photograph. */
@@ -182,6 +197,22 @@ adminDashboardRouter.get(
       detail: 'Nothing has been scheduled against them yet.',
       count: unstartedOrders,
       href: '#/orders?status=CONFIRMED',
+    });
+    add({
+      id: 'impossible-stock',
+      severity: 'urgent',
+      title: 'Stock records showing less than nothing',
+      detail: 'Something went out that never went in. The count is wrong.',
+      count: impossibleStock,
+      href: '#/stock',
+    });
+    add({
+      id: 'low-stock',
+      severity: 'attention',
+      title: 'Materials at or below their reorder level',
+      detail: 'Only items you have set a level for are counted.',
+      count: lowStock,
+      href: '#/stock?low=1',
     });
     add({
       id: 'open-inspections',
@@ -254,8 +285,8 @@ adminDashboardRouter.get(
         catalogue: { published: publishedProducts, drafts: draftProducts },
         factory: { openOrders, lateOrders, lateRuns, productionStages },
         /* Named so the screen can say what it is *not* reporting on, rather
-           than leaving the owner to wonder where inventory went. */
-        notConfigured: ['inventory', 'shipping'],
+           than leaving the owner to wonder where shipping went. */
+        notConfigured: ['shipping'],
         generatedAt: now,
         since: dayAgo,
       },

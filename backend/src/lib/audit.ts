@@ -30,7 +30,10 @@ export type AuditAction =
   /* Units off the line, and a miscount taken back out. Same reasoning as a
      payment: it is not a field being edited, it is a count somebody asserted. */
   | 'output_recorded'
-  | 'output_removed';
+  | 'output_removed'
+  /* Stock in or out. A ledger line, not a field being edited — and the only
+     way a stock level ever changes. */
+  | 'stock_moved';
 
 export async function log(entry: {
   adminId?: string | null;
