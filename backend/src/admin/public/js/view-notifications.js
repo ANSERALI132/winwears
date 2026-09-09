@@ -224,6 +224,7 @@
       card.appendChild(slot);
       card.appendChild(h('div.card__foot', h('a.btn.btn--sm', { href: '#/notifications' }, '← Back')));
       ui.clear(mount).appendChild(card);
+      mount.appendChild(mailCard());
 
       function load() {
         ui.clear(slot).appendChild(ui.skeleton(3));
@@ -254,4 +255,58 @@
       return load();
     },
   });
+
+  /* --------------------------------------------------------------- mail -- */
+
+  /** Whether these also arrive by email, and a way to check the settings
+   *  without mailing anybody. */
+  function mailCard() {
+    var card = h('section.card');
+    card.appendChild(h('h2.card__title', 'By email'));
+    var slot = h('div');
+    card.appendChild(slot);
+
+    ui.clear(slot).appendChild(ui.skeleton(2));
+    api.get('/api/admin/notifications/mail')
+      .then(function (res) {
+        var m = res.data;
+        ui.clear(slot);
+
+        if (!m.configured) {
+          slot.appendChild(ui.notice('info',
+            'Email is switched off because no mail server is configured. Everything above still reaches you in the admin.'));
+          slot.appendChild(h('p.card__hint',
+            'To switch it on, set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS in the project’s .env file, then restart the server. MAIL_FROM sets the sender and MAIL_TO adds a shared inbox that receives everything.'));
+          return;
+        }
+
+        var facts = h('div.grid.grid--2');
+        function fact(name, value) {
+          facts.appendChild(h('div.field', h('div.field__label', { text: name }), h('div', { text: value })));
+        }
+        fact('Mail server', m.host + ':' + m.port);
+        fact('Sent from', m.from || 'not set');
+        fact('Shared inbox', m.alsoTo || 'none — each person gets their own');
+        slot.appendChild(facts);
+        slot.appendChild(h('p.card__hint',
+          'Turning a kind off above turns it off for email too. Nothing here shows the password.'));
+
+        var verify = h('button.btn.btn--sm', { type: 'button' }, 'Check the settings');
+        verify.addEventListener('click', function () {
+          verify.disabled = true;
+          api.post('/api/admin/notifications/mail/verify', {})
+            .then(function (res2) {
+              ui.toast(res2.data.ok ? 'The mail server accepted the connection.' : res2.data.error,
+                res2.data.ok ? 'ok' : 'error');
+              verify.disabled = false;
+            })
+            .catch(function (err) { ui.toast(err.message, 'error'); verify.disabled = false; });
+        });
+        slot.appendChild(h('div.chip-row', verify,
+          h('span.muted.tiny', { text: 'Connects and signs in only. It does not send anything to anybody.' })));
+      })
+      .catch(function () { ui.clear(slot).appendChild(h('p.muted', { text: 'Could not read the mail settings.' })); });
+
+    return card;
+  }
 })();

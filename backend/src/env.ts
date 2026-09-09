@@ -84,6 +84,26 @@ const schema = z
        and rare enough that it is not a load on the database. */
     AUTOMATION_SWEEP_MINUTES: z.coerce.number().int().min(0).max(1440).default(15),
 
+    /* Sending notification email. Every field is optional and the whole
+       channel stays off until SMTP_HOST is set, so an installation with no
+       mail server works exactly as before. Nothing here is ever logged. */
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().positive().max(65535).default(587),
+    /* True for implicit TLS on 465; false for 587, which upgrades with
+       STARTTLS. Defaulted from the port rather than guessed at. */
+    SMTP_SECURE: z.enum(['true', 'false']).optional().transform((v) => (v === undefined ? undefined : v === 'true')),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    /* What the message is from. Falls back to SMTP_USER, since most providers
+       refuse to send as an address the account does not own. */
+    MAIL_FROM: z.string().optional(),
+    /* An address that receives everything, on top of each person's own.
+       A shared inbox somebody watches when nobody is signed in. */
+    MAIL_TO: z.string().optional(),
+    /* Where the admin lives, so a link in an email is clickable. A hash route
+       on its own is meaningless outside the browser that is already there. */
+    ADMIN_URL: z.string().default('http://localhost:3000/admin'),
+
     /* Serve the static site from this process too. Handy in development; in
        production a CDN or nginx usually does it instead. */
     SERVE_FRONTEND: z

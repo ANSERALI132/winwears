@@ -124,6 +124,33 @@ on, and trusting it without a proxy lets anyone forge their own IP.
 `NODE_ENV=production` also turns on the `Secure` flag for the session cookie,
 so the admin dashboard needs HTTPS in production.
 
+### Notification email
+
+Notifications always appear in the admin, on the bell in the top bar. Sending
+them by email as well is optional and off until `SMTP_HOST` is set — with no
+mail server everything works exactly as before, and nothing fails.
+
+| Variable | | |
+|---|---|---|
+| `SMTP_HOST` | — | Setting this switches email on |
+| `SMTP_PORT` | 587 | 465 for implicit TLS, 587 for STARTTLS |
+| `SMTP_SECURE` | from the port | Override only if your provider is unusual |
+| `SMTP_USER` | — | The account to sign in as |
+| `SMTP_PASS` | — | Its password. For Gmail this is an **app password**, not the account password |
+| `MAIL_FROM` | `SMTP_USER` | Most providers refuse to send as an address the account does not own |
+| `MAIL_TO` | — | A shared inbox that receives everything, on top of each person's own |
+| `ADMIN_URL` | `http://localhost:3000/admin` | So a link in an email is clickable |
+
+Each person is emailed at the address on their admin account, and turning a
+kind off under Notifications turns it off for email too. `MAIL_TO` is the
+exception: it receives everything, which is what a shared mailbox is for.
+
+Nothing is sent until the mail settings are present, and the password is never
+logged, never returned by an endpoint and never shown in the admin. There is a
+**Check the settings** button under Notifications that connects and signs in
+without mailing anybody, so a wrong password can be found without sending the
+whole team a test.
+
 ### The AI assistant
 
 The assistant is optional and off by default. With no `AI_API_KEY` the site

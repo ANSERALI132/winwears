@@ -9,9 +9,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../db';
 import { asyncHandler } from '../../middleware/error';
-import { csrfProtection } from '../../middleware/auth';
+import { csrfProtection, requireRole } from '../../middleware/auth';
 import { notFound } from '../../lib/errors';
 import { NOTIFICATION_KINDS } from '../../lib/notify';
+import { describeMail, verifyMail } from '../../lib/mailer';
 import { pagination } from '../../validation/common';
 
 export const adminNotificationsRouter = Router();
@@ -106,6 +107,32 @@ adminNotificationsRouter.delete(
       where: { userId: req.admin?.id ?? '', NOT: { readAt: null } },
     });
     res.json({ data: { cleared: result.count } });
+  }),
+);
+
+/* ------------------------------------------------------------------ mail -- */
+
+/** Whether email is switched on, and where from. Never the password — not
+ *  even its length. */
+adminNotificationsRouter.get(
+  '/mail',
+  asyncHandler(async (_req, res) => {
+    res.json({ data: describeMail() });
+  }),
+);
+
+/**
+ * Checks the settings work without mailing anybody.
+ *
+ * Connects and authenticates only. Somebody setting this up should be able to
+ * find out their password is wrong without sending the whole team a test.
+ */
+adminNotificationsRouter.post(
+  '/mail/verify',
+  requireRole('ADMIN'),
+  asyncHandler(async (_req, res) => {
+    const result = await verifyMail();
+    res.json({ data: { ...describeMail(), ...result } });
   }),
 );
 

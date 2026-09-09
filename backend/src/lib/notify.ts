@@ -12,6 +12,8 @@
  */
 import type { NotificationKind } from '@prisma/client';
 import { prisma } from '../db';
+import { env } from '../env';
+import { mailConfigured, sendMail } from './mailer';
 
 /** Plain wording for each kind, used on the preferences screen. */
 export const NOTIFICATION_KINDS: Array<{ kind: NotificationKind; label: string; detail: string }> = [
@@ -59,6 +61,51 @@ async function audience(): Promise<string[]> {
 }
 
 /**
+ * The same notification, by email.
+ *
+ * Sent to the people who are getting it in the admin — the mute has already
+ * been applied, so turning a kind off turns off both. MAIL_TO is a shared
+ * inbox that receives everything regardless, for when nobody is signed in.
+ *
+ * A hash route means nothing outside the browser that is already on the page,
+ * so the link is made absolute against ADMIN_URL.
+ */
+async function emailOut(
+  input: NotifyInput,
+  recipients: string[],
+  href: string | null,
+): Promise<void> {
+  if (!mailConfigured()) return;
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: recipients }, active: true, NOT: { email: '' } },
+    select: { email: true },
+  });
+
+  const to = users.map((u) => u.email);
+  if (env.MAIL_TO) to.push(env.MAIL_TO);
+  if (!to.length) return;
+
+  const link = href ? `${env.ADMIN_URL.replace(/\/+$/, '')}/${href}` : env.ADMIN_URL;
+
+  await sendMail({
+    to,
+    subject: `WIN WEARS — ${input.title}`,
+    text: [
+      input.title,
+      input.body ?? '',
+      '',
+      link,
+      '',
+      'You are receiving this because it is switched on under',
+      'Notifications in the WIN WEARS admin.',
+    ]
+      .filter((line, i, all) => !(line === '' && all[i - 1] === ''))
+      .join('\n'),
+  });
+}
+
+/**
  * Writes one notification per recipient.
  *
  * Muted kinds are dropped per person rather than for everybody: one person
@@ -90,6 +137,13 @@ export async function notify(input: NotifyInput): Promise<number> {
         entity: input.entity ?? null,
         entityId: input.entityId ?? null,
       })),
+    });
+
+    /* Not awaited. An SMTP round trip must not sit inside the request that
+       caused it — a customer posting the contact form should not wait on our
+       mail server. Failures are logged by the mailer itself. */
+    void emailOut(input, recipients, href).catch((err) => {
+      console.error('[notify] could not send mail', err);
     });
 
     return recipients.length;
