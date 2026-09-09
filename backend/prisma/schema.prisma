@@ -35,6 +35,7 @@ model User {
   activity     ActivityLog[]
   ownedLeads   Lead[]           @relation("LeadOwner")
   stageChanges LeadStageEvent[] @relation("StageMovedBy")
+  assignedRfqs QuoteRequest[]   @relation("RfqAssignee")
 
   @@index([email])
 }
@@ -222,6 +223,16 @@ enum QuoteSource {
   AI_AGENT
 }
 
+/// How soon somebody should look at an RFQ. Deliberately separate from the
+/// lead score: the score is computed from what the customer told us, this is
+/// what a human decided about it.
+enum RfqPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model QuoteRequest {
   id                    String      @id @default(cuid())
   /// Human-quotable id shown to the customer and used in email: WW-RFQ-2026-0001.
@@ -248,7 +259,18 @@ model QuoteRequest {
   message               String?     @db.Text
   logoFile              String?
   designFile            String?
+  /// Where this request has got to in the inbox: has anyone dealt with it.
+  /// The sales workflow itself lives on the linked Lead — an RFQ is the
+  /// document, the lead is the opportunity, and giving each its own ten-stage
+  /// pipeline would mean two that disagree.
   status                QuoteStatus @default(NEW)
+  /// Who is dealing with it. Null is a real answer and worth reporting.
+  assignedToId          String?
+  /// What a human decided about urgency, as opposed to what the lead score
+  /// computed from the customer's own words.
+  priority              RfqPriority @default(NORMAL)
+  followUpAt            DateTime?
+  lastActivityAt        DateTime?
   /// Never returned by a public endpoint.
   internalNotes         String?     @db.Text
   createdAt             DateTime    @default(now())
@@ -262,6 +284,7 @@ model QuoteRequest {
   companyAccount        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
   contactPerson         Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
   lead                  Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignedTo            User?           @relation("RfqAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([createdAt])
@@ -269,6 +292,9 @@ model QuoteRequest {
   @@index([source])
   @@index([companyId])
   @@index([leadId])
+  @@index([assignedToId])
+  @@index([priority, status, createdAt])
+  @@index([followUpAt])
 }
 
 enum MessageStatus {

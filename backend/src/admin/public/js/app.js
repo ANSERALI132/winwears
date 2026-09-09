@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Admin — shell, routing and the session gate
+   Admin â€” shell, routing and the session gate
    ========================================================================== */
 (function () {
   'use strict';
@@ -54,7 +54,7 @@
       { path: '/crm/leads', label: 'Pipeline', icon: 'activity' },
     ] },
     { group: 'Enquiries', items: [
-      { path: '/quotes', label: 'Quote Requests', icon: 'quotes', count: 'quotes' },
+      { path: '/rfq', label: 'Quote Requests', icon: 'quotes', count: 'quotes' },
       { path: '/messages', label: 'Contact Messages', icon: 'messages', count: 'messages' },
     ] },
     { group: 'AI Assistant', items: [

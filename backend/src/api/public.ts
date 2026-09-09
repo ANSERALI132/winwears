@@ -17,7 +17,7 @@ import { contactCreateSchema, quoteCreateSchema } from '../validation/enquiry';
 import { upload } from '../middleware/upload';
 import { assertAllowed, ALLOWED_UPLOAD_TYPES } from '../lib/fileType';
 import { storage } from '../lib/storage';
-import { resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
+import { attachRfqToLead, resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
 
 export const publicRouter = Router();
 
@@ -248,6 +248,26 @@ publicRouter.post(
       console.error('[crm] could not resolve identity for a quote request', err);
     }
 
+    /* An RFQ is an opportunity, so it opens or advances one rather than
+       sitting in an inbox waiting to be noticed. Allowed to fail for the
+       same reason as the identity work above. */
+    let leadId: string | null = null;
+    try {
+      leadId = await attachRfqToLead({
+        companyId: identity.companyId,
+        contactId: identity.contactId,
+        title: input.quantity ? `${input.quantity} footballs` : 'Quote request',
+        productId,
+        quantity: input.quantity ?? null,
+        size: input.size ?? null,
+        customizationRequired: input.customizationRequired,
+        requirements: input.message ?? null,
+        source: 'WEBSITE_FORM',
+      });
+    } catch (err) {
+      console.error('[crm] could not attach a quote request to a lead', err);
+    }
+
     const quote = await prisma.quoteRequest.create({
       data: {
         name: input.name,
@@ -265,6 +285,8 @@ publicRouter.post(
         designFile: stored.designFile ?? null,
         companyId: identity.companyId,
         contactId: identity.contactId,
+        leadId,
+        lastActivityAt: new Date(),
       },
       select: { id: true, createdAt: true },
     });

@@ -260,6 +260,80 @@ export async function moveLeadStage(input: {
   return { from: lead.stage, to: input.toStage };
 }
 
+/**
+ * Finds the opportunity an incoming RFQ belongs to, opening one if there
+ * isn't a suitable one already.
+ *
+ * A quote request *is* an opportunity, so leaving it sitting in an inbox
+ * with no lead attached is how enquiries get forgotten. But a customer who
+ * sends three requests in a week is one opportunity being refined, not
+ * three — so an open lead on the same account is reused and advanced rather
+ * than duplicated.
+ *
+ * Returns null when there is no account to hang a lead off, which happens
+ * when identity resolution failed. That is not worth failing the enquiry
+ * over; the RFQ still lands, unfiled, and shows up in the unlinked list.
+ */
+export async function attachRfqToLead(input: {
+  companyId: string | null;
+  contactId: string | null;
+  title: string;
+  productId?: string | null;
+  categoryId?: string | null;
+  quantity?: number | null;
+  size?: string | null;
+  customizationRequired?: boolean | null;
+  requirements?: string | null;
+  source: LeadSource;
+}): Promise<string | null> {
+  if (!input.companyId) return null;
+
+  const open = await prisma.lead.findFirst({
+    where: { companyId: input.companyId, closedAt: null },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, stage: true, quantity: true },
+  });
+
+  if (open) {
+    /* Advance to RFQ only from the stages that come before it. A lead already
+       in negotiation should not be dragged backwards because the customer
+       sent another form. */
+    const earlier: LeadStage[] = ['NEW', 'QUALIFIED', 'CONTACTED', 'DISCOVERY'];
+    if (earlier.includes(open.stage)) {
+      await moveLeadStage({ leadId: open.id, toStage: 'RFQ', note: 'New quote request received' });
+    } else {
+      await prisma.lead.update({ where: { id: open.id }, data: { lastActivityAt: new Date() } });
+    }
+
+    /* A later request usually supersedes the earlier figure. */
+    if (input.quantity && input.quantity !== open.quantity) {
+      await prisma.lead.update({ where: { id: open.id }, data: { quantity: input.quantity } });
+    }
+    return open.id;
+  }
+
+  const { id } = await createLeadWithReference({
+    title: input.title,
+    companyId: input.companyId,
+    contactId: input.contactId,
+    stage: 'RFQ',
+    source: input.source,
+    productId: input.productId ?? null,
+    categoryId: input.categoryId ?? null,
+    quantity: input.quantity ?? null,
+    size: input.size ?? null,
+    customizationRequired: input.customizationRequired ?? null,
+    requirements: input.requirements ?? null,
+    lastActivityAt: new Date(),
+  });
+
+  await prisma.leadStageEvent.create({
+    data: { leadId: id, toStage: 'RFQ', note: 'Opened by a quote request' },
+  });
+
+  return id;
+}
+
 /* ------------------------------------------------------------ timeline -- */
 
 export type TimelineKind = 'lead' | 'quote' | 'message' | 'conversation' | 'stage';

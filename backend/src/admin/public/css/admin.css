@@ -605,3 +605,9 @@ a.pulse__title:hover { text-decoration: underline; }
   .pulse__row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .priority { grid-template-columns: 40px minmax(0, 1fr) 20px; gap: 8px; }
 }
+
+/* RFQ command centre */
+.stat--button { width: 100%; text-align: left; cursor: pointer; font: inherit; border: 1px solid var(--line); }
+.stat--button:hover { border-color: var(--line-2); }
+.row--overdue { background: var(--accent-sub); }
+.tiny { font-size: 11px; }

@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { prisma } from '../../db';
 import { createQuoteWithReference } from '../../lib/reference';
 import { scoreLead } from '../../lib/leadScore';
-import { resolveIdentity, touchCompany, type ResolvedIdentity } from '../../lib/crm';
+import { attachRfqToLead, resolveIdentity, touchCompany, type ResolvedIdentity } from '../../lib/crm';
 import type { AITool, ToolContext } from './types';
 
 /* ---------------------------------------------------------- remember ----- */
@@ -216,6 +216,23 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
       console.error('[crm] could not resolve identity for an assistant quote request', err);
     }
 
+    let leadId: string | null = null;
+    try {
+      leadId = await attachRfqToLead({
+        companyId: identity.companyId,
+        contactId: identity.contactId,
+        title: input.quantity ? `${input.quantity} footballs` : 'Quote request',
+        productId: product?.id ?? null,
+        quantity: input.quantity ?? null,
+        size: input.size ?? null,
+        customizationRequired: input.customizationRequired ?? null,
+        requirements: input.message ?? null,
+        source: 'AI_ASSISTANT',
+      });
+    } catch (err) {
+      console.error('[crm] could not attach an assistant quote request to a lead', err);
+    }
+
     const { reference } = await createQuoteWithReference({
       name: input.name,
       email: input.email,
@@ -232,6 +249,8 @@ export const createQuoteRequest: AITool<z.infer<typeof submitInput>> = {
       aiConversationId: ctx.conversationId,
       companyId: identity.companyId,
       contactId: identity.contactId,
+      leadId,
+      lastActivityAt: new Date(),
       status: 'NEW',
     });
 
