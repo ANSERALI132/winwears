@@ -44,8 +44,13 @@
   /* ------------------------------------------------------------ nav ----- */
 
   var NAV = [
-    { group: 'Catalogue', items: [
+    /* The two screens somebody opens to find out where things stand, kept
+       apart from the catalogue they used to sit in. */
+    { group: 'Command', items: [
       { path: '/', label: 'Overview', icon: 'overview' },
+      { path: '/copilot', label: 'Copilot', icon: 'activity' },
+    ] },
+    { group: 'Catalogue', items: [
       { path: '/products', label: 'Products', icon: 'products' },
       { path: '/categories', label: 'Categories', icon: 'categories' },
     ] },

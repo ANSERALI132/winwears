@@ -50,6 +50,7 @@ model User {
   stockMoves   StockMovement[]  @relation("StockRecorder")
   shipments    Shipment[]       @relation("ShipmentAuthor")
   shipmentMoves ShipmentEvent[] @relation("ShipmentMovedBy")
+  copilotThreads CopilotThread[] @relation("CopilotUser")
 
   @@index([email])
 }
@@ -1564,4 +1565,64 @@ model AIEvent {
 
   @@index([eventType, createdAt])
   @@index([conversationId])
+}
+
+// ----------------------------------------------------------- ai copilot --
+//
+// The internal assistant. It answers questions about the business from the
+// same tool gate the customer agent uses, and it is deliberately read-only:
+// every tool it can reach is a lookup. An assistant that can cancel an order
+// on a misread question is a different class of risk from one that can only
+// be wrong out loud.
+//
+// These are separate tables from AIConversation rather than a `kind` column
+// on it, which is the one place in this schema that duplicates rather than
+// adapts. The reason is blast radius: every existing query over customer
+// conversations — the admin list, the analytics, the escalation counts —
+// would need a filter it does not have today, and the failure mode of
+// forgetting one is internal business questions appearing in a customer
+// conversation view. A separate table cannot leak that way.
+
+model CopilotThread {
+  id           String           @id @default(cuid())
+  /// Whose thread. An admin sees only their own: one person asking about
+  /// margins should not have that question surface on a colleague's screen.
+  userId       String
+  /// Taken from the first question, so a list of threads is readable.
+  title        String?
+
+  messageCount Int              @default(0)
+  inputTokens  Int              @default(0)
+  outputTokens Int              @default(0)
+
+  lastMessageAt DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user         User             @relation("CopilotUser", fields: [userId], references: [id], onDelete: Cascade)
+  messages     CopilotMessage[]
+
+  @@index([userId, lastMessageAt])
+}
+
+model CopilotMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  role      AIMessageRole
+  content   String        @db.Text
+
+  /// Which tools ran and what they returned, kept so somebody can see what a
+  /// number was actually built from. The whole point of the tool gate is that
+  /// this list is the complete set of facts behind an answer.
+  toolCalls Json?
+
+  inputTokens  Int        @default(0)
+  outputTokens Int        @default(0)
+  latencyMs    Int?
+
+  createdAt DateTime      @default(now())
+
+  thread    CopilotThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
 }
