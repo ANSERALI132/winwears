@@ -114,6 +114,27 @@ classic scripts served by Express — so the project has exactly one build step
   No summaries of work already visible in the diff.
 - Ask one clarifying question when a task is genuinely ambiguous, rather than
   building two versions.
+- Verify by reading the page — the accessibility tree or its text — not by
+  screenshotting it. Take a screenshot only when the question is genuinely
+  visual: colour, spacing, alignment. A screenshot costs roughly ten times what
+  the same check costs in text, and it stays in the session being paid for long
+  after it has been looked at.
+- One session per module, not one per project. Every call in a session re-reads
+  everything said before it, so a session's cost grows with the square of its
+  length; a four-day session reached 690,000 tokens of context per message.
+  `/clear` between pieces of work, `/compact` when one must continue.
+
+## Costs money
+
+`backend/tests/ai-scenarios.test.mjs` is the only thing in this repository that
+spends the Anthropic API credit on `AI_API_KEY` — a dozen conversations, each up
+to `AI_MAX_TOOL_ITERATIONS` model calls. It is gated behind
+`RUN_AI_SCENARIOS=yes` so `npm test` stays free. Do not set that flag as a
+matter of routine, and read the output before running it again. The admin
+copilot spends the same key on every question.
+
+See `TOKEN_USAGE_AUDIT.md` for what a million tokens actually looked like and
+which two habits caused it.
 
 ## Scope rule
 
