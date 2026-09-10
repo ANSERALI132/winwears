@@ -2,7 +2,8 @@
 
 Prompted by roughly 1.3 M input tokens showing on the Anthropic dashboard for
 9–10 September. This is an audit of the WIN WEARS project and of the Claude
-Code configuration on this machine. No files were changed except this one.
+Code configuration on this machine. It was written before anything was
+changed; §7 records the four fixes that followed and the commits they landed in.
 
 **Headline: nothing is looping and nothing is running behind your back.** There
 is no hook, no scheduled task, no watcher, no subagent and no background
@@ -101,7 +102,7 @@ Reported without values, as asked.
 | Variable | Present | Referenced by code | Note |
 | --- | --- | --- | --- |
 | `AI_API_KEY` | yes, full length | `src/ai/index.ts:20` → `src/ai/providers/anthropic.ts:88` | the key the website spends |
-| `ANTHROPIC_API_KEY` | yes, but short — looks like a stub | **not referenced by any source file** | blank in `.env.example:141`; **not** exported into the shell |
+| `ANTHROPIC_API_KEY` | yes, but short — looks like a stub | **not referenced by any source file** | was blank in `.env.example`; **not** exported into the shell. **Both lines have since been removed** — see §7. |
 
 Settings in force: `AI_ENABLED=true`, `AI_MODEL=claude-sonnet-5`,
 `AI_MAX_TOKENS=1024`, `AI_MAX_TOOL_ITERATIONS=6`,
@@ -165,10 +166,29 @@ exported).
 
 ### Applied
 
-- This report. Nothing else — every other change is listed below awaiting a
-  go-ahead, as asked.
+All four, in the order they were approved:
 
-### Proposed, not applied
+1. **The AI scenario suite is gated** behind `RUN_AI_SCENARIOS=yes`
+   (`6005291`). `npm test` no longer calls the model: with a key but no flag it
+   skips the nine scenarios and prints the two commands that run them. No test
+   was removed, and all three branches were exercised against a stub server so
+   checking the gate itself cost nothing.
+2. **`.claude/settings.json` denies `Read`** on ten paths — `node_modules`,
+   `dist`, `.git`, the four photograph folders and the two upload directories
+   (`c5673c7`). Only reading is denied, so the paths stay listable and
+   referable. Migrations were left out: small, and occasionally read.
+3. **`CLAUDE.md` records the two habits** that caused this, with the numbers
+   attached, plus a section naming the two things that spend real money
+   (`378b847`).
+4. **`ANTHROPIC_API_KEY` is gone** from both `.env` and `.env.example`, along
+   with the comments that documented it. Nothing read it; `dist/env.js` still
+   loads with no missing variable, and the site is unaffected. `.env` is
+   gitignored, so only the template change is committed.
+
+This report was written before those four; the proposals below are kept as they
+were written, since what was proposed and why is the useful record.
+
+### What was proposed
 
 1. **Gate the AI scenario suite** — about six lines at the top of
    `backend/tests/ai-scenarios.test.mjs`: skip unless `RUN_AI_SCENARIOS=yes` is
