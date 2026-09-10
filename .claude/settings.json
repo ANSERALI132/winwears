@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./backend/node_modules/**)",
+      "Read(./node_modules/**)",
+      "Read(./backend/dist/**)",
+      "Read(./.git/**)",
+      "Read(./frontend/assets/img/**)",
+      "Read(./Catagories/**)",
+      "Read(./LOGO/**)",
+      "Read(./OUR FACTORY/**)",
+      "Read(./backend/uploads/**)",
+      "Read(./backend/uploads-private/**)"
+    ]
+  }
+}
