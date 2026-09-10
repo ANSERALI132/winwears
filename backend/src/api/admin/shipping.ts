@@ -29,6 +29,7 @@ import {
   refusalFor,
   safeTrackingUrl,
 } from '../../lib/shipping';
+import { dispatch } from '../../lib/webhooks';
 import {
   shipmentCreateSchema,
   shipmentItemsSchema,
@@ -404,6 +405,25 @@ adminShippingRouter.patch(
 
     if (input.status === 'DISPATCHED' || input.status === 'DELIVERED') {
       await followOrder(existing.orderId, input.status, existing.reference, req.admin?.id ?? null);
+    }
+
+    if (input.status === 'DISPATCHED') {
+      const order = await prisma.order.findUnique({
+        where: { id: existing.orderId },
+        select: { number: true, poNumber: true },
+      });
+      const shipment = await prisma.shipment.findUnique({
+        where: { id },
+        select: { carrier: true, trackingNumber: true, packages: true },
+      });
+      await dispatch('shipment.dispatched', {
+        reference: existing.reference,
+        order: order?.number ?? null,
+        theirPoNumber: order?.poNumber ?? null,
+        carrier: shipment?.carrier ?? null,
+        tracking: shipment?.trackingNumber ?? null,
+        packages: shipment?.packages ?? 0,
+      });
     }
 
     await log({

@@ -55,6 +55,7 @@ model User {
   notifications  Notification[]  @relation("NotifiedUser")
   notificationMutes NotificationMute[] @relation("NotificationMutes")
   documents      Attachment[]    @relation("DocumentUploader")
+  webhooks       Webhook[]       @relation("WebhookAuthor")
   ruleAssignments AutomationRule[] @relation("RuleAssignee")
   authoredRules  AutomationRule[] @relation("RuleAuthor")
   assignedTasks  Task[]           @relation("TaskAssignee")
@@ -1941,4 +1942,75 @@ model Attachment {
 
   @@index([entity, entityId, createdAt])
   @@index([createdAt])
+}
+
+// ------------------------------------------------------------- webhooks --
+//
+// Outbound integration. When something happens here, tell somewhere else:
+// a spreadsheet, an accounting package, a Zapier or n8n flow, a customer's
+// own ERP. Deliberately generic rather than a list of named connectors —
+// every named one needs an account, an OAuth dance and API-specific code, and
+// none of that can be written or tested without credentials nobody has yet.
+//
+// A signature travels with every call so the receiver can tell a real
+// delivery from anybody who learned the URL.
+
+model Webhook {
+  id          String            @id @default(cuid())
+  name        String
+  /// Where to POST. https only, and never an address inside this network.
+  url         String
+  /// Shared secret for the HMAC signature. Readable because the sender needs
+  /// it in the clear to sign with; shown only to an administrator.
+  secret      String
+
+  /// Which events this one wants. Empty means every event, which is a
+  /// reasonable thing to want for a general-purpose flow.
+  events      String[]          @default([])
+  active      Boolean           @default(true)
+
+  /// The last outcome, denormalised so a list of webhooks can show which one
+  /// is broken without reading every delivery.
+  lastStatus  Int?
+  lastError   String?
+  lastAttemptAt DateTime?
+  /// Consecutive failures. Reset by a success.
+  failures    Int               @default(0)
+
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  createdBy   User?             @relation("WebhookAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  deliveries  WebhookDelivery[]
+
+  @@index([active])
+}
+
+/// Every attempt, kept. "Why did my integration not fire" is the only
+/// question ever asked about a webhook, and it cannot be answered by a hook
+/// that keeps no record of its own attempts.
+model WebhookDelivery {
+  id           String    @id @default(cuid())
+  webhookId    String
+  event        String
+  /// Exactly what was sent, so a failure can be inspected and resent.
+  payload      Json
+
+  /// Null until the first attempt finishes.
+  status       Int?
+  error        String?
+  attempts     Int       @default(0)
+  /// Set on success, or once it has failed too many times to keep trying.
+  settledAt    DateTime?
+  /// When the sweep may try again. Null means never — either done, or given
+  /// up on.
+  nextAttemptAt DateTime?
+
+  createdAt    DateTime  @default(now())
+
+  webhook      Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@index([nextAttemptAt])
 }

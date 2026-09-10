@@ -131,6 +131,15 @@ const schema = z
        silences. Example: WHATSAPP_KINDS=AI_ESCALATED,QC_FAILED */
     WHATSAPP_KINDS: z.string().default(''),
 
+    /* Lets a webhook point at localhost or a private address, for developing
+       against a receiver on this machine. Off by default and named so nobody
+       switches it on in production by accident: with it on, a webhook URL is
+       a way to make this server fetch anything inside its own network. */
+    WEBHOOK_ALLOW_PRIVATE: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+
     /* Serve the static site from this process too. Handy in development; in
        production a CDN or nginx usually does it instead. */
     SERVE_FRONTEND: z

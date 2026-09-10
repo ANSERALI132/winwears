@@ -22,6 +22,7 @@ import { computeTotals, decimalToNumber } from '../../lib/quotation';
 import { allowedNext, balanceOf, canMove, nextOrderNumber, refusalFor } from '../../lib/order';
 import { moveLeadStage } from '../../lib/crm';
 import { notify } from '../../lib/notify';
+import { dispatch } from '../../lib/webhooks';
 import {
   orderCreateSchema,
   orderFromQuotationSchema,
@@ -238,6 +239,12 @@ adminOrdersRouter.post(
       req.admin?.id ?? null,
     );
 
+    await dispatch('order.confirmed', {
+      number: created.number,
+      currency: input.currency,
+      total: totals.total,
+    });
+
     await notify({
       kind: 'ORDER_CONFIRMED',
       title: `Order ${created.number} confirmed`,
@@ -343,6 +350,13 @@ adminOrdersRouter.post(
         note: `Order ${created.number} raised from ${quotation.number}`,
       });
     }
+
+    await dispatch('order.confirmed', {
+      number: created.number,
+      currency: quotation.currency,
+      total: decimalToNumber(quotation.total),
+      fromQuotation: quotation.number,
+    });
 
     await notify({
       kind: 'ORDER_CONFIRMED',
@@ -532,6 +546,13 @@ adminOrdersRouter.patch(
       await prisma.lead.update({ where: { id: existing.leadId }, data: { lastActivityAt: new Date() } });
     }
 
+    await dispatch('order.status_changed', {
+      number: existing.number,
+      from: existing.status,
+      to: input.status,
+      ...(input.reason ? { reason: input.reason } : {}),
+    });
+
     await log({
       adminId: req.admin?.id,
       action: 'status_changed',
@@ -571,6 +592,12 @@ adminOrdersRouter.post(
         note: input.note ?? null,
         recordedById: req.admin?.id ?? null,
       },
+    });
+
+    await dispatch('payment.received', {
+      order: existing.number,
+      currency: existing.currency,
+      amount: input.amount,
     });
 
     await notify({

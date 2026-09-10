@@ -20,6 +20,7 @@ import { log } from '../../lib/audit';
 import { slugify } from '../../lib/slug';
 import { hasCriticalFailure, judge, nextInspectionReference, summarise } from '../../lib/qc';
 import { notify } from '../../lib/notify';
+import { dispatch } from '../../lib/webhooks';
 import {
   checkpointCreateSchema,
   checkpointUpdateSchema,
@@ -488,6 +489,12 @@ adminQcRouter.post(
 
     if (result === 'FAILED') {
       const critical = existing.results.some((r) => !r.passed && r.checkpoint.critical);
+      await dispatch('qc.failed', {
+        reference: existing.reference,
+        critical,
+        sampleSize: existing.sampleSize,
+        failedCheckpoints: existing.results.filter((r) => !r.passed).length,
+      });
       await notify({
         kind: 'QC_FAILED',
         title: `Inspection ${existing.reference} failed`,

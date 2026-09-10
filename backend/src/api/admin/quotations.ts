@@ -16,6 +16,7 @@ import { badRequest, conflict, notFound } from '../../lib/errors';
 import { log } from '../../lib/audit';
 import { computeTotals, decimalToNumber, nextQuotationNumber } from '../../lib/quotation';
 import { moveLeadStage } from '../../lib/crm';
+import { dispatch } from '../../lib/webhooks';
 import {
   quotationCreateSchema,
   quotationListQuery,
@@ -298,6 +299,18 @@ adminQuotationsRouter.patch(
       } else if (status === 'ACCEPTED') {
         await moveLeadStage({ leadId: existing.leadId, toStage: 'WON', byUserId: req.admin?.id ?? null, note: `Quotation ${existing.number} accepted` });
       }
+    }
+
+    if (status === 'SENT' || status === 'ACCEPTED') {
+      const fresh = await prisma.quotation.findUnique({
+        where: { id },
+        select: { number: true, currency: true, total: true },
+      });
+      await dispatch(status === 'SENT' ? 'quotation.sent' : 'quotation.accepted', {
+        number: fresh?.number ?? existing.number,
+        currency: fresh?.currency ?? null,
+        total: fresh ? decimalToNumber(fresh.total) : null,
+      });
     }
 
     await log({

@@ -29,6 +29,7 @@ import { adminAnalyticsRouter } from './analytics';
 import { adminContentRouter } from './content';
 import { adminNotificationsRouter } from './notifications';
 import { adminAttachmentsRouter } from './attachments';
+import { adminWebhooksRouter } from './webhooks';
 
 export const adminRouter = Router();
 
@@ -62,3 +63,4 @@ adminRouter.use('/analytics', adminAnalyticsRouter);
 adminRouter.use('/content', adminContentRouter);
 adminRouter.use('/notifications', adminNotificationsRouter);
 adminRouter.use('/attachments', adminAttachmentsRouter);
+adminRouter.use('/webhooks', adminWebhooksRouter);

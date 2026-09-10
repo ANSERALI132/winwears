@@ -83,6 +83,7 @@
     ] },
     { group: 'Site', items: [
       { path: '/automation', label: 'Automation', icon: 'settings' },
+      { path: '/integrations', label: 'Integrations', icon: 'activity', adminOnly: true },
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/users', label: 'Admin Users', icon: 'users', adminOnly: true },
       { path: '/activity', label: 'Activity Log', icon: 'activity' },

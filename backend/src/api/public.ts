@@ -20,6 +20,7 @@ import { storage } from '../lib/storage';
 import { attachRfqToLead, resolveIdentity, touchCompany, type ResolvedIdentity } from '../lib/crm';
 import { pageExists } from '../lib/content';
 import { notify } from '../lib/notify';
+import { dispatch } from '../lib/webhooks';
 
 export const publicRouter = Router();
 
@@ -326,6 +327,16 @@ publicRouter.post(
     });
 
     await touchCompany(identity.companyId);
+
+    /* No email or phone number in the payload. A webhook sends business data
+       to an outside address, and a customer did not consent to their contact
+       details going there — the reference is enough to look them up here. */
+    await dispatch('rfq.received', {
+      company: input.company ?? null,
+      country: input.country ?? null,
+      quantity: input.quantity ?? null,
+      category: input.category ?? null,
+    });
 
     await notify({
       kind: 'ENQUIRY_RECEIVED',

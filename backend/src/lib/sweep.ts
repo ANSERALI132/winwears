@@ -13,6 +13,7 @@
  */
 import { env } from '../env';
 import { runAllRules } from './automation';
+import { retryDueDeliveries } from './webhooks';
 
 let timer: NodeJS.Timeout | null = null;
 let running = false;
@@ -30,6 +31,17 @@ export async function sweepOnce(): Promise<void> {
     }
   } catch (err) {
     console.error('Automation sweep failed:', err);
+  }
+
+  /* Webhook retries ride along on the same timer. A retry needs durable
+     scheduling, and a second scheduler for it would be more infrastructure
+     than the problem deserves. Kept apart from the rules above so a failing
+     rule does not stop deliveries, and vice versa. */
+  try {
+    const sent = await retryDueDeliveries();
+    if (sent > 0) console.info(`Webhooks: ${sent} delivery retries succeeded.`);
+  } catch (err) {
+    console.error('Webhook retries failed:', err);
   } finally {
     running = false;
   }
