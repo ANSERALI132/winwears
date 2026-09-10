@@ -15,6 +15,7 @@ import {
 } from '../../lib/settings';
 import { activityListQuery, settingsUpdateSchema, userCreateSchema, userUpdateSchema } from '../../validation/admin';
 import { log } from '../../lib/audit';
+import { runHealthChecks } from '../../lib/health';
 
 export const adminStatsRouter = Router();
 export const adminSettingsRouter = Router();
@@ -93,6 +94,27 @@ adminStatsRouter.get(
         recentActivity,
       },
     });
+  }),
+);
+
+/* --------------------------------------------------------------- health --- */
+
+/**
+ * What is working and what is quietly wrong.
+ *
+ * Admin-only: it names the storage driver, the mail server's state and how
+ * many rules are running, which is a description of the installation and not
+ * something to hand out. The unauthenticated version lives on the public
+ * router and says only whether the database answers.
+ */
+adminStatsRouter.get(
+  '/health',
+  asyncHandler(async (_req, res) => {
+    const report = await runHealthChecks();
+    /* Never cached: a health report from a minute ago is not a health
+       report. */
+    res.set('Cache-Control', 'no-store');
+    res.json({ data: report });
   }),
 );
 

@@ -12,6 +12,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { env, isProd } from './env';
 import { PrismaSessionStore } from './lib/sessionStore';
+import { livenessCheck } from './lib/health';
 import { loadUser } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { publicRouter } from './api/public';
@@ -82,8 +83,25 @@ export function createApp(): express.Express {
 
   app.use(loadUser);
 
+  /**
+   * Liveness, for an uptime monitor.
+   *
+   * This used to answer `ok: true` unconditionally, which meant it reported a
+   * healthy site while the database was refusing connections — the one
+   * failure a monitor exists to catch. It now asks the database whether it is
+   * there, and answers 503 when it is not, because a monitor reads the status
+   * code rather than the body.
+   *
+   * Deliberately says nothing else. It is unauthenticated, so everything here
+   * is public; the detailed report lives behind the admin guard.
+   */
   app.get('/api/health', (_req, res) => {
-    res.json({ data: { ok: true, uptime: Math.round(process.uptime()) } });
+    void livenessCheck().then(({ ok }) => {
+      res
+        .status(ok ? 200 : 503)
+        .set('Cache-Control', 'no-store')
+        .json({ data: { ok, uptime: Math.round(process.uptime()) } });
+    });
   });
 
   app.use('/api/auth', authRouter);

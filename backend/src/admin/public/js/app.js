@@ -87,6 +87,7 @@
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/users', label: 'Admin Users', icon: 'users', adminOnly: true },
       { path: '/activity', label: 'Activity Log', icon: 'activity' },
+      { path: '/health', label: 'System Health', icon: 'overview' },
     ] },
   ];
 

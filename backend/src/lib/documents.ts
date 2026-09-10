@@ -87,6 +87,39 @@ export async function readDocument(key: string): Promise<Buffer> {
   return fs.readFile(resolveKey(key));
 }
 
+/** Whether a file exists for this key. Used by the health check to find rows
+ *  whose file has gone, without reading megabytes to find out. */
+export async function documentExists(key: string): Promise<boolean> {
+  try {
+    await fs.access(resolveKey(key));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Proves the store can actually be written to, then tidies up after itself.
+ *
+ * A disk that is full or a directory that is read-only is invisible until
+ * somebody tries to attach a file to an order — which is the worst moment to
+ * find out.
+ */
+export async function checkWritable(): Promise<{ ok: boolean; error?: string }> {
+  const probe = path.join(root(), '.health-probe');
+  try {
+    await fs.mkdir(root(), { recursive: true });
+    await fs.writeFile(probe, 'ok');
+    const read = await fs.readFile(probe, 'utf8');
+    await fs.unlink(probe);
+    if (read !== 'ok') return { ok: false, error: 'what was written did not read back' };
+    return { ok: true };
+  } catch (err) {
+    await fs.unlink(probe).catch(() => {});
+    return { ok: false, error: err instanceof Error ? err.message : 'could not write' };
+  }
+}
+
 /** Best effort. A document row whose file has already gone should still be
  *  removable — otherwise a failed upload leaves a row nobody can clear. */
 export async function removeDocument(key: string): Promise<void> {
