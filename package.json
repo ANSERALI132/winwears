@@ -1,0 +1,8 @@
+{
+"name": "win-wears",
+"private": true,
+"scripts": {
+"build": "cd backend && npm ci && npm run build",
+"start": "cd backend && npm run migrate:deploy && npm start"
+}
+}
