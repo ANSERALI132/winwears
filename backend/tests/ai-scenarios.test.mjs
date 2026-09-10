@@ -13,7 +13,20 @@
 import { check, describe, done, prisma, req, skip, summary, serverIsUp } from './harness.mjs';
 
 const key = process.env.AI_API_KEY ?? '';
-const configured = key.startsWith('sk-ant-') && !key.includes('placeholder');
+const hasKey = key.startsWith('sk-ant-') && !key.includes('placeholder');
+
+/**
+ * Asked for by name, not run by default.
+ *
+ * This is the only suite that spends money, and `npm test` gives no hint of
+ * it: one run is a dozen conversations, each of which may take up to
+ * AI_MAX_TOOL_ITERATIONS calls, so running the whole suite after every edit
+ * adds up to a real bill rather than a few cents. Requiring the flag makes
+ * the cost a decision instead of a side effect, and leaves `npm test` free to
+ * run as often as anyone likes.
+ */
+const requested = process.env.RUN_AI_SCENARIOS === 'yes';
+const configured = hasKey && requested;
 
 if (!(await serverIsUp())) {
   console.error('\nThe server is not answering. Start it with `npm start` and try again.\n');
@@ -23,9 +36,16 @@ if (!(await serverIsUp())) {
 if (!configured) {
   describe('conversation scenarios');
   console.log(
-    '\n  These need a real AI_API_KEY in .env and cost a few cents to run.\n' +
-      '  Everything else about the assistant is covered by the other suites;\n' +
-      '  what is untested without a key is the model\'s own judgement.\n',
+    hasKey
+      ? '\n  Not run: these call the real model and cost money. Ask for them:\n' +
+          '\n    PowerShell:  $env:RUN_AI_SCENARIOS="yes"; npm test' +
+          '\n    bash:        RUN_AI_SCENARIOS=yes npm test\n' +
+          '\n  Everything else about the assistant is covered by the other\n' +
+          '  suites, which are free; what is untested until you run these is\n' +
+          '  the model\'s own judgement.\n'
+      : '\n  These need a real AI_API_KEY in .env and cost a few cents to run.\n' +
+          '  Everything else about the assistant is covered by the other suites;\n' +
+          '  what is untested without a key is the model\'s own judgement.\n',
   );
   for (const name of [
     'product discovery searches the catalogue',
@@ -38,7 +58,7 @@ if (!configured) {
     'a price is never invented',
     'an MOQ is never invented',
   ]) {
-    skip(name, 'no AI_API_KEY');
+    skip(name, hasKey ? 'costs money — set RUN_AI_SCENARIOS=yes' : 'no AI_API_KEY');
   }
   await done(summary());
 } else {
