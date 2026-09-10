@@ -1,6 +1,7 @@
 {
 "name": "win-wears",
 "private": true,
+"description": "root orchestrator so Railway builds frontend and backend together",
 "scripts": {
 "build": "cd backend && npm ci && npm run build",
 "start": "cd backend && npm run migrate:deploy && npm start"
