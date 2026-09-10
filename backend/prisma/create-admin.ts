@@ -8,6 +8,8 @@
  * Passing the password on the command line would put it in your shell history,
  * so it is read from the environment instead.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -56,7 +58,24 @@ async function main(): Promise<void> {
   await prisma.session.deleteMany({ where: { userId: user.id } });
 
   console.log(`\nAdministrator ready: ${user.email}`);
-  console.log('Sign in at /admin/login\n');
+  console.log('Sign in at /admin/login');
+
+  /**
+   * Removes the development credential note, if there is one.
+   *
+   * Done here rather than by hand so the two things happen together: the file
+   * only goes once a new password is actually in place, and there is never a
+   * window where the note has been deleted but the old password still works.
+   * The password itself is never written anywhere — not to this file, not to
+   * the console, not to the shell history.
+   */
+  const note = path.resolve(__dirname, '..', 'ADMIN-LOGIN.local.txt');
+  if (fs.existsSync(note)) {
+    fs.unlinkSync(note);
+    console.log('Removed ADMIN-LOGIN.local.txt — the new password is not written down anywhere.');
+  }
+
+  console.log('');
 }
 
 main()

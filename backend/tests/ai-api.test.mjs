@@ -79,7 +79,7 @@ for (const field of ['"status"', 'deletedAt', 'internalNotes']) {
 const session = await signIn();
 
 if (!session?.cookie) {
-  skip('admin endpoint checks', 'could not sign in — is ADMIN-LOGIN.local.txt present?');
+  skip('admin endpoint checks', 'could not sign in — set ADMIN_EMAIL and ADMIN_PASSWORD');
 } else {
   describe('signed in as an admin');
 

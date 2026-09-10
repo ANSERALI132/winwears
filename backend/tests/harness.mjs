@@ -10,6 +10,8 @@
  * the tools agree with each other — which a mocked test cannot tell you.
  * Every test cleans up what it made.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 export const BASE = process.env.TEST_BASE_URL ?? 'http://localhost:3000';
@@ -123,17 +125,35 @@ export async function req(method, path, { body, headers, cookie } = {}) {
   return { status: res.status, ok: res.ok, data, text, headers: res.headers };
 }
 
-/** Signs in and returns the cookie plus CSRF token every admin write needs. */
-export async function signIn() {
-  const fs = await import('node:fs');
-  const path = await import('node:path');
+/**
+ * The administrator these tests sign in as.
+ *
+ * The environment first, so the suite works on a machine that keeps no
+ * credential on disk — which is where it should be run. The local file is a
+ * fallback for a development box that still has one, and is expected to be
+ * absent.
+ */
+export function testCredentials() {
+  const fromEnv = {
+    email: process.env.ADMIN_EMAIL?.trim(),
+    password: process.env.ADMIN_PASSWORD,
+  };
+  if (fromEnv.email && fromEnv.password) return fromEnv;
+
   const file = path.resolve(process.cwd(), 'ADMIN-LOGIN.local.txt');
   if (!fs.existsSync(file)) return null;
 
   const text = fs.readFileSync(file, 'utf8');
   const email = /^\s*Email\s+(\S+)/m.exec(text)?.[1];
   const password = /^\s*Password\s+(\S+)/m.exec(text)?.[1];
-  if (!email || !password) return null;
+  return email && password ? { email, password } : null;
+}
+
+/** Signs in and returns the cookie plus CSRF token every admin write needs. */
+export async function signIn() {
+  const credentials = testCredentials();
+  if (!credentials) return null;
+  const { email, password } = credentials;
 
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
