@@ -1,17 +1,18 @@
 /* ==========================================================================
    WIN WEARS — 3D football
    --------------------------------------------------------------------------
-   A real truncated icosahedron built as 32 separate panels — 12 pentagons and
-   20 hexagons — each one domed, inset and rolled down at its edge so the seams
-   are actual grooves in the geometry rather than lines painted on a sphere.
-   That is what stops it reading as CG: the silhouette is faintly faceted, the
-   seams catch their own shadow, and the panel crowns take a real highlight.
+   The ball is the WIN WEARS match ball model, assets/models/
+   WIN-WEARS-Football.glb — its own panels, artwork, normal and occlusion maps.
+   It is downloaded once per page however many balls the page shows.
 
-   Everything is generated in the browser. No model file, no texture download,
-   nothing to license.
+   Every ball on the site uses it, the customizer included. The model's
+   colours are its artwork, so setColours() changes nothing on it; the
+   customer's colour choice is still recorded with their specification.
+   { procedural: true } still builds the old generated, recolourable ball.
 
-   Usage:  var ball = WW.ball3d(el, { base:'#fff', accent:'#16264F', ... });
-           ball.setColours({ base:'#E1132C' });   // live recolour
+   Usage:  var ball = WW.ball3d(el, { zoom: 1.2, interactive: true });
+           var ball = WW.ball3d(el, { procedural: true, base:'#fff', accent:'#16264F' });
+           ball.setColours({ base:'#E1132C' });   // procedural ball only
            ball.destroy();
 
    Degrades: fewer rings and no environment map on weaker devices, and if
@@ -21,20 +22,81 @@
   'use strict';
 
   var THREE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-  var loading = null;
+  var scripts = {};
+
+  function loadScript(src) {
+    if (scripts[src]) return scripts[src];
+    scripts[src] = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error(src + ' failed to load')); };
+      document.head.appendChild(s);
+    });
+    return scripts[src];
+  }
 
   function loadThree() {
     if (window.THREE) return Promise.resolve(window.THREE);
-    if (loading) return loading;
-    loading = new Promise(function (resolve, reject) {
-      var s = document.createElement('script');
-      s.src = THREE_URL;
-      s.async = true;
-      s.onload = function () { window.THREE ? resolve(window.THREE) : reject(new Error('three missing')); };
-      s.onerror = function () { reject(new Error('three failed to load')); };
-      document.head.appendChild(s);
+    return loadScript(THREE_URL).then(function () {
+      if (!window.THREE) throw new Error('three missing');
+      return window.THREE;
     });
-    return loading;
+  }
+
+  /* ======================================================================
+     The match ball model
+     GLTFLoader is the r128 build from three's own npm package, served from
+     this site — the same version as three itself, and no second outside host.
+     ====================================================================== */
+  var models = {};
+
+  function loadModel(THREE, url) {
+    if (models[url]) return models[url];
+    var base = document.documentElement.getAttribute('data-base') || '';
+    models[url] = (THREE.GLTFLoader ? Promise.resolve() : loadScript(base + 'assets/js/vendor/GLTFLoader.js'))
+      .then(function () {
+        return new Promise(function (resolve, reject) {
+          new THREE.GLTFLoader().load(url, resolve, undefined, reject);
+        });
+      });
+    return models[url];
+  }
+
+  /**
+   * One ball's copy of the model, centred on its own middle and scaled to
+   * radius R, so it sits exactly where the generated ball did under the same
+   * camera and turns about its centre rather than the file's origin.
+   *
+   * Materials are cloned because the studio reflection is a texture that
+   * belongs to one renderer, and the home page has two. The artwork textures
+   * inside those materials are still shared.
+   */
+  function modelBall(THREE, gltf, R, env) {
+    var root = gltf.scene.clone(true);
+    function own(m) {
+      var c = m.clone();
+      if (env) {
+        c.envMap = env;
+        c.envMapIntensity = 0.55;
+      }
+      return c;
+    }
+    root.traverse(function (o) {
+      if (!o.isMesh) return;
+      o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
+    });
+
+    var box = new THREE.Box3().setFromObject(root);
+    var size = box.getSize(new THREE.Vector3());
+    var s = R / ((Math.max(size.x, size.y, size.z) / 2) || 1);
+    root.scale.setScalar(s);
+    root.position.copy(box.getCenter(new THREE.Vector3())).multiplyScalar(-s);
+
+    var pivot = new THREE.Group();
+    pivot.add(root);
+    return pivot;
   }
 
   function hasWebGL() {
@@ -392,7 +454,14 @@
     var api = { ready: false, setColours: function () {}, destroy: function () {} };
     var destroyed = false;
 
+    var modelUrl = opts.procedural ? null
+      : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/WIN-WEARS-Football.glb';
+    var gltf = null;
+
     loadThree().then(function (THREE) {
+      if (!modelUrl) return THREE;
+      return loadModel(THREE, modelUrl).then(function (g) { gltf = g; return THREE; });
+    }).then(function (THREE) {
       if (destroyed) return;
 
       var w = el.clientWidth || 600;
@@ -422,83 +491,90 @@
       }
       camera.position.set(0, 0, opts.distance || fitDistance());
 
-      /* ---- geometry ---------------------------------------------------- */
-      var rings = mode === 'low' ? PROFILE_LO : PROFILE_HI;
-      var gap = 0.055;
-      var panels = buildPanels();
-
-      /* Two hexagons are printed — the wordmark on one, the badge on another
-         on the far side, so one of them is always facing you as it turns.
-         Everything else merges into two meshes by panel type. */
-      function pickHex(towards, exclude) {
-        var best = -2, at = -1;
-        panels.forEach(function (p, i) {
-          if (p.kind !== 'hex' || i === exclude) return;
-          var facing = dot(norm(p.pts.reduce(add, [0, 0, 0])), norm(towards));
-          if (facing > best) { best = facing; at = i; }
-        });
-        return at;
-      }
-      var brandIdx = colours.wordmark ? pickHex([0.15, 0.12, 1]) : -1;
-      var logoIdx = colours.wordmark ? pickHex([-0.9, 0.22, -0.35], brandIdx) : -1;
-
-      var pentGeos = [], hexGeos = [], brandGeo = null, logoGeo = null;
-      panels.forEach(function (p, i) {
-        var g = panelGeometry(THREE, p, R, gap, rings);
-        if (i === brandIdx) brandGeo = g;
-        else if (i === logoIdx) logoGeo = g;
-        else if (p.kind === 'pent') pentGeos.push(g);
-        else hexGeos.push(g);
-      });
-
-      var grain = grainMap(THREE, mode === 'high' ? 512 : 256);
+      /* ---- the ball ---------------------------------------------------- */
       var env = mode === 'high' ? studioEnv(THREE, renderer) : null;
+      var ball, grain = null, seamMat = null;
+      var matHex = null, matPent = null, matBrand = null, matLogo = null;
 
-      function panelMaterial(hex, map) {
-        if (map) map.encoding = THREE.sRGBEncoding;
-        return new THREE.MeshStandardMaterial({
-          color: col(hex),
-          map: map || null,
-          roughness: 0.46,
-          metalness: 0.02,
-          bumpMap: grain,
-          bumpScale: 0.007,
-          envMap: env,
-          envMapIntensity: env ? 0.55 : 0
-        });
-      }
+      if (gltf) {
+        ball = modelBall(THREE, gltf, R, env);
+      } else {
+        var rings = mode === 'low' ? PROFILE_LO : PROFILE_HI;
+        var gap = 0.055;
+        var panels = buildPanels();
 
-      var matHex = panelMaterial(colours.base);
-      var matPent = panelMaterial(colours.accent);
-      var matBrand = brandGeo ? panelMaterial('#ffffff', markMap(THREE, colours.base, colours.markColour)) : null;
-      var matLogo = logoGeo ? panelMaterial('#ffffff', badgeMap(THREE, colours.base, logoImg)) : null;
-
-      var ball = new THREE.Group();
-      ball.add(new THREE.Mesh(mergeGeometries(THREE, hexGeos), matHex));
-      ball.add(new THREE.Mesh(mergeGeometries(THREE, pentGeos), matPent));
-      if (brandGeo) ball.add(new THREE.Mesh(brandGeo, matBrand));
-      if (logoGeo) ball.add(new THREE.Mesh(logoGeo, matLogo));
-
-      /* The badge arrives asynchronously — repaint that one panel on arrival. */
-      if (matLogo) {
-        loadLogo(opts.logoUrl || (document.documentElement.getAttribute('data-base') || '') + 'assets/img/logo/win-wears-logo.jpeg')
-          .then(function (img) {
-            if (destroyed || !img) return;
-            var old = matLogo.map;
-            var fresh = badgeMap(THREE, colours.base, img);
-            fresh.encoding = THREE.sRGBEncoding;
-            matLogo.map = fresh;
-            matLogo.needsUpdate = true;
-            if (old) old.dispose();
-            if (mode === 'still' || !raf) renderer.render(scene, camera);
+        /* Two hexagons are printed — the wordmark on one, the badge on another
+           on the far side, so one of them is always facing you as it turns.
+           Everything else merges into two meshes by panel type. */
+        function pickHex(towards, exclude) {
+          var best = -2, at = -1;
+          panels.forEach(function (p, i) {
+            if (p.kind !== 'hex' || i === exclude) return;
+            var facing = dot(norm(p.pts.reduce(add, [0, 0, 0])), norm(towards));
+            if (facing > best) { best = facing; at = i; }
           });
-      }
+          return at;
+        }
+        var brandIdx = colours.wordmark ? pickHex([0.15, 0.12, 1]) : -1;
+        var logoIdx = colours.wordmark ? pickHex([-0.9, 0.22, -0.35], brandIdx) : -1;
 
-      /* The body under the panels — what you see down in the seam grooves. */
-      var seamMat = new THREE.MeshStandardMaterial({
-        color: col(colours.seam), roughness: 0.85, metalness: 0
-      });
-      ball.add(new THREE.Mesh(new THREE.SphereGeometry(R * 0.938, 48, 32), seamMat));
+        var pentGeos = [], hexGeos = [], brandGeo = null, logoGeo = null;
+        panels.forEach(function (p, i) {
+          var g = panelGeometry(THREE, p, R, gap, rings);
+          if (i === brandIdx) brandGeo = g;
+          else if (i === logoIdx) logoGeo = g;
+          else if (p.kind === 'pent') pentGeos.push(g);
+          else hexGeos.push(g);
+        });
+
+        grain = grainMap(THREE, mode === 'high' ? 512 : 256);
+
+        function panelMaterial(hex, map) {
+          if (map) map.encoding = THREE.sRGBEncoding;
+          return new THREE.MeshStandardMaterial({
+            color: col(hex),
+            map: map || null,
+            roughness: 0.46,
+            metalness: 0.02,
+            bumpMap: grain,
+            bumpScale: 0.007,
+            envMap: env,
+            envMapIntensity: env ? 0.55 : 0
+          });
+        }
+
+        matHex = panelMaterial(colours.base);
+        matPent = panelMaterial(colours.accent);
+        matBrand = brandGeo ? panelMaterial('#ffffff', markMap(THREE, colours.base, colours.markColour)) : null;
+        matLogo = logoGeo ? panelMaterial('#ffffff', badgeMap(THREE, colours.base, logoImg)) : null;
+
+        ball = new THREE.Group();
+        ball.add(new THREE.Mesh(mergeGeometries(THREE, hexGeos), matHex));
+        ball.add(new THREE.Mesh(mergeGeometries(THREE, pentGeos), matPent));
+        if (brandGeo) ball.add(new THREE.Mesh(brandGeo, matBrand));
+        if (logoGeo) ball.add(new THREE.Mesh(logoGeo, matLogo));
+
+        /* The badge arrives asynchronously — repaint that one panel on arrival. */
+        if (matLogo) {
+          loadLogo(opts.logoUrl || (document.documentElement.getAttribute('data-base') || '') + 'assets/img/logo/win-wears-logo.jpeg')
+            .then(function (img) {
+              if (destroyed || !img) return;
+              var old = matLogo.map;
+              var fresh = badgeMap(THREE, colours.base, img);
+              fresh.encoding = THREE.sRGBEncoding;
+              matLogo.map = fresh;
+              matLogo.needsUpdate = true;
+              if (old) old.dispose();
+              if (mode === 'still' || !raf) renderer.render(scene, camera);
+            });
+        }
+
+        /* The body under the panels — what you see down in the seam grooves. */
+        seamMat = new THREE.MeshStandardMaterial({
+          color: col(colours.seam), roughness: 0.85, metalness: 0
+        });
+        ball.add(new THREE.Mesh(new THREE.SphereGeometry(R * 0.938, 48, 32), seamMat));
+      }
 
       ball.rotation.z = 0.30;
       ball.rotation.x = -0.12;
@@ -598,6 +674,7 @@
       /* Recolouring only touches materials — the geometry never rebuilds. */
       api.setColours = function (next) {
         Object.keys(next || {}).forEach(function (k) { colours[k] = next[k]; });
+        if (!matHex) return;   /* the model's colours are its artwork */
         matHex.color.copy(col(colours.base));
         matPent.color.copy(col(colours.accent));
         seamMat.color.copy(col(colours.seam));
@@ -631,7 +708,7 @@
           if (o.geometry) o.geometry.dispose();
           if (o.material) o.material.dispose();
         });
-        grain.dispose();
+        if (grain) grain.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
       };

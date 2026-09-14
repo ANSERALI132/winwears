@@ -40,7 +40,10 @@ export function createApp(): express.Express {
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
           imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-          connectSrc: ["'self'"],
+          /* blob: is how GLTFLoader reads the textures packed inside the match ball
+             model: it unpacks them to blob URLs and fetches them back. A blob URL
+             is data this page already holds, so this opens no other host. */
+          connectSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
           baseUri: ["'self'"],
