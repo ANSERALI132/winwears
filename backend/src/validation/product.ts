@@ -80,6 +80,8 @@ export const productListQuery = pagination.extend({
   size: optionalText(64),
   customization: z.enum(['yes', 'no']).optional(),
   featured: z.enum(['yes', 'no']).optional(),
+  /** Only products in a standalone range — the football collection page. */
+  ranges: z.enum(['yes']).optional(),
   status: productStatus.optional(),
   includeDeleted: z.enum(['yes', 'no']).default('no'),
   sort: z

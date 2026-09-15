@@ -1,6 +1,6 @@
 /* ==========================================================================
    WIN WEARS — Homepage
-   Renders the four category cards and boots the hero + technology balls.
+   Renders the category cards and boots the hero + technology balls.
    ========================================================================== */
 (function () {
   'use strict';
@@ -11,7 +11,8 @@
     'hybrid-pro-match-ball':    'assets/img/products/hybrid/hyb-02/1.jpeg',
     'hand-made-match-ball':     'assets/img/products/handmade/hm-04/1.jpeg',
     'thermal-bonded-match-ball':'assets/img/products/thermal/tb-01/1.jpeg',
-    'tpu-ball':                 'assets/img/products/tpu/tpu-01/1.jpeg'
+    'tpu-ball':                 'assets/img/products/tpu/tpu-01/1.jpeg',
+    'soccer-uniforms':          'assets/img/uniforms/kits/design-33/1.jpg'
   };
   var COVER_FALLBACK = 'assets/img/products/hybrid/hyb-02/1.jpeg';
 
@@ -28,9 +29,12 @@
     var host = document.getElementById('cat-cards');
     if (!host || !window.WW || !WW.CATEGORIES) return;
 
-    WW.CATEGORIES.forEach(function (c, i) {
+    /* Every top-level category: the ball ranges, and one card for a group such
+       as Soccer Uniforms whose own page lists the categories inside it. */
+    WW.CATEGORIES.filter(function (c) { return !c.parentId; }).forEach(function (c, i) {
       /* The count comes back with the category, so no second request. */
       var count = c.productCount;
+      var group = c.childCount > 0;
       var a = document.createElement('a');
       a.className = 'cat-card reveal';
       a.href = c.page;
@@ -40,10 +44,12 @@
           '<img src="' + (c.image || COVER[c.key] || COVER_FALLBACK) + '" alt="' + esc(c.name) + '" loading="lazy" decoding="async">' +
         '</div>' +
         '<div class="cat-card__body">' +
-          '<span class="cat-card__num">' + count + ' model' + (count === 1 ? '' : 's') + '</span>' +
+          '<span class="cat-card__num">' + (group
+            ? c.childCount + ' categor' + (c.childCount === 1 ? 'y' : 'ies')
+            : count + ' model' + (count === 1 ? '' : 's')) + '</span>' +
           '<h3 class="cat-card__title">' + esc(c.name) + '</h3>' +
           '<p class="cat-card__desc">' + esc(c.blurb) + '</p>' +
-          '<span class="cat-card__go">View range ' + ARROW + '</span>' +
+          '<span class="cat-card__go">' + (group ? 'View categories ' : 'View range ') + ARROW + '</span>' +
         '</div>';
       host.appendChild(a);
     });

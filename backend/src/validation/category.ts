@@ -8,6 +8,8 @@ export const categoryCreateSchema = z.object({
   description: optionalLongText(8000),
   image: optionalText(500),
   displayOrder: z.coerce.number().int().min(0).default(0),
+  /** Empty clears it. */
+  parentId: optionalText(64),
   active: boolish.default(true),
   metaTitle: optionalText(200),
   metaDescription: optionalText(400),

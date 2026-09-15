@@ -18,6 +18,7 @@
       );
 
       var slot = h('div');
+      var allRows = [];
       ui.clear(mount).appendChild(h('section.card', slot));
       return load();
 
@@ -31,6 +32,7 @@
 
       function draw(rows) {
         ui.clear(slot);
+        allRows = rows;
 
         if (!rows.length) {
           slot.appendChild(
@@ -64,6 +66,8 @@
       }
 
       function row(c, index, all) {
+        var parentRow = c.parentId ? all.filter(function (x) { return x.id === c.parentId; })[0] : null;
+        var parentName = parentRow ? parentRow.name : '';
         function moveTo(newIndex) {
           if (newIndex < 0 || newIndex >= all.length) return;
           var ids = all.map(function (x) { return x.id; });
@@ -83,6 +87,7 @@
             h('button.btn.btn--sm', { type: 'button', 'aria-label': 'Move down', disabled: index === all.length - 1,
               onclick: function () { moveTo(index + 1); } }, '↓'))),
           h('td', h('strong', { text: c.name }),
+            parentName ? h('div.muted', { text: 'Under ' + parentName }) : null,
             c.shortDescription ? h('div.muted.truncate', { text: c.shortDescription }) : null),
           h('td.mono', { text: c.slug }),
           h('td', h('a', { href: '#/products?category=' + encodeURIComponent(c.slug), text: String(c.productCount) })),
@@ -130,12 +135,20 @@
         var metaTitle = h('input', { type: 'text', name: 'metaTitle', value: c.metaTitle || '' });
         var metaDescription = h('textarea', { name: 'metaDescription', rows: 2, value: c.metaDescription || '' });
         var active = h('input', { type: 'checkbox', name: 'active', checked: c.active !== false });
+        /* Only top-level categories can hold others, and never the one being edited. */
+        var parent = h('select', { name: 'parentId' },
+          h('option', { value: '', text: 'None — a range of its own' }),
+          allRows
+            .filter(function (x) { return !x.parentId && x.id !== c.id; })
+            .map(function (x) { return h('option', { value: x.id, text: x.name, selected: x.id === c.parentId }); }));
 
         var form = h('form', { novalidate: true },
           errorSlot,
           h('div.field.field--req', h('label.field__label', { text: 'Name' }), name),
           h('div.field', h('label.field__label', { text: 'Slug' }), slug,
             h('p.field__hint', { text: 'Used in the category URL. Leave blank to generate one.' })),
+          h('div.field', h('label.field__label', { text: 'Parent category' }), parent,
+            h('p.field__hint', { text: 'Group this category under another. One level only.' })),
           h('div.field', h('label.field__label', { text: 'Short description' }), shortDescription),
           h('div.field', h('label.field__label', { text: 'Description' }), description),
           h('div.field', h('label.field__label', { text: 'Hero image URL' }), image),
@@ -159,6 +172,7 @@
             metaTitle: metaTitle.value.trim(),
             metaDescription: metaDescription.value.trim(),
             active: active.checked,
+            parentId: parent.value,
           };
           if (!body.slug) delete body.slug;
 

@@ -78,13 +78,18 @@ publicRouter.get(
       where: { active: true },
       orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
       include: {
-        _count: { select: { products: { where: { status: 'PUBLISHED', deletedAt: null } } } },
+        _count: {
+          select: {
+            products: { where: { status: 'PUBLISHED', deletedAt: null } },
+            children: { where: { active: true } },
+          },
+        },
       },
     });
 
     res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json({
-      data: rows.map((c) => ({ ...publicCategory(c), productCount: c._count.products })),
+      data: rows.map((c) => ({ ...publicCategory(c), productCount: c._count.products, childCount: c._count.children })),
     });
   }),
 );
@@ -145,8 +150,10 @@ publicRouter.get(
       prisma.product.findMany({ where, select: { material: true }, distinct: ['material'] }),
       prisma.product.findMany({ where, select: { usage: true }, distinct: ['usage'] }),
       prisma.product.findMany({ where, select: { size: true }, distinct: ['size'] }),
+      /* The collection page is the ball ranges, so a category that belongs to
+         a group, or is one, is left out of its filter. */
       prisma.category.findMany({
-        where: { active: true },
+        where: { active: true, parentId: null, children: { none: {} } },
         orderBy: { displayOrder: 'asc' },
         select: { slug: true, name: true },
       }),

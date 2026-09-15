@@ -89,6 +89,11 @@
         + '</div>'
       : '<div class="gallery"><div class="gallery__main gallery__main--empty"><p class="muted">No photograph yet</p></div></div>';
 
+    /* A product in a grouped category, such as a soccer uniform, is not a
+       ball: no ball customiser, and a note about kits rather than bladders. */
+    var productCat = p.category && WW.catBy(p.category.slug);
+    var isKit = !!(productCat && productCat.parentId);
+
     var specs = WW.specs(p).map(function (row) {
       return '<div><dt>' + esc(row[0]) + '</dt><dd>' + esc(row[1]) + '</dd></div>';
     }).join('');
@@ -122,12 +127,14 @@
       +   (specs ? '<dl class="spec-table">' + specs + '</dl>' : '')
       +   '<div class="pdp__cta">'
       +     '<a class="btn btn--accent" href="request-quote.html?product=' + encodeURIComponent(p.slug) + '" data-magnetic>Request Bulk Quote</a>'
-      +     (p.details && p.details.customizationAvailable
+      +     (p.details && p.details.customizationAvailable && !isKit
               ? '<a class="btn btn--ghost" href="customization.html?ball=' + encodeURIComponent((p.category && p.category.slug) || '') + '">Customize This Ball</a>'
               : '')
       +     '<a class="btn btn--whatsapp" data-wa="' + esc(waMsg) + '">WhatsApp Us</a>'
       +   '</div>'
-      +   '<p class="pdp__note">Specifications above are confirmed at quotation. Bladder, panel count, weight and packaging are set per order — tell us how the ball will be used and we will spec it with you.</p>'
+      +   (isKit
+            ? '<p class="pdp__note">Specifications above are confirmed at quotation. Sizes, colours, crest, sponsor, names and numbers are set per order — tell us about your team and we will spec it with you.</p>'
+            : '<p class="pdp__note">Specifications above are confirmed at quotation. Bladder, panel count, weight and packaging are set per order — tell us how the ball will be used and we will spec it with you.</p>')
       + '</div>';
 
     wireGallery(imgs, alts, p);
@@ -149,7 +156,7 @@
         var ask = doc.createElement('button');
         ask.type = 'button';
         ask.className = 'btn btn--ghost';
-        ask.textContent = 'Ask AI About This Ball';
+        ask.textContent = isKit ? 'Ask AI About This Kit' : 'Ask AI About This Ball';
         ask.addEventListener('click', function () {
           window.WWChat.openForProduct({ slug: p.slug, name: p.productName });
         });

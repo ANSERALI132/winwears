@@ -16,6 +16,26 @@ export const adminCategoriesRouter = Router();
 
 adminCategoriesRouter.use(csrfProtection);
 
+/**
+ * One level of grouping only. A parent must exist, cannot be the category being
+ * saved and cannot sit under another category itself; a category that already
+ * holds others cannot be moved under one. Anything deeper would stop "no parent
+ * and no children" meaning a standalone range, which is how the public pages
+ * tell the ball ranges apart.
+ */
+async function checkParent(parentId: string | null | undefined, selfId?: string): Promise<void> {
+  if (!parentId) return;
+  if (parentId === selfId) throw conflict('A category cannot sit under itself.');
+
+  const parent = await prisma.category.findUnique({ where: { id: parentId }, select: { parentId: true } });
+  if (!parent) throw notFound('That parent category no longer exists.');
+  if (parent.parentId) throw conflict('That category already sits under another one. Choose a top-level category.');
+
+  if (selfId && (await prisma.category.count({ where: { parentId: selfId } })) > 0) {
+    throw conflict('This category has others under it, so it cannot be placed under another.');
+  }
+}
+
 adminCategoriesRouter.get(
   '/',
   asyncHandler(async (_req, res) => {
@@ -40,6 +60,7 @@ adminCategoriesRouter.post(
   '/',
   asyncHandler(async (req, res) => {
     const input = categoryCreateSchema.parse(req.body);
+    await checkParent(input.parentId);
     const slug = await uniqueSlug('category', input.slug || input.name);
 
     const category = await prisma.category.create({ data: { ...input, slug } });
@@ -62,6 +83,7 @@ adminCategoriesRouter.put(
 
     const existing = await prisma.category.findUnique({ where: { id } });
     if (!existing) throw notFound('That category no longer exists.');
+    if (input.parentId !== undefined) await checkParent(input.parentId, id);
 
     const slug = input.slug && input.slug !== existing.slug ? await uniqueSlug('category', input.slug, id) : existing.slug;
 

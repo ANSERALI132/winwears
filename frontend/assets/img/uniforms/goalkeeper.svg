@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Long-sleeved goalkeeper jersey in WIN WEARS navy and red">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101F47"/>
+      <stop offset="1" stop-color="#070E24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".42" r=".55">
+      <stop offset="0" stop-color="#2C4783" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#2C4783" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloth" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E3468"/>
+      <stop offset="1" stop-color="#16264F"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <path d="M150 118 L112 132 L130 176 L130 392 Q200 404 270 392 L270 176 L288 132 L250 118 Q200 152 150 118 Z" fill="url(#cloth)"/>
+  <path d="M112 132 L58 318 L92 330 L130 212 L130 176 Z" fill="#E1132C"/>
+  <path d="M288 132 L342 318 L308 330 L270 212 L270 176 Z" fill="#E1132C"/>
+  <path d="M58 318 L92 330 L86 350 L52 338 Z" fill="#16264F"/>
+  <path d="M342 318 L308 330 L314 350 L348 338 Z" fill="#16264F"/>
+  <path d="M150 118 Q200 152 250 118 L240 112 Q200 140 160 112 Z" fill="#E1132C"/>
+  <rect x="130" y="248" width="140" height="14" fill="#E1132C" opacity=".9"/>
+</svg>

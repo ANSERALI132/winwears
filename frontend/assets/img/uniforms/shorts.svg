@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Football shorts in WIN WEARS navy and red">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101F47"/>
+      <stop offset="1" stop-color="#070E24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".45" r=".55">
+      <stop offset="0" stop-color="#2C4783" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#2C4783" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloth" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E3468"/>
+      <stop offset="1" stop-color="#16264F"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <path d="M116 150 L284 150 L312 372 L214 372 L200 262 L186 372 L88 372 Z" fill="url(#cloth)"/>
+  <rect x="116" y="150" width="168" height="20" fill="#E1132C"/>
+  <path d="M116 170 L132 170 L106 372 L88 372 Z" fill="#E1132C"/>
+  <path d="M284 170 L268 170 L294 372 L312 372 Z" fill="#E1132C"/>
+  <path d="M200 176 L200 262" stroke="#070E24" stroke-opacity=".35" stroke-width="2"/>
+</svg>

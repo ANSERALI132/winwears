@@ -54,6 +54,10 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
   if (q.customization) and.push({ customizationAvailable: q.customization === 'yes' });
   if (q.featured) and.push({ featured: q.featured === 'yes' });
 
+  /* A standalone range is a category with no parent and no children, so the
+     football collection never lists a kit from a group like Soccer Uniforms. */
+  if (q.ranges === 'yes') and.push({ category: { parentId: null, children: { none: {} } } });
+
   if (q.q) {
     const term = q.q.trim();
     and.push({

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   WIN WEARS — Catalogue (products.html and the four category pages)
+   WIN WEARS — Catalogue (products.html and the category pages)
    Renders product cards and drives the filter toolbar.
 
    Products come from the API, filtered and paginated on the server: a
@@ -62,14 +62,17 @@
       + '</article>';
   };
 
-  /** Render a list of products into a grid element. */
-  WW.renderGrid = function (host, list, emptyMsg) {
+  /** Render a list of products into a grid element. `empty` can replace the
+   *  empty state's heading and link, for pages that are not football ranges. */
+  WW.renderGrid = function (host, list, emptyMsg, empty) {
     if (!host) return;
     if (!list.length) {
-      host.innerHTML = '<div class="empty-state"><h3>No footballs found</h3>'
+      empty = empty || {};
+      host.innerHTML = '<div class="empty-state"><h3>' + esc(empty.title || 'No footballs found') + '</h3>'
         + '<p class="lead" style="margin:.5rem auto var(--s-4)">'
         + esc(emptyMsg || 'Try clearing a filter, or tell us what you need and we will quote it.')
-        + '</p><a class="btn" href="' + BASE + 'products.html">See the full collection</a></div>';
+        + '</p><a class="btn" href="' + esc(empty.href || BASE + 'products.html') + '">'
+        + esc(empty.label || 'See the full collection') + '</a></div>';
       return;
     }
     host.innerHTML = list.map(WW.cardHTML).join('');
@@ -102,7 +105,7 @@
     var grid = $('#product-grid');
     if (!grid) return;
 
-    var state = { category: '', construction: '', material: '', usage: '', size: '', page: 1, perPage: 24, sort: 'order' };
+    var state = { category: '', construction: '', material: '', usage: '', size: '', page: 1, perPage: 24, sort: 'order', ranges: 'yes' };
 
     var params = new URLSearchParams(location.search);
     /* Accept the old ?cat= as well as ?category=, so existing links survive. */
@@ -234,6 +237,11 @@
     var key = grid.getAttribute('data-category');
     var state = { category: key, page: 1, perPage: 24, sort: 'order' };
 
+    /* A photo set on the category in the admin replaces the page's artwork. */
+    var cat = WW.catBy(key);
+    var art = $('[data-category-image]');
+    if (cat && cat.image && art) art.src = cat.image;
+
     showSkeleton(grid, 6);
     load();
 
@@ -247,7 +255,16 @@
             if (WW.wireWhatsApp) WW.wireWhatsApp(grid);
             if (WW.bootReveal) WW.bootReveal(grid);
           } else {
-            WW.renderGrid(grid, res.items, 'Nothing is published in this range yet. Tell us what you need and we will quote it.');
+            WW.renderGrid(
+              grid,
+              res.items,
+              grid.getAttribute('data-empty-message') || 'Nothing is published in this range yet. Tell us what you need and we will quote it.',
+              {
+                title: grid.getAttribute('data-empty-title'),
+                href: grid.getAttribute('data-empty-href'),
+                label: grid.getAttribute('data-empty-label')
+              }
+            );
           }
 
           var count = $('#category-count');
@@ -269,7 +286,74 @@
     }
   }
 
-  function init() { initCatalogue(); initCategory(); }
+  /* ------------------------------------------------- grouped categories --- */
+
+  /* Artwork for a kit type until a photo is set on its category in the admin.
+     Every kit type not listed here uses the jersey. */
+  var KIT_ART = {
+    'football-shorts': 'shorts',
+    'football-socks': 'socks',
+    'goalkeeper-kits': 'goalkeeper'
+  };
+
+  WW.kitArt = function (slug) {
+    return BASE + 'assets/img/uniforms/' + (KIT_ART[slug] || 'jersey') + '.svg';
+  };
+
+  function node(tag, cls, text) {
+    var n = doc.createElement(tag);
+    n.className = cls;
+    n.textContent = text || '';
+    return n;
+  }
+
+  /** The categories under a group, as cards, on the group's own page. Built
+   *  with textContent: every value here came back from the API. */
+  function initSubcategories() {
+    var host = $('#subcategory-cards');
+    if (!host) return;
+
+    var list = WW.childrenOf(host.getAttribute('data-parent'));
+    if (!list.length) {
+      host.innerHTML = '<div class="empty-state"><h3>These kits are being added</h3>'
+        + '<p class="lead" style="margin:.5rem auto var(--s-4)">Tell us what your team needs and we will quote it.</p>'
+        + '<a class="btn" href="' + BASE + 'request-quote.html">Request a Quote</a></div>';
+      return;
+    }
+
+    list.forEach(function (c, i) {
+      var count = c.productCount || 0;
+
+      var card = doc.createElement('a');
+      card.className = 'cat-card reveal';
+      card.href = c.page;
+      if (i) card.setAttribute('data-delay', String(Math.min(i, 5)));
+
+      var media = node('div', 'cat-card__media');
+      var img = doc.createElement('img');
+      img.src = c.image || WW.kitArt(c.slug);
+      img.alt = c.name;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      media.appendChild(img);
+
+      var body = node('div', 'cat-card__body');
+      body.appendChild(node('span', 'cat-card__num', count ? count + ' model' + (count === 1 ? '' : 's') : 'Made to order'));
+      body.appendChild(node('h3', 'cat-card__title', c.name));
+      body.appendChild(node('p', 'cat-card__desc', c.shortDescription || c.blurb));
+      var go = node('span', 'cat-card__go', 'View kits ');
+      go.insertAdjacentHTML('beforeend', ARROW);   /* a fixed icon, not data */
+      body.appendChild(go);
+
+      card.appendChild(media);
+      card.appendChild(body);
+      host.appendChild(card);
+    });
+
+    if (WW.bootReveal) WW.bootReveal(host);
+  }
+
+  function init() { initCatalogue(); initCategory(); initSubcategories(); }
 
   /* Nothing can render until the categories and contact details are in. */
   WW.ready.then(init).catch(function (err) {

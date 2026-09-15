@@ -198,7 +198,7 @@
   function buildTypes() {
     var host = $('#cx-type');
     if (!host) return;
-    host.innerHTML = WW.CATEGORIES.map(function (c) {
+    host.innerHTML = WW.ranges().map(function (c) {
       var blurb = (c.blurb || c.shortDescription || '').split('.')[0];
       return optButton({ id: c.key, t: c.name, d: blurb ? blurb + '.' : '' }, false);
     }).join('');

@@ -31,6 +31,7 @@ export function publicCategory(c: Category) {
     description: c.description,
     image: c.image,
     displayOrder: c.displayOrder,
+    parentId: c.parentId,
     seo: { title: c.metaTitle, description: c.metaDescription },
   };
 }

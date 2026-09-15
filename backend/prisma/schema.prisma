@@ -92,6 +92,14 @@ model Category {
   displayOrder     Int      @default(0)
   active           Boolean  @default(true)
 
+  /// A category can sit under one other: Soccer Uniforms holds its kit types.
+  /// One level only, so a category with no parent and no children is a
+  /// standalone range, and the pages that show only the ball ranges can tell
+  /// them apart without a list of names.
+  parentId         String?
+  parent           Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Category[] @relation("CategoryTree")
+
   metaTitle        String?
   metaDescription  String?
 
@@ -103,6 +111,7 @@ model Category {
   leads            Lead[]
 
   @@index([active, displayOrder])
+  @@index([parentId])
 }
 
 enum ProductStatus {

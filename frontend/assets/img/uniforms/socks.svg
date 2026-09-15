@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" role="img" aria-label="Football socks in WIN WEARS navy and red">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101F47"/>
+      <stop offset="1" stop-color="#070E24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".45" r=".55">
+      <stop offset="0" stop-color="#2C4783" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#2C4783" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <path d="M196 108 L256 108 L256 318 Q256 336 272 344 L318 364 Q338 374 330 396 Q324 412 304 410 L220 406 Q196 404 196 380 Z" fill="#16264F"/>
+  <rect x="196" y="108" width="60" height="26" fill="#E1132C" opacity=".85"/>
+  <path d="M122 96 L182 96 L182 306 Q182 324 198 332 L244 352 Q264 362 256 384 Q250 400 230 398 L146 394 Q122 392 122 368 Z" fill="#1E3468"/>
+  <rect x="122" y="96" width="60" height="26" fill="#E1132C"/>
+  <rect x="122" y="130" width="60" height="8" fill="#E1132C"/>
+</svg>

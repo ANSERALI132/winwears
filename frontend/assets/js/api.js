@@ -243,6 +243,8 @@
         image: c.image,
         page: BASE + 'products/' + c.slug + '.html',
         productCount: c.productCount,
+        parentId: c.parentId || null,
+        childCount: c.childCount || 0,
         seo: c.seo,
       };
     });
@@ -289,6 +291,22 @@
       if (c.key === key || c.slug === key || c.id === key) return c;
     }
     return null;
+  };
+
+  /**
+   * The ball ranges: categories that neither belong to a group nor are one.
+   * The homepage cards and the customiser's ball types show only these, so a
+   * group such as Soccer Uniforms never appears as a kind of football.
+   */
+  WW.ranges = function () {
+    return WW.CATEGORIES.filter(function (c) { return !c.parentId && !c.childCount; });
+  };
+
+  /** The categories grouped under one, found by its slug. */
+  WW.childrenOf = function (slug) {
+    var parent = WW.catBy(slug);
+    if (!parent) return [];
+    return WW.CATEGORIES.filter(function (c) { return c.parentId === parent.id; });
   };
 
   /* --- catalogue --------------------------------------------------------- */
