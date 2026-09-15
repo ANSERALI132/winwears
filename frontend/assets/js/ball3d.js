@@ -1,8 +1,8 @@
 /* ==========================================================================
    WIN WEARS — 3D football
    --------------------------------------------------------------------------
-   The ball is the WIN WEARS match ball model, assets/models/
-   WIN-WEARS-Football.glb — its own panels, artwork, normal and occlusion maps.
+   The ball is the WIN WEARS 14-panel match ball model, assets/models/
+   WIN-WEARS-14-Panel-Ball.glb — its own panels, artwork and materials.
    It is downloaded once per page however many balls the page shows.
 
    Every ball on the site uses it, the customizer included. The model's
@@ -65,6 +65,79 @@
   }
 
   /**
+   * The model's true centre and radius, measured from its vertices. A bounding
+   * box built from rotated nodes overstates a sphere — for the 14-panel ball by
+   * about a fifth — which would shrink it. Measured once per model and kept on
+   * it, however many balls the page shows.
+   */
+  function fitOf(THREE, gltf) {
+    if (gltf.wwFit) return gltf.wwFit;
+    gltf.scene.updateMatrixWorld(true);
+    var box = new THREE.Box3();
+    var v = new THREE.Vector3();
+    gltf.scene.traverse(function (o) {
+      if (!o.isMesh) return;
+      var pos = o.geometry.attributes.position;
+      for (var i = 0; i < pos.count; i++) box.expandByPoint(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld));
+    });
+    var size = box.getSize(new THREE.Vector3());
+    gltf.wwFit = { center: box.getCenter(new THREE.Vector3()), radius: Math.max(size.x, size.y, size.z) / 2 || 1 };
+    return gltf.wwFit;
+  }
+
+  /**
+   * Which of a material's maps the file puts on its second UV set. The r128
+   * GLTFLoader reads every map through the first set and only warns, so the
+   * answer has to come from the file itself.
+   */
+  function secondUvMaps(gltf, material) {
+    var parser = gltf.parser;
+    var ref = parser && parser.associations && parser.associations.get(material);
+    var def = ref && ref.type === 'materials' && parser.json.materials && parser.json.materials[ref.index];
+    if (!def) return null;
+    var pbr = def.pbrMetallicRoughness || {};
+    var onSecond = function (t) { return !!t && t.texCoord === 1; };
+    var maps = { normal: onSecond(def.normalTexture), roughness: onSecond(pbr.metallicRoughnessTexture) };
+    return maps.normal || maps.roughness ? maps : null;
+  }
+
+  /**
+   * Samples those maps with the second UV set. The 14-panel ball keeps its PU
+   * grain there, tiling across each panel; read through the first set — the
+   * artwork's layout — the grain is stretched about twelvefold. GLTFLoader
+   * already loads that set as `uv2`; only the lookups in the shader change.
+   */
+  function sampleSecondUv(THREE, material, maps) {
+    if (!maps) return;
+    /* three declares uv2 itself only for an AO or light map; reuse it then. */
+    var declare = !material.aoMap && !material.lightMap;
+    var uv = declare ? 'vDetailUv' : 'vUv2';
+    var swap = function (chunk) { return THREE.ShaderChunk[chunk].replace(/\bvUv\b/g, uv); };
+
+    material.onBeforeCompile = function (shader) {
+      if (declare) {
+        shader.vertexShader = 'attribute vec2 uv2;\nvarying vec2 vDetailUv;\n'
+          + shader.vertexShader.replace('#include <uv2_vertex>', '#include <uv2_vertex>\n\tvDetailUv = uv2;');
+        shader.fragmentShader = 'varying vec2 vDetailUv;\n' + shader.fragmentShader;
+      }
+      if (maps.normal) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <normalmap_pars_fragment>', swap('normalmap_pars_fragment'))
+          .replace('#include <normal_fragment_maps>', swap('normal_fragment_maps'));
+      }
+      if (maps.roughness) {
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <roughnessmap_fragment>', swap('roughnessmap_fragment'))
+          .replace('#include <metalnessmap_fragment>', swap('metalnessmap_fragment'));
+      }
+    };
+    /* The closure differs by map, so the compiled program must too. */
+    var key = 'ww-uv2-' + (maps.normal ? 'n' : '') + (maps.roughness ? 'r' : '') + '-' + uv;
+    material.customProgramCacheKey = function () { return key; };
+    material.needsUpdate = true;
+  }
+
+  /**
    * One ball's copy of the model, centred on its own middle and scaled to
    * radius R, so it sits exactly where the generated ball did under the same
    * camera and turns about its centre rather than the file's origin.
@@ -75,24 +148,28 @@
    */
   function modelBall(THREE, gltf, R, env) {
     var root = gltf.scene.clone(true);
-    function own(m) {
+    /* m is the loader's own material, which is what the file's settings are
+       recorded against; the clone is what this ball draws with. */
+    function own(m, geometry) {
       var c = m.clone();
       if (env) {
         c.envMap = env;
         c.envMapIntensity = 0.55;
       }
+      if (geometry.attributes.uv2) sampleSecondUv(THREE, c, secondUvMaps(gltf, m));
       return c;
     }
     root.traverse(function (o) {
       if (!o.isMesh) return;
-      o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
+      o.material = Array.isArray(o.material)
+        ? o.material.map(function (m) { return own(m, o.geometry); })
+        : own(o.material, o.geometry);
     });
 
-    var box = new THREE.Box3().setFromObject(root);
-    var size = box.getSize(new THREE.Vector3());
-    var s = R / ((Math.max(size.x, size.y, size.z) / 2) || 1);
+    var fit = fitOf(THREE, gltf);
+    var s = R / fit.radius;
     root.scale.setScalar(s);
-    root.position.copy(box.getCenter(new THREE.Vector3())).multiplyScalar(-s);
+    root.position.copy(fit.center).multiplyScalar(-s);
 
     var pivot = new THREE.Group();
     pivot.add(root);
@@ -455,7 +532,7 @@
     var destroyed = false;
 
     var modelUrl = opts.procedural ? null
-      : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/WIN-WEARS-Football.glb';
+      : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/WIN-WEARS-14-Panel-Ball.glb';
     var gltf = null;
 
     loadThree().then(function (THREE) {
