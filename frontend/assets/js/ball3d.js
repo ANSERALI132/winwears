@@ -2,7 +2,9 @@
    WIN WEARS — 3D football
    --------------------------------------------------------------------------
    The ball is the WIN WEARS 14-panel match ball model, assets/models/
-   WIN-WEARS-14-Panel-Ball.glb — its own panels, artwork and materials.
+   WIN-WEARS-14-Panel-Ball.glb — its own panels, artwork and materials. Phones
+   and low-power devices load WIN-WEARS-14-Panel-Ball.mobile.glb instead: the
+   same model with 2048 artwork, no tangents and quantized geometry.
    It is downloaded once per page however many balls the page shows.
 
    Every ball on the site uses it, the customizer included. The model's
@@ -70,6 +72,15 @@
    * about a fifth — which would shrink it. Measured once per model and kept on
    * it, however many balls the page shows.
    */
+  function normalizedScale(attr) {
+    var a = attr.isInterleavedBufferAttribute ? attr.data.array : attr.array;
+    if (a instanceof Int8Array) return 1 / 127;
+    if (a instanceof Uint8Array) return 1 / 255;
+    if (a instanceof Int16Array) return 1 / 32767;
+    if (a instanceof Uint16Array) return 1 / 65535;
+    return 1;
+  }
+
   function fitOf(THREE, gltf) {
     if (gltf.wwFit) return gltf.wwFit;
     gltf.scene.updateMatrixWorld(true);
@@ -78,7 +89,10 @@
     gltf.scene.traverse(function (o) {
       if (!o.isMesh) return;
       var pos = o.geometry.attributes.position;
-      for (var i = 0; i < pos.count; i++) box.expandByPoint(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld));
+      /* A quantized position arrives as its raw integer; r128 does not scale
+         it back when read, so the fit has to. */
+      var k = pos.normalized ? normalizedScale(pos) : 1;
+      for (var i = 0; i < pos.count; i++) box.expandByPoint(v.fromBufferAttribute(pos, i).multiplyScalar(k).applyMatrix4(o.matrixWorld));
     });
     var size = box.getSize(new THREE.Vector3());
     gltf.wwFit = { center: box.getCenter(new THREE.Vector3()), radius: Math.max(size.x, size.y, size.z) / 2 || 1 };
@@ -531,8 +545,12 @@
     var api = { ready: false, setColours: function () {}, destroy: function () {} };
     var destroyed = false;
 
+    /* The full model is 40 MB with an 8192 texture — more memory than many
+       phones have for it. They get the lighter copy of the same ball. */
+    var light = mode === 'low' || window.innerWidth < 700;
     var modelUrl = opts.procedural ? null
-      : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/WIN-WEARS-14-Panel-Ball.glb';
+      : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/'
+        + (light ? 'WIN-WEARS-14-Panel-Ball.mobile.glb' : 'WIN-WEARS-14-Panel-Ball.glb');
     var gltf = null;
 
     loadThree().then(function (THREE) {
