@@ -135,6 +135,7 @@
         var metaTitle = h('input', { type: 'text', name: 'metaTitle', value: c.metaTitle || '' });
         var metaDescription = h('textarea', { name: 'metaDescription', rows: 2, value: c.metaDescription || '' });
         var active = h('input', { type: 'checkbox', name: 'active', checked: c.active !== false });
+        var footballRange = h('input', { type: 'checkbox', name: 'footballRange', checked: c.footballRange !== false });
         /* Only top-level categories can hold others, and never the one being edited. */
         var parent = h('select', { name: 'parentId' },
           h('option', { value: '', text: 'None — a range of its own' }),
@@ -154,6 +155,8 @@
           h('div.field', h('label.field__label', { text: 'Hero image URL' }), image),
           h('div.field', h('label.field__label', { text: 'Meta title' }), metaTitle),
           h('div.field', h('label.field__label', { text: 'Meta description' }), metaDescription),
+          h('label.check', footballRange,
+            h('span', { text: 'A football range — listed in the customiser and the Football Collection' })),
           h('label.check', active, h('span', { text: 'Active — shown on the website' })));
 
         ui.modal({
@@ -172,6 +175,7 @@
             metaTitle: metaTitle.value.trim(),
             metaDescription: metaDescription.value.trim(),
             active: active.checked,
+            footballRange: footballRange.checked,
             parentId: parent.value,
           };
           if (!body.slug) delete body.slug;

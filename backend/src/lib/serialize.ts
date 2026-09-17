@@ -32,6 +32,7 @@ export function publicCategory(c: Category) {
     image: c.image,
     displayOrder: c.displayOrder,
     parentId: c.parentId,
+    footballRange: c.footballRange,
     seo: { title: c.metaTitle, description: c.metaDescription },
   };
 }

@@ -89,10 +89,10 @@
         + '</div>'
       : '<div class="gallery"><div class="gallery__main gallery__main--empty"><p class="muted">No photograph yet</p></div></div>';
 
-    /* A product in a grouped category, such as a soccer uniform, is not a
-       ball: no ball customiser, and a note about kits rather than bladders. */
+    /* Apparel — a soccer uniform, a tracksuit — is not a ball: no ball
+       customiser, and a note about kit rather than bladders. */
     var productCat = p.category && WW.catBy(p.category.slug);
-    var isKit = !!(productCat && productCat.parentId);
+    var isKit = !!(productCat && (productCat.parentId || productCat.footballRange === false));
 
     var specs = WW.specs(p).map(function (row) {
       return '<div><dt>' + esc(row[0]) + '</dt><dd>' + esc(row[1]) + '</dd></div>';

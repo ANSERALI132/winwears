@@ -11,6 +11,7 @@ export const categoryCreateSchema = z.object({
   /** Empty clears it. */
   parentId: optionalText(64),
   active: boolish.default(true),
+  footballRange: boolish.default(true),
   metaTitle: optionalText(200),
   metaDescription: optionalText(400),
 });

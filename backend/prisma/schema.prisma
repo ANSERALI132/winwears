@@ -96,6 +96,11 @@ model Category {
   /// One level only, so a category with no parent and no children is a
   /// standalone range, and the pages that show only the ball ranges can tell
   /// them apart without a list of names.
+  /// A football range: shown in the customiser's ball types and the Football
+  /// Collection. False for apparel such as Soccer Uniforms and Tracksuits,
+  /// which are categories in their own right but are not kinds of ball.
+  footballRange    Boolean  @default(true)
+
   parentId         String?
   parent           Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
   children         Category[] @relation("CategoryTree")

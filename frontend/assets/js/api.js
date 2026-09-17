@@ -243,10 +243,21 @@
         image: c.image,
         page: BASE + 'products/' + c.slug + '.html',
         productCount: c.productCount,
+        /* Filled in below for a group, whose own products sit in its types. */
+        groupCount: c.productCount,
         parentId: c.parentId || null,
         childCount: c.childCount || 0,
+        /* Absent in the bundled snapshot, where everything is a ball range. */
+        footballRange: c.footballRange !== false,
         seo: c.seo,
       };
+    });
+
+    WW.CATEGORIES.forEach(function (c) {
+      if (!c.childCount) return;
+      c.groupCount = WW.CATEGORIES.reduce(function (sum, x) {
+        return x.parentId === c.id ? sum + (x.productCount || 0) : sum;
+      }, c.productCount || 0);
     });
   }
 
@@ -294,12 +305,12 @@
   };
 
   /**
-   * The ball ranges: categories that neither belong to a group nor are one.
-   * The homepage cards and the customiser's ball types show only these, so a
-   * group such as Soccer Uniforms never appears as a kind of football.
+   * The football ranges: top-level categories marked as such. The customiser's
+   * ball types show only these, so apparel — a soccer uniform, a tracksuit —
+   * never appears as a kind of football.
    */
   WW.ranges = function () {
-    return WW.CATEGORIES.filter(function (c) { return !c.parentId && !c.childCount; });
+    return WW.CATEGORIES.filter(function (c) { return !c.parentId && c.footballRange && !c.childCount; });
   };
 
   /** The categories grouped under one, found by its slug. */

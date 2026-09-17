@@ -35,7 +35,13 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
   }
 
   if (q.category) {
-    and.push({ category: { OR: [{ slug: q.category }, { id: q.category }] } });
+    /* A group's slug means everything in it: the Soccer Uniforms page lists
+       every kit, not one card per type. */
+    and.push({
+      category: {
+        OR: [{ slug: q.category }, { id: q.category }, { parent: { slug: q.category } }, { parent: { id: q.category } }],
+      },
+    });
   }
 
   /* `equals` with insensitive mode, not `contains`: filter chips come from the
@@ -54,9 +60,9 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
   if (q.customization) and.push({ customizationAvailable: q.customization === 'yes' });
   if (q.featured) and.push({ featured: q.featured === 'yes' });
 
-  /* A standalone range is a category with no parent and no children, so the
-     football collection never lists a kit from a group like Soccer Uniforms. */
-  if (q.ranges === 'yes') and.push({ category: { parentId: null, children: { none: {} } } });
+  /* A football range is a top-level category marked as one, so the football
+     collection never lists apparel — a soccer uniform or a tracksuit. */
+  if (q.ranges === 'yes') and.push({ category: { parentId: null, footballRange: true } });
 
   if (q.q) {
     const term = q.q.trim();
@@ -77,7 +83,16 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
   return and.length ? { AND: and } : {};
 }
 
-export function buildProductOrderBy(sort: ProductListQuery['sort']): Prisma.ProductOrderByWithRelationInput[] {
+export function buildProductOrderBy(
+  sort: ProductListQuery['sort'],
+  opts: { byCategoryFirst?: boolean } = {},
+): Prisma.ProductOrderByWithRelationInput[] {
+  /* Asked for a group, the list spans its types; clustering by category keeps
+     each type together instead of interleaving kits and socks. A page for one
+     category is unaffected, every product there sharing it. */
+  const lead: Prisma.ProductOrderByWithRelationInput[] = opts.byCategoryFirst
+    ? [{ category: { displayOrder: 'asc' } }]
+    : [];
   switch (sort) {
     case 'newest':
       return [{ createdAt: 'desc' }];
@@ -92,6 +107,6 @@ export function buildProductOrderBy(sort: ProductListQuery['sort']): Prisma.Prod
     case 'order':
     default:
       /* Featured first, then the admin's manual order, then newest. */
-      return [{ featured: 'desc' }, { displayOrder: 'asc' }, { createdAt: 'desc' }];
+      return [{ featured: 'desc' }, ...lead, { displayOrder: 'asc' }, { createdAt: 'desc' }];
   }
 }
