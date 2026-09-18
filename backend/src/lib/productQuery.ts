@@ -60,9 +60,9 @@ export function buildProductWhere(q: ProductListQuery, opts: BuildOptions): Pris
   if (q.customization) and.push({ customizationAvailable: q.customization === 'yes' });
   if (q.featured) and.push({ featured: q.featured === 'yes' });
 
-  /* A football range is a top-level category marked as one, so the football
-     collection never lists apparel — a soccer uniform or a tracksuit. */
-  if (q.ranges === 'yes') and.push({ category: { parentId: null, footballRange: true } });
+  /* A football range is a category marked as one — it sits in the Footballs
+     group — so the football collection never lists apparel. */
+  if (q.ranges === 'yes') and.push({ category: { footballRange: true } });
 
   if (q.q) {
     const term = q.q.trim();

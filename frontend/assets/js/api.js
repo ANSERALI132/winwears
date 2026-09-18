@@ -305,12 +305,13 @@
   };
 
   /**
-   * The football ranges: top-level categories marked as such. The customiser's
-   * ball types show only these, so apparel — a soccer uniform, a tracksuit —
-   * never appears as a kind of football.
+   * The football ranges: categories marked as such. They sit in the Footballs
+   * group, so the flag, not their place in the tree, picks them out. The
+   * customiser's ball types show only these, so apparel — a soccer uniform, a
+   * tracksuit — never appears as a kind of football.
    */
   WW.ranges = function () {
-    return WW.CATEGORIES.filter(function (c) { return !c.parentId && c.footballRange && !c.childCount; });
+    return WW.CATEGORIES.filter(function (c) { return c.footballRange && !c.childCount; });
   };
 
   /** The categories grouped under one, found by its slug. */

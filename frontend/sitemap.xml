@@ -9,6 +9,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://winwears.com/</loc><priority>1.0</priority><changefreq>monthly</changefreq></url>
   <url><loc>https://winwears.com/products</loc><priority>0.9</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://winwears.com/products/footballs</loc><priority>0.9</priority></url>
   <url><loc>https://winwears.com/products/hybrid-pro-match-ball</loc><priority>0.9</priority></url>
   <url><loc>https://winwears.com/products/hand-made-match-ball</loc><priority>0.9</priority></url>
   <url><loc>https://winwears.com/products/thermal-bonded-match-ball</loc><priority>0.9</priority></url>

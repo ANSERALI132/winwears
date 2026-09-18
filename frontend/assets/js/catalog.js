@@ -341,7 +341,7 @@
       body.appendChild(node('span', 'cat-card__num', count ? count + ' model' + (count === 1 ? '' : 's') : 'Made to order'));
       body.appendChild(node('h3', 'cat-card__title', c.name));
       body.appendChild(node('p', 'cat-card__desc', c.shortDescription || c.blurb));
-      var go = node('span', 'cat-card__go', 'View kits ');
+      var go = node('span', 'cat-card__go', c.footballRange ? 'View range ' : 'View kits ');
       go.insertAdjacentHTML('beforeend', ARROW);   /* a fixed icon, not data */
       body.appendChild(go);
 
