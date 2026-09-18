@@ -119,8 +119,9 @@
   }
 
   /**
-   * The hero's slides: the ball, then Team Wears, Socks and Tracksuits, each
-   * shown for data-interval milliseconds before the next slides in.
+   * The hero's slides: the ball, then Team Wears, Soccer Uniforms, Socks and
+   * Tracksuits, each shown for data-interval milliseconds before the next
+   * slides in.
    *
    * An apparel slide takes its name, photo, description and links from the
    * category, and is dropped if that category is missing or has no photo.
