@@ -12,7 +12,13 @@
    customer's colour choice is still recorded with their specification.
    { procedural: true } still builds the old generated, recolourable ball.
 
+   Another model in assets/models can be named with { modelName }, and gets
+   its own .mobile.glb copy on phones the same way. A page can also ask for a
+   ball in its markup, without a script of its own — see bootFromMarkup — and
+   a script that draws such markup later passes it to WW.bootBalls(root).
+
    Usage:  var ball = WW.ball3d(el, { zoom: 1.2, interactive: true });
+           var ball = WW.ball3d(el, { modelName: 'WIN-WEARS-14-Panel-Ball-Diamond' });
            var ball = WW.ball3d(el, { procedural: true, base:'#fff', accent:'#16264F' });
            ball.setColours({ base:'#E1132C' });   // procedural ball only
            ball.destroy();
@@ -532,7 +538,8 @@
     if (!el) return null;
     opts = opts || {};
     var mode = tier();
-    if (mode === 'none') return null;
+    /* Marked, so a stage that hides its photo while loading shows it. */
+    if (mode === 'none') { el.setAttribute('data-ball', 'fallback'); return null; }
 
     var colours = {
       base: opts.base || '#FFFFFF',
@@ -545,12 +552,14 @@
     var api = { ready: false, setColours: function () {}, destroy: function () {} };
     var destroyed = false;
 
-    /* The full model is 34 MB with an 8192 texture — more memory than many
-       phones have for it. They get the lighter copy of the same ball. */
+    /* A full model is 34–41 MB with an 8192 texture — more memory than many
+       phones have for it. They get the lighter copy of the same ball. Only a
+       plain file name is taken, so a name cannot reach outside the folder. */
     var light = mode === 'low' || window.innerWidth < 700;
+    var stem = /^[\w.-]+$/.test(opts.modelName || '') ? opts.modelName : 'WIN-WEARS-14-Panel-Ball-Red';
     var modelUrl = opts.procedural ? null
       : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/'
-        + (light ? 'WIN-WEARS-14-Panel-Ball-Red.mobile.glb' : 'WIN-WEARS-14-Panel-Ball-Red.glb');
+        + stem + (light ? '.mobile.glb' : '.glb');
     var gltf = null;
 
     loadThree().then(function (THREE) {
@@ -813,4 +822,38 @@
 
     return api;
   };
+
+  /* A page can ask for a ball in its markup: data-ball3d on the container,
+     data-ball-model naming a model in assets/models, data-ball-zoom, and
+     data-ball-interactive / data-ball-parallax set to "false" or "true". Each
+     starts loading only as it comes near the screen, so a ball further down
+     the page costs a visitor nothing until they scroll towards it. */
+  function bootFromMarkup(el) {
+    var zoom = parseFloat(el.getAttribute('data-ball-zoom'));
+    WW.ball3d(el, {
+      modelName: el.getAttribute('data-ball-model') || undefined,
+      zoom: zoom > 0 ? zoom : 1.22,
+      interactive: el.getAttribute('data-ball-interactive') !== 'false',
+      parallax: el.getAttribute('data-ball-parallax') === 'true'
+    });
+  }
+
+  var near = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      near.unobserve(e.target);
+      bootFromMarkup(e.target);
+    });
+  }, { rootMargin: '600px 0px' }) : null;
+
+  /* Takes every ball asked for under root that is not already taken: the
+     page's own markup now, and markup a script draws later when it passes
+     its container. */
+  WW.bootBalls = function (root) {
+    [].forEach.call((root || document).querySelectorAll('[data-ball3d]:not([data-ball-queued])'), function (el) {
+      el.setAttribute('data-ball-queued', '');
+      if (near) near.observe(el); else bootFromMarkup(el);
+    });
+  };
+  WW.bootBalls();
 })();

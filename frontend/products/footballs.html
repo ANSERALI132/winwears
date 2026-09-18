@@ -79,6 +79,7 @@
 <main id="main">
 
   <section class="page-hero" data-nav-watch>
+    <div class="page-hero__ball" data-ball3d data-ball-model="WIN-WEARS-14-Panel-Ball-Diamond" data-ball-zoom="1.12" data-ball-interactive="false" data-ball-parallax="true" aria-hidden="true"></div>
     <div class="wrap">
       <ol class="breadcrumb">
         <li><a href="../index.html">Home</a></li>
@@ -115,7 +116,11 @@
     <div class="wrap">
       <div class="split">
         <div class="split__media split__media--full reveal">
-          <img src="../assets/img/products/hybrid/hyb-02/1.jpeg" alt="WIN WEARS hybrid pro match ball" loading="lazy" decoding="async">
+          <div class="tech__stage tech__stage--quiet" data-ball3d data-ball-model="WIN-WEARS-14-Panel-Ball-Diamond" role="img" aria-label="WIN WEARS 14-panel match ball in 3D — drag to turn it">
+            <div class="tech__fallback">
+              <img src="../assets/img/products/hybrid/hyb-02/1.jpeg" alt="" loading="lazy" decoding="async">
+            </div>
+          </div>
         </div>
         <div class="split__body reveal" data-delay="1">
           <p class="eyebrow">Customization</p>
@@ -227,6 +232,7 @@
 
 <script defer src="../assets/js/api.js"></script>
 <script defer src="../assets/js/site.js"></script>
+<script defer src="../assets/js/ball3d.js"></script>
 <script defer src="../assets/js/catalog.js"></script>
   <script defer src="../assets/js/ai-chat.js"></script>
 </body>

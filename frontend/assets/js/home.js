@@ -17,6 +17,10 @@
   };
   var COVER_FALLBACK = 'assets/img/products/hybrid/hyb-02/1.jpeg';
 
+  /* The ball a group of football ranges shows on its card, turning, in place
+     of a photo — the same one its own page shows. */
+  var GROUP_BALL = 'WIN-WEARS-14-Panel-Ball-Diamond';
+
   var ARROW = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'
             + '<path d="M2 8h12M9 3l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -42,10 +46,17 @@
       a.className = 'cat-card reveal';
       a.href = c.page;
       if (i) a.setAttribute('data-delay', String(Math.min(i, 5)));
+      var cover = '<img src="' + (c.image || COVER[c.key] || COVER_FALLBACK) + '" alt="' + esc(c.name) + '" loading="lazy" decoding="async">';
+      /* Told apart by what it holds, not by its name: a group of ball ranges. */
+      var balls = group && WW.CATEGORIES.some(function (x) { return x.parentId === c.id && x.footballRange; });
       a.innerHTML =
-        '<div class="cat-card__media">' +
-          '<img src="' + (c.image || COVER[c.key] || COVER_FALLBACK) + '" alt="' + esc(c.name) + '" loading="lazy" decoding="async">' +
-        '</div>' +
+        (balls
+          ? '<div class="cat-card__media cat-card__media--ball">' +
+              '<div class="cat-card__ball" data-ball3d data-ball-model="' + GROUP_BALL + '"'
+                + ' data-ball-interactive="false" data-ball-zoom="1.08" aria-hidden="true"></div>' +
+              cover +
+            '</div>'
+          : '<div class="cat-card__media">' + cover + '</div>') +
         '<div class="cat-card__body">' +
           '<span class="cat-card__num">' + (group
             ? c.childCount + ' categor' + (c.childCount === 1 ? 'y' : 'ies')
@@ -60,6 +71,7 @@
     });
 
     if (WW.bootReveal) WW.bootReveal(host);
+    if (WW.bootBalls) WW.bootBalls(host);
   }
 
   function boot3D() {
@@ -119,97 +131,104 @@
   }
 
   /**
-   * The hero's slides: the ball, then Team Wears, Soccer Uniforms, Socks and
-   * Tracksuits, each shown for data-interval milliseconds before the next
-   * slides in.
+   * The hero's background: the ball, then a soccer uniform, a tracksuit and
+   * socks, each shown for data-interval milliseconds before the next slides
+   * in behind the same headline. The description under the headline follows
+   * the picture: the ball keeps the page's own, and each garment shows its
+   * category's, so an edit in the admin reaches the hero too. The ball's turn
+   * starts counting once it has drawn, so it is seen rather than skipped
+   * while the model downloads.
    *
-   * An apparel slide takes its name, photo, description and links from the
-   * category, and is dropped if that category is missing or has no photo.
-   * The ball's slide starts counting once the ball has drawn, so it is seen
-   * rather than skipped while the model downloads.
-   *
-   * Nothing moves while the visitor is using a control inside the hero, has
-   * paused it, has the tab in the background or has scrolled past; and not at
-   * all for anyone who has asked their system for reduced motion.
+   * There are no dots or pause button, by choice. Nothing moves while the
+   * visitor is using a control inside the hero, has the tab in the background
+   * or has scrolled past; and not at all for anyone who has asked their
+   * system for reduced motion. On a phone a sideways swipe changes it.
    */
   function initHeroSlider() {
     var hero = document.querySelector('[data-hero-slider]');
-    if (!hero) return;
+    if (!hero || hero.hasAttribute('data-slider-on')) return;
+    var layers = [].slice.call(hero.querySelectorAll('[data-layer]'));
+    if (layers.length < 2) return;
+    hero.setAttribute('data-slider-on', '');
 
-    var slides = [].slice.call(hero.querySelectorAll('[data-slide]'));
-    /* The ball's layer moves with the first slide. */
-    var ballLayer = hero.querySelector('[data-layer]');
-    var moving = function () { return ballLayer ? slides.concat(ballLayer) : slides; };
-
-    for (var i = slides.length - 1; i > 0; i--) {
-      var slug = slides[i].getAttribute('data-category');
-      var c = slug && WW.catBy ? WW.catBy(slug) : null;
-      if (!c || !c.image) {
-        slides[i].remove();
-        slides.splice(i, 1);
-        continue;
-      }
-      slides[i].querySelector('[data-slide-name]').textContent = c.name;
-      slides[i].querySelector('[data-slide-desc]').textContent = c.shortDescription || c.blurb;
-      var link = slides[i].querySelector('[data-slide-link]');
-      link.href = c.page;
-      link.textContent = 'Explore ' + c.name;
-      slides[i].querySelector('[data-slide-quote]').href = 'request-quote.html?category=' + encodeURIComponent(c.slug);
-      var img = slides[i].querySelector('[data-slide-image]');
-      img.src = c.image;
-      img.alt = c.name;
-    }
-    if (slides.length < 2) return;
-
-    var total = slides.length;
-    slides.forEach(function (s, n) { s.setAttribute('aria-label', (n + 1) + ' of ' + total); });
-
+    var total = layers.length;
     var dwell = parseInt(hero.getAttribute('data-interval'), 10) || 2000;
     var SLIDE_MS = 800;
     var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var index = 0, timer = null, settle = null, started = false;
-    var userPaused = false, focused = false, offscreen = false;
+    var focused = false, offscreen = false;
 
-    var dotsHost = hero.querySelector('[data-slide-dots]');
-    var dots = slides.map(function (s, n) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'hero__dot';
-      var name = s.querySelector('[data-slide-name]');
-      b.setAttribute('aria-label', 'Show slide ' + (n + 1) + (name ? ': ' + name.textContent : ''));
-      b.addEventListener('click', function () { go(n); });
-      dotsHost.appendChild(b);
-      return b;
+
+    /* Each picture's description; null keeps whatever the page shows, which
+       for the ball is the page's own — possibly set in the admin. */
+    var sub = hero.querySelector('.hero__sub');
+    var texts = layers.map(function (l) {
+      var slug = l.getAttribute('data-category');
+      var c = slug && WW.catBy ? WW.catBy(slug) : null;
+      return c ? (c.shortDescription || c.blurb || null) : null;
     });
-    var pause = hero.querySelector('[data-slide-pause]');
-    hero.querySelector('[data-slide-controls]').hidden = false;
+    var ownText = null;
+
+    /* Room for the longest, so the buttons below never jump. */
+    function reserve() {
+      if (!sub) return;
+      var shown = sub.textContent;
+      var tallest = 0;
+      sub.style.minHeight = '';
+      [ownText || shown].concat(texts).forEach(function (t) {
+        if (!t) return;
+        sub.textContent = t;
+        tallest = Math.max(tallest, sub.offsetHeight);
+      });
+      sub.textContent = shown;
+      sub.style.minHeight = tallest + 'px';
+    }
+    var resizing = null;
+    window.addEventListener('resize', function () { clearTimeout(resizing); resizing = setTimeout(reserve, 150); });
+    reserve();
+
+    /* The page's own text is kept as the ball leaves, so it comes back as it
+       last was. Only the latest swap writes, however fast swipes come. */
+    var swaps = 0;
+    function describe(from, to) {
+      if (!sub) return;
+      if (from === 0) ownText = sub.textContent;
+      var next = to === 0 ? ownText : texts[to];
+      if (!next || next === sub.textContent) return;
+      var mine = ++swaps;
+      if (still || !sub.animate) { sub.textContent = next; return; }
+      sub.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }).onfinish = function () {
+        if (mine !== swaps) return;
+        sub.textContent = next;
+        sub.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, fill: 'forwards' });
+      };
+    }
 
     function mark() {
-      slides.forEach(function (s, n) { s.classList.toggle('is-active', n === index); });
-      if (ballLayer) ballLayer.classList.toggle('is-active', index === 0);
-      dots.forEach(function (d, n) { d.setAttribute('aria-current', n === index ? 'true' : 'false'); });
+      layers.forEach(function (l, n) { l.classList.toggle('is-active', n === index); });
     }
 
     function go(n) {
+      n = (n + total) % total;
       if (n === index) return;
       var prev = index;
-      index = (n + total) % total;
-      moving().forEach(function (el) { el.classList.remove('is-prev'); });
-      slides[prev].classList.add('is-prev');
-      if (ballLayer && prev === 0) ballLayer.classList.add('is-prev');
+      index = n;
+      layers.forEach(function (l) { l.classList.remove('is-prev'); });
+      layers[prev].classList.add('is-prev');
       mark();
-      /* Once it has left, the old slide goes back to waiting off to the right.
-         The ball overhangs the hero's edge, so without this a sliver of it
-         would stay in view — and keep drawing — at the left. */
+      describe(prev, index);
+      /* Once it has left, the old picture goes back to waiting off to the
+         right. The ball overhangs the hero's edge, so without this a sliver
+         of it would stay in view — and keep drawing — at the left. */
       clearTimeout(settle);
       settle = setTimeout(function () {
-        moving().forEach(function (el) { el.classList.remove('is-prev'); });
+        layers.forEach(function (l) { l.classList.remove('is-prev'); });
       }, SLIDE_MS);
       schedule(SLIDE_MS + dwell);
     }
 
     function halted() {
-      return still || !started || userPaused || focused || offscreen || document.hidden;
+      return still || !started || focused || offscreen || document.hidden;
     }
 
     function schedule(ms) {
@@ -218,12 +237,6 @@
       timer = setTimeout(function () { go(index + 1); }, ms);
     }
 
-    pause.addEventListener('click', function () {
-      userPaused = !userPaused;
-      pause.setAttribute('aria-pressed', String(userPaused));
-      pause.setAttribute('aria-label', userPaused ? 'Play slides' : 'Pause slides');
-      schedule(dwell);
-    });
     hero.addEventListener('focusin', function () { focused = true; schedule(dwell); });
     hero.addEventListener('focusout', function (e) {
       if (hero.contains(e.relatedTarget)) return;
@@ -244,7 +257,7 @@
       }, { threshold: steps }).observe(hero);
     }
 
-    /* Phones: a sideways swipe moves a slide either way. */
+    /* Phones: a sideways swipe moves the background either way. */
     var touchX = null;
     hero.addEventListener('touchstart', function (e) { touchX = e.touches[0].clientX; }, { passive: true });
     hero.addEventListener('touchend', function (e) {
@@ -267,7 +280,7 @@
     new MutationObserver(function (list, obs) {
       if (drawn()) { obs.disconnect(); begin(); }
     }).observe(ball, { attributes: true, attributeFilter: ['data-ball'] });
-    /* A slow connection still gets the other slides. */
+    /* A slow connection still gets the other pictures. */
     setTimeout(begin, 6000);
   }
 
@@ -280,5 +293,5 @@
   }
 
   /* The 3D ball needs no data, so it starts even if the API is unreachable. */
-  WW.ready.then(init).catch(function () { boot3D(); });
+  WW.ready.then(init).catch(function () { boot3D(); initHeroSlider(); });
 })();
