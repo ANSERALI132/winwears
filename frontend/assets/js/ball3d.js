@@ -1,9 +1,9 @@
 /* ==========================================================================
    WIN WEARS — 3D football
    --------------------------------------------------------------------------
-   The ball is the WIN WEARS 14-panel match ball model, assets/models/
-   WIN-WEARS-14-Panel-Ball.glb — its own panels, artwork and materials. Phones
-   and low-power devices load WIN-WEARS-14-Panel-Ball.mobile.glb instead: the
+   The ball is the WIN WEARS 14-panel match ball model in red, assets/models/
+   WIN-WEARS-14-Panel-Ball-Red.glb — its own panels, artwork and materials. Phones
+   and low-power devices load WIN-WEARS-14-Panel-Ball-Red.mobile.glb instead: the
    same model with 2048 artwork, no tangents and quantized geometry.
    It is downloaded once per page however many balls the page shows.
 
@@ -545,12 +545,12 @@
     var api = { ready: false, setColours: function () {}, destroy: function () {} };
     var destroyed = false;
 
-    /* The full model is 40 MB with an 8192 texture — more memory than many
+    /* The full model is 34 MB with an 8192 texture — more memory than many
        phones have for it. They get the lighter copy of the same ball. */
     var light = mode === 'low' || window.innerWidth < 700;
     var modelUrl = opts.procedural ? null
       : opts.model || (document.documentElement.getAttribute('data-base') || '') + 'assets/models/'
-        + (light ? 'WIN-WEARS-14-Panel-Ball.mobile.glb' : 'WIN-WEARS-14-Panel-Ball.glb');
+        + (light ? 'WIN-WEARS-14-Panel-Ball-Red.mobile.glb' : 'WIN-WEARS-14-Panel-Ball-Red.glb');
     var gltf = null;
 
     loadThree().then(function (THREE) {
