@@ -1,7 +1,7 @@
 /* ==========================================================================
    WIN WEARS — Homepage
-   Renders the category cards, runs the hero slides and boots the hero +
-   technology balls.
+   Renders the category cards and boots the hero + technology balls. The
+   hero's sliding background is backdrop.js.
    ========================================================================== */
 (function () {
   'use strict';
@@ -130,162 +130,7 @@
       });
   }
 
-  /**
-   * The hero's background: the ball, then a soccer uniform, a tracksuit and
-   * socks, each shown for data-interval milliseconds before the next slides
-   * in behind the same headline. The description under the headline follows
-   * the picture: the ball keeps the page's own, and each garment shows its
-   * category's, so an edit in the admin reaches the hero too. The ball's turn
-   * starts counting once it has drawn, so it is seen rather than skipped
-   * while the model downloads.
-   *
-   * There are no dots or pause button, by choice. Nothing moves while the
-   * visitor is using a control inside the hero, has the tab in the background
-   * or has scrolled past; and not at all for anyone who has asked their
-   * system for reduced motion. On a phone a sideways swipe changes it.
-   */
-  function initHeroSlider() {
-    var hero = document.querySelector('[data-hero-slider]');
-    if (!hero || hero.hasAttribute('data-slider-on')) return;
-    var layers = [].slice.call(hero.querySelectorAll('[data-layer]'));
-    if (layers.length < 2) return;
-    hero.setAttribute('data-slider-on', '');
-
-    var total = layers.length;
-    var dwell = parseInt(hero.getAttribute('data-interval'), 10) || 2000;
-    var SLIDE_MS = 800;
-    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var index = 0, timer = null, settle = null, started = false;
-    var focused = false, offscreen = false;
-
-
-    /* Each picture's description; null keeps whatever the page shows, which
-       for the ball is the page's own — possibly set in the admin. */
-    var sub = hero.querySelector('.hero__sub');
-    var texts = layers.map(function (l) {
-      var slug = l.getAttribute('data-category');
-      var c = slug && WW.catBy ? WW.catBy(slug) : null;
-      return c ? (c.shortDescription || c.blurb || null) : null;
-    });
-    var ownText = null;
-
-    /* Room for the longest, so the buttons below never jump. */
-    function reserve() {
-      if (!sub) return;
-      var shown = sub.textContent;
-      var tallest = 0;
-      sub.style.minHeight = '';
-      [ownText || shown].concat(texts).forEach(function (t) {
-        if (!t) return;
-        sub.textContent = t;
-        tallest = Math.max(tallest, sub.offsetHeight);
-      });
-      sub.textContent = shown;
-      sub.style.minHeight = tallest + 'px';
-    }
-    var resizing = null;
-    window.addEventListener('resize', function () { clearTimeout(resizing); resizing = setTimeout(reserve, 150); });
-    reserve();
-
-    /* The page's own text is kept as the ball leaves, so it comes back as it
-       last was. Only the latest swap writes, however fast swipes come. */
-    var swaps = 0;
-    function describe(from, to) {
-      if (!sub) return;
-      if (from === 0) ownText = sub.textContent;
-      var next = to === 0 ? ownText : texts[to];
-      if (!next || next === sub.textContent) return;
-      var mine = ++swaps;
-      if (still || !sub.animate) { sub.textContent = next; return; }
-      sub.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }).onfinish = function () {
-        if (mine !== swaps) return;
-        sub.textContent = next;
-        sub.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, fill: 'forwards' });
-      };
-    }
-
-    function mark() {
-      layers.forEach(function (l, n) { l.classList.toggle('is-active', n === index); });
-    }
-
-    function go(n) {
-      n = (n + total) % total;
-      if (n === index) return;
-      var prev = index;
-      index = n;
-      layers.forEach(function (l) { l.classList.remove('is-prev'); });
-      layers[prev].classList.add('is-prev');
-      mark();
-      describe(prev, index);
-      /* Once it has left, the old picture goes back to waiting off to the
-         right. The ball overhangs the hero's edge, so without this a sliver
-         of it would stay in view — and keep drawing — at the left. */
-      clearTimeout(settle);
-      settle = setTimeout(function () {
-        layers.forEach(function (l) { l.classList.remove('is-prev'); });
-      }, SLIDE_MS);
-      schedule(SLIDE_MS + dwell);
-    }
-
-    function halted() {
-      return still || !started || focused || offscreen || document.hidden;
-    }
-
-    function schedule(ms) {
-      clearTimeout(timer);
-      if (halted()) return;
-      timer = setTimeout(function () { go(index + 1); }, ms);
-    }
-
-    hero.addEventListener('focusin', function () { focused = true; schedule(dwell); });
-    hero.addEventListener('focusout', function (e) {
-      if (hero.contains(e.relatedTarget)) return;
-      focused = false; schedule(dwell);
-    });
-    document.addEventListener('visibilitychange', function () { schedule(dwell); });
-    /* Scrolled past means less than a third of the screen is hero. Measured
-       against the screen, not the hero, which can be taller than a short
-       window and so never a third visible. */
-    if ('IntersectionObserver' in window) {
-      var steps = [];
-      for (var k = 0; k <= 20; k++) steps.push(k / 20);
-      new IntersectionObserver(function (entries) {
-        var e = entries[0];
-        var room = Math.min(e.boundingClientRect.height, window.innerHeight) || 1;
-        var now = e.intersectionRect.height / room < 0.35;
-        if (now !== offscreen) { offscreen = now; schedule(dwell); }
-      }, { threshold: steps }).observe(hero);
-    }
-
-    /* Phones: a sideways swipe moves the background either way. */
-    var touchX = null;
-    hero.addEventListener('touchstart', function (e) { touchX = e.touches[0].clientX; }, { passive: true });
-    hero.addEventListener('touchend', function (e) {
-      if (touchX === null) return;
-      var dx = e.changedTouches[0].clientX - touchX;
-      touchX = null;
-      if (Math.abs(dx) > 50) go(index + (dx < 0 ? 1 : -1));
-    }, { passive: true });
-
-    mark();
-
-    function begin() {
-      if (started) return;
-      started = true;
-      schedule(dwell);
-    }
-    var ball = document.getElementById('hero-ball');
-    var drawn = function () { return /^(ready|fallback)$/.test(ball.getAttribute('data-ball') || ''); };
-    if (!ball || drawn()) { begin(); return; }
-    new MutationObserver(function (list, obs) {
-      if (drawn()) { obs.disconnect(); begin(); }
-    }).observe(ball, { attributes: true, attributeFilter: ['data-ball'] });
-    /* A slow connection still gets the other pictures. */
-    setTimeout(begin, 6000);
-  }
-
   function init() {
-    initHeroSlider();
     renderCategories();
     renderFeatured();
     boot3D();
@@ -293,5 +138,5 @@
   }
 
   /* The 3D ball needs no data, so it starts even if the API is unreachable. */
-  WW.ready.then(init).catch(function () { boot3D(); initHeroSlider(); });
+  WW.ready.then(init).catch(function () { boot3D(); });
 })();
