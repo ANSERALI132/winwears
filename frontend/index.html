@@ -110,26 +110,91 @@
 <main id="main">
 
   <!-- ============================= HERO ============================= -->
-  <section class="hero" data-nav-watch>
-    <div class="hero__bg" id="hero-ball" aria-hidden="true"></div>
+  <section class="hero" data-nav-watch data-hero-slider data-interval="2000" aria-roledescription="carousel" aria-label="WIN WEARS highlights">
+    <div class="hero__layer is-active" data-layer aria-hidden="true">
+      <div class="hero__bg" id="hero-ball"></div>
+    </div>
     <span class="hero__glow" aria-hidden="true"></span>
     <span class="hero__glow hero__glow--red" aria-hidden="true"></span>
     <span class="hero__grid" aria-hidden="true"></span>
 
     <div class="wrap hero__inner">
-      <p class="eyebrow hero__eyebrow">Football manufacturing · Custom ball solutions</p>
+      <div class="hero__slides">
+        <div class="hero__slide is-active" data-slide role="group" aria-roledescription="slide" aria-label="1 of 4">
+          <p class="eyebrow hero__eyebrow">Football manufacturing · Custom ball solutions</p>
 
-      <h1 class="hero__title">
-        <span class="ln"><span>Engineered</span></span>
-        <span class="ln"><span>for the game.</span></span>
-        <span class="ln"><span>Built for <em>your brand.</em></span></span>
-      </h1>
+          <h1 class="hero__title">
+            <span class="ln"><span>Engineered</span></span>
+            <span class="ln"><span>for the game.</span></span>
+            <span class="ln"><span>Built for <em>your brand.</em></span></span>
+          </h1>
 
-      <p class="hero__sub" data-ww-content="hero.subtitle">Premium football manufacturing and custom ball solutions by WIN WEARS — for clubs, academies, federations, tournaments and distributors.</p>
+          <p class="hero__sub" data-ww-content="hero.subtitle">Premium football manufacturing and custom ball solutions by WIN WEARS — for clubs, academies, federations, tournaments and distributors.</p>
 
-      <div class="hero__actions">
-        <a class="btn btn--light btn--lg" href="products.html" data-magnetic>Explore Footballs</a>
-        <a class="btn btn--on-dark btn--lg" href="customization.html" data-magnetic>Customize Your Ball</a>
+          <div class="hero__actions">
+            <a class="btn btn--light btn--lg" href="products.html" data-magnetic>Explore Footballs</a>
+            <a class="btn btn--on-dark btn--lg" href="customization.html" data-magnetic>Customize Your Ball</a>
+          </div>
+        </div>
+
+        <div class="hero__slide hero__slide--photo" data-slide data-category="team-wears" role="group" aria-roledescription="slide" aria-label="2 of 4">
+          <div class="hero__copy">
+            <p class="eyebrow hero__eyebrow" data-slide-name></p>
+            <h2 class="hero__title">
+              <span class="ln"><span>Kitted out.</span></span>
+              <span class="ln"><span>Head to toe.</span></span>
+              <span class="ln"><span>Built for <em>your team.</em></span></span>
+            </h2>
+            <p class="hero__sub" data-slide-desc></p>
+            <div class="hero__actions">
+              <a class="btn btn--light btn--lg" data-slide-link data-magnetic></a>
+              <a class="btn btn--on-dark btn--lg" data-slide-quote data-magnetic>Request a Quote</a>
+            </div>
+          </div>
+          <div class="hero__photo"><img alt="" decoding="async" data-slide-image></div>
+        </div>
+
+        <div class="hero__slide hero__slide--photo" data-slide data-category="football-socks" role="group" aria-roledescription="slide" aria-label="3 of 4">
+          <div class="hero__copy">
+            <p class="eyebrow hero__eyebrow" data-slide-name></p>
+            <h2 class="hero__title">
+              <span class="ln"><span>Grip. Comfort.</span></span>
+              <span class="ln"><span>Every match.</span></span>
+              <span class="ln"><span>In <em>your colours.</em></span></span>
+            </h2>
+            <p class="hero__sub" data-slide-desc></p>
+            <div class="hero__actions">
+              <a class="btn btn--light btn--lg" data-slide-link data-magnetic></a>
+              <a class="btn btn--on-dark btn--lg" data-slide-quote data-magnetic>Request a Quote</a>
+            </div>
+          </div>
+          <div class="hero__photo"><img alt="" decoding="async" data-slide-image></div>
+        </div>
+
+        <div class="hero__slide hero__slide--photo" data-slide data-category="tracksuits" role="group" aria-roledescription="slide" aria-label="4 of 4">
+          <div class="hero__copy">
+            <p class="eyebrow hero__eyebrow" data-slide-name></p>
+            <h2 class="hero__title">
+              <span class="ln"><span>Train sharp.</span></span>
+              <span class="ln"><span>Travel sharp.</span></span>
+              <span class="ln"><span>Built for <em>your squad.</em></span></span>
+            </h2>
+            <p class="hero__sub" data-slide-desc></p>
+            <div class="hero__actions">
+              <a class="btn btn--light btn--lg" data-slide-link data-magnetic></a>
+              <a class="btn btn--on-dark btn--lg" data-slide-quote data-magnetic>Request a Quote</a>
+            </div>
+          </div>
+          <div class="hero__photo"><img alt="" decoding="async" data-slide-image></div>
+        </div>
+      </div>
+
+      <div class="hero__controls" data-slide-controls hidden>
+        <div class="hero__dots" data-slide-dots></div>
+        <button class="hero__pause" type="button" data-slide-pause aria-pressed="false" aria-label="Pause slides">
+          <svg class="hero__pause-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="hero__play-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" fill="currentColor"/></svg>
+        </button>
       </div>
 
       <dl class="hero__meta">

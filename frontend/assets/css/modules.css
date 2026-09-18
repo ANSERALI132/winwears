@@ -62,27 +62,97 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   text-transform: uppercase; max-width: 16ch;
 }
 .hero__title .ln { display: block; overflow: hidden; }
-.hero__title .ln > span {
-  display: block; transform: translateY(102%);
-  animation: heroLine 1.05s var(--e-out) forwards;
-}
+.hero__title .ln > span { display: block; transform: translateY(102%); }
+.hero__slide.is-active .hero__title .ln > span,
+.hero__slide.is-prev .hero__title .ln > span { animation: heroLine 1.05s var(--e-out) forwards; }
 .hero__title .ln:nth-child(2) > span { animation-delay: .10s; }
 .hero__title em { font-style: normal; color: var(--red-500); }
 @keyframes heroLine { to { transform: translateY(0); } }
 
 .hero__sub {
   margin-top: var(--s-5); max-width: 46ch; font-size: var(--t-lead);
-  color: var(--on-dark-soft); line-height: 1.5;
-  opacity: 0; animation: heroFade .9s var(--e-out) .38s forwards;
+  color: var(--on-dark-soft); line-height: 1.5; opacity: 0;
 }
 .hero__actions {
-  margin-top: var(--s-6); display: flex; flex-wrap: wrap; gap: var(--s-3);
-  opacity: 0; animation: heroFade .9s var(--e-out) .5s forwards;
+  margin-top: var(--s-6); display: flex; flex-wrap: wrap; gap: var(--s-3); opacity: 0;
 }
+.hero__slide.is-active .hero__sub,
+.hero__slide.is-prev .hero__sub { animation: heroFade .9s var(--e-out) .38s forwards; }
+.hero__slide.is-active .hero__actions,
+.hero__slide.is-prev .hero__actions { animation: heroFade .9s var(--e-out) .5s forwards; }
 @keyframes heroFade { to { opacity: 1; } }
+
+/* Slides. The ball is a layer behind the first slide, moved with it, so it
+   keeps its place relative to the whole hero. A slide waiting its turn sits
+   off to the right, hidden; the one leaving slides out to the left. */
+.hero__slides { display: grid; }
+/* Slides differ in height; each sits on the controls below it. */
+.hero__slide { grid-area: 1 / 1; align-self: end; }
+.hero__layer { position: absolute; inset: 0; z-index: -3; pointer-events: none; }
+.hero__slide, .hero__layer { transform: translateX(100vw); visibility: hidden; }
+.hero__slide.is-active, .hero__layer.is-active { transform: none; visibility: visible; }
+.hero__slide.is-prev, .hero__layer.is-prev { transform: translateX(-100vw); visibility: visible; }
+.hero__slide.is-active, .hero__slide.is-prev,
+.hero__layer.is-active, .hero__layer.is-prev { transition: transform .8s var(--e-out); }
+
+/* An apparel slide: copy on the left, the photo in its own column on the
+   right, so the two never overlap. The headline is sized to its column —
+   10% of it keeps the longest line clear. */
+.hero__slide--photo {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .72fr);
+  gap: clamp(1.5rem, 4vw, 4rem); align-items: center;
+}
+.hero__copy { min-width: 0; container-type: inline-size; }
+.hero__slide--photo .hero__title { font-size: min(var(--t-display), 6vw); }
+@supports (container-type: inline-size) {
+  .hero__slide--photo .hero__title { font-size: min(var(--t-display), 10cqi); }
+}
+/* Shown whole at its own proportions. */
+.hero__photo img {
+  display: block; margin-left: auto; width: auto; height: auto;
+  max-width: 100%; max-height: 62svh; border-radius: var(--r-lg);
+  box-shadow: 0 50px 100px -40px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.08);
+}
+/* Phones and small tablets: the photo above the copy. */
+@media (max-width: 860px) {
+  .hero__slide--photo { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+  .hero__slide--photo .hero__photo { order: -1; }
+  .hero__photo img { margin-left: 0; max-height: 30svh; }
+}
+/* Phones: one button, so a photo slide is barely taller than the ball's and
+   the ball slide's own buttons stay on the first screen. */
+@media (max-width: 560px) {
+  .hero__slide--photo [data-slide-quote] { display: none; }
+}
+
+.hero__controls { margin-top: var(--s-6); display: flex; align-items: center; gap: var(--s-4); }
+.hero__controls[hidden] { display: none; }
+.hero__dots { display: flex; gap: var(--s-2); }
+/* A thin bar to look at, a 24px strip to tap. */
+.hero__dot {
+  position: relative; width: 36px; height: 24px; padding: 0;
+  background: none; border: 0; cursor: pointer;
+}
+.hero__dot::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px;
+  border-radius: 2px; background: rgba(255,255,255,.28); transition: background .3s;
+}
+.hero__dot:hover::before { background: rgba(255,255,255,.55); }
+.hero__dot[aria-current="true"]::before { background: var(--red-500); }
+.hero__pause {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--line-dark); background: none;
+  color: var(--on-dark-soft); cursor: pointer;
+}
+.hero__pause:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+.hero__pause svg { width: 14px; height: 14px; }
+.hero__play-icon, .hero__pause[aria-pressed="true"] .hero__pause-icon { display: none; }
+.hero__pause[aria-pressed="true"] .hero__play-icon { display: block; }
+
 @media (prefers-reduced-motion: reduce) {
-  .hero__title .ln > span { transform: none; animation: none; }
-  .hero__sub, .hero__actions { opacity: 1; animation: none; }
+  .hero__slide .hero__title .ln > span { transform: none; animation: none; }
+  .hero__slide .hero__sub, .hero__slide .hero__actions { opacity: 1; animation: none; }
+  .hero__slide, .hero__layer { transition: none !important; }
 }
 
 .hero__meta {
