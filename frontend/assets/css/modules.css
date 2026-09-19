@@ -523,6 +523,31 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .process__body p { color: var(--ink-soft); max-width: 60ch; }
 .section--dark .process__body p { color: var(--on-dark-soft); }
 .process__tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+/* A stage with its factory clip: heading and text on the left, the clip
+   large on the right at its own proportions — upright phone footage or
+   landscape — never cropped. On a phone the clip follows the text. */
+.process__step:has(> .process__media) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "index media" "body media";
+  grid-template-rows: auto 1fr;
+  row-gap: var(--s-4);
+}
+.process__step:has(> .process__media) .process__index { grid-area: index; }
+.process__step:has(> .process__media) .process__body { grid-area: body; align-self: start; }
+.process__media { grid-area: media; margin: 0; }
+.process__video {
+  display: block; width: auto; height: auto; max-width: 100%;
+  max-height: min(640px, 80vh); margin-inline: auto;
+  border-radius: var(--r-md); background: var(--navy-900);
+}
+@media (max-width: 800px) {
+  .process__step:has(> .process__media) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "index" "body" "media";
+    grid-template-rows: auto;
+  }
+  .process__video { max-height: 75vh; }
+}
 .tagchip {
   font-size: .625rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 650;
   padding: .32rem .6rem; border-radius: var(--r-xs);

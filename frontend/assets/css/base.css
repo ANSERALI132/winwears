@@ -25,6 +25,13 @@ body {
 
 img, svg, video, canvas { display: block; max-width: 100%; }
 img { height: auto; }
+/* No long-press "Download image" card on a phone, and no dragging a picture
+   out of the page. Both are deterrents: the files are still public urls. */
+img, video {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
 input, button, textarea, select { font: inherit; color: inherit; }
 button { background: none; border: 0; cursor: pointer; }
 a { color: inherit; text-decoration: none; }

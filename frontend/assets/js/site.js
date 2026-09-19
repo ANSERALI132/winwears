@@ -1,7 +1,8 @@
 /* ==========================================================================
    WIN WEARS — Site behaviour
    Navigation, mobile menu, scroll progress, reveals, accordions, counters,
-   magnetic buttons, cursor, parallax, WhatsApp deep links.
+   magnetic buttons, cursor, parallax, WhatsApp deep links, videos that play
+   while on screen, pictures kept out of the save menu.
    Plain script: no modules, no build step.
    ========================================================================== */
 (function () {
@@ -354,6 +355,59 @@
   }
 
   /* ----------------------------------------------------------- Boot ------ */
+  /* Videos marked data-inview play by themselves, muted — the only way a
+     browser lets a video start on its own — with no controls: the
+     manufacturing clips. Each starts just before it scrolls into view and
+     pauses once well away, so every clip a visitor sees is playing without
+     the page fetching all of them at once. data-playlist plays several clips
+     in turn in one player. The browser's save menu is turned off on them.
+     For anyone who asked their system for reduced motion they stay still. */
+  function bootInviewVideos() {
+    var vids = $$('video[data-inview]');
+    if (!vids.length) return;
+
+    vids.forEach(function (v) {
+      var list = (v.getAttribute('data-playlist') || '').split(/\s+/).filter(Boolean);
+      if (list.length > 1) {
+        var at = 0;
+        v.addEventListener('ended', function () {
+          at = (at + 1) % list.length;
+          v.src = list[at];
+          v.play().catch(function () { /* the poster stays */ });
+        });
+      }
+    });
+
+    if (reduced || !('IntersectionObserver' in window)) return;
+    var watch = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var v = e.target;
+        if (e.isIntersecting) {
+          if (v.paused) v.play().catch(function () { /* the poster stays */ });
+        } else if (!v.paused) {
+          v.pause();
+        }
+      });
+    }, { rootMargin: '150px 0px' });
+    vids.forEach(function (v) { watch.observe(v); });
+  }
+
+  /* A long press on a phone, or a right click, offers Download image and
+     Copy image for any picture. Turning the menu off on pictures and clips
+     takes those away, and dragging one out of the page is stopped too.
+     Neither hides the file itself — its url is public either way — so this
+     deters the casual save rather than preventing it. Menus on text, links
+     and form fields are left alone. */
+  function bootPictureGuard() {
+    doc.addEventListener('contextmenu', function (e) {
+      var el = e.target;
+      if (el && (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'PICTURE')) e.preventDefault();
+    });
+    doc.addEventListener('dragstart', function (e) {
+      if (e.target && e.target.tagName === 'IMG') e.preventDefault();
+    });
+  }
+
   function init() {
     bootPreloader();
     bootNav();
@@ -365,6 +419,8 @@
     bootMagnetic();
     bootCursor();
     bootParallax();
+    bootInviewVideos();
+    bootPictureGuard();
     bootCurrent();
     bootFooter();
 
