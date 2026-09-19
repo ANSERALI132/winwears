@@ -142,6 +142,29 @@ export function createApp(): express.Express {
     const frontend = path.isAbsolute(env.FRONTEND_DIR)
       ? env.FRONTEND_DIR
       : path.resolve(__dirname, '..', env.FRONTEND_DIR);
+    /* A picture or clip is for this site's own pages. A browser loading one
+       sends a referrer or a same-origin fetch header; the "paste a url and
+       download every image" services fetch them from their own servers with
+       neither, and are turned away. Link previews keep working because their
+       pictures sit in assets/social, which is left open — social networks and
+       search engines fetch those without a referrer too.
+
+       Vercel serves these files from its CDN in production, where vercel.json
+       carries the same rule; this covers running the site from here. */
+    const OWN_MEDIA = /^\/assets\/(img|video)\//;
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' || !OWN_MEDIA.test(req.path)) return next();
+      const site = req.get('sec-fetch-site');
+      if (site === 'same-origin' || site === 'same-site') return next();
+      const referer = req.get('referer');
+      if (referer) {
+        try {
+          if (new URL(referer).host === req.get('host')) return next();
+        } catch { /* a referrer we cannot read is no proof of anything */ }
+      }
+      res.status(403).type('text/plain').send('This picture belongs to a WIN WEARS page.');
+    });
+
     app.use(express.static(frontend, { extensions: ['html'], maxAge: isProd ? '1h' : 0 }));
     app.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api')) return next();

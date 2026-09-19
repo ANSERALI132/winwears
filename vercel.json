@@ -1,1 +1,54 @@
-{"outputDirectory":"frontend","buildCommand":"cd backend && npm ci && DATABASE_URL=\"$DATABASE_URL_UNPOOLED\" npx prisma migrate deploy && npm run build","rewrites":[{"source":"/api/:path*","destination":"/api/index"},{"source":"/admin","destination":"/api/index"},{"source":"/admin/","destination":"/api/index"},{"source":"/admin/:path*","destination":"/api/index"}]}
+{
+  "outputDirectory": "frontend",
+  "buildCommand": "cd backend && npm ci && DATABASE_URL=\"$DATABASE_URL_UNPOOLED\" npx prisma migrate deploy && npm run build",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/admin",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/api/index"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/assets/img/:path*",
+      "missing": [
+        {
+          "type": "header",
+          "key": "referer"
+        },
+        {
+          "type": "header",
+          "key": "sec-fetch-site"
+        }
+      ],
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/assets/video/:path*",
+      "missing": [
+        {
+          "type": "header",
+          "key": "referer"
+        },
+        {
+          "type": "header",
+          "key": "sec-fetch-site"
+        }
+      ],
+      "destination": "/",
+      "permanent": false
+    }
+  ]
+}
