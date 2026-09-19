@@ -9,6 +9,9 @@ Desktop.ini
 
 # Working files
 tools/tmp/
+# Camera originals of the process films: 197 MB, one of them past GitHub's
+# 100 MB limit. The site serves the re-encoded copies in frontend/assets/video.
+COMPLETE FOTBALL PROCESS/
 *.bak
 *.log
 
