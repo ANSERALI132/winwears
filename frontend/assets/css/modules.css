@@ -523,6 +523,22 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .process__body p { color: var(--ink-soft); max-width: 60ch; }
 .section--dark .process__body p { color: var(--on-dark-soft); }
 .process__tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+/* The factory films on the homepage: eight small clips in a strip, each one
+   whole inside its frame rather than cropped to fit. */
+.film-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-4); }
+.film { margin: 0; display: grid; gap: .6rem; }
+.film__video {
+  width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: contain;
+  border-radius: var(--r-md); background: var(--navy-900);
+}
+.film__caption {
+  display: flex; align-items: baseline; gap: .5rem;
+  font-size: var(--t-small); text-transform: uppercase; letter-spacing: var(--tr-wide);
+}
+.film__caption .num { font-family: var(--font-mono); font-size: var(--t-micro); color: var(--red-500); }
+@media (max-width: 900px) { .film-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .film-strip { grid-template-columns: minmax(0, 1fr); } }
+
 /* A stage with its factory clip: heading and text on the left, the clip
    large on the right at its own proportions — upright phone footage or
    landscape — never cropped. On a phone the clip follows the text. */
