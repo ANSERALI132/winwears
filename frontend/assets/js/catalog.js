@@ -68,7 +68,7 @@
     if (!host) return;
     if (!list.length) {
       empty = empty || {};
-      host.innerHTML = '<div class="empty-state"><h3>' + esc(empty.title || 'No footballs found') + '</h3>'
+      host.innerHTML = '<div class="empty-state"><h3>' + esc(empty.title || 'No products found') + '</h3>'
         + '<p class="lead" style="margin:.5rem auto var(--s-4)">'
         + esc(emptyMsg || 'Try clearing a filter, or tell us what you need and we will quote it.')
         + '</p><a class="btn" href="' + esc(empty.href || BASE + 'products.html') + '">'
@@ -105,7 +105,9 @@
     var grid = $('#product-grid');
     if (!grid) return;
 
-    var state = { category: '', construction: '', material: '', usage: '', size: '', page: 1, perPage: 24, sort: 'order', ranges: 'yes' };
+      /* Everything made, not the ball ranges alone: uniforms, tracksuits and
+       socks are listed here too. */
+    var state = { category: '', construction: '', material: '', usage: '', size: '', page: 1, perPage: 24, sort: 'order' };
 
     var params = new URLSearchParams(location.search);
     /* Accept the old ?cat= as well as ?category=, so existing links survive. */
@@ -207,8 +209,8 @@
           if (count) {
             var shown = Math.min(res.meta.total, res.meta.page * res.meta.perPage);
             count.textContent = res.meta.total
-              ? 'Showing ' + shown + ' of ' + res.meta.total + ' football' + (res.meta.total === 1 ? '' : 's')
-              : 'No footballs match those filters';
+              ? 'Showing ' + shown + ' of ' + res.meta.total + ' product' + (res.meta.total === 1 ? '' : 's')
+              : 'No products match those filters';
           }
 
           var more = $('#f-more');

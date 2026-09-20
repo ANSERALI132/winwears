@@ -150,11 +150,11 @@ publicRouter.get(
       prisma.product.findMany({ where, select: { material: true }, distinct: ['material'] }),
       prisma.product.findMany({ where, select: { usage: true }, distinct: ['usage'] }),
       prisma.product.findMany({ where, select: { size: true }, distinct: ['size'] }),
-      /* The collection page is the ball ranges: apparel and the groups are
-         left out of its filter. The ranges sit in a group, so the flag says
-         which they are, not their place in the tree. */
+      /* The collection page lists everything made, so its category filter is
+         every category that holds products — the ball ranges and the apparel
+         alike. A group holds none of its own and is left out. */
       prisma.category.findMany({
-        where: { active: true, footballRange: true },
+        where: { active: true, children: { none: {} } },
         orderBy: { displayOrder: 'asc' },
         select: { slug: true, name: true },
       }),
