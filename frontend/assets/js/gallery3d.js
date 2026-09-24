@@ -1,10 +1,9 @@
 /* ==========================================================================
    WIN WEARS — 3D product gallery
    --------------------------------------------------------------------------
-   One gallery, every page. The products are spread over a ball that turns,
-   each one square to the viewer so it stays readable wherever it has been
-   carried to; whichever is chosen is named underneath with its own quote and
-   WhatsApp buttons.
+   One gallery, every page. Products float in a ring around whichever one is
+   active; the active one stands forward, larger and lit, and carries its own
+   name, category, quote link and WhatsApp message.
 
    A page asks for it in markup and names nothing else:
 
@@ -20,9 +19,9 @@
    gallery can never show a product the catalogue does not, and no product
    name, image or count is written here.
 
-   What it costs: only the products on the ball are in the DOM at all —
-   eleven on a phone, nineteen on a desktop — however many the category
-   holds. Images load lazily, the loop stops when the gallery is
+   What it costs: only the active product and the ring around it are in the
+   DOM at all — four on a phone, eight on a desktop — however many products
+   the category holds. Images load lazily, the loop stops when the gallery is
    off-screen or the tab is hidden, and a visitor who has asked for reduced
    motion gets the same gallery standing still.
    ========================================================================== */
@@ -40,13 +39,14 @@
     });
   }
 
-  /* How many products the ball carries. Enough to cover it — too few and the
-     shape reads as a scatter rather than a ball — but every one is a card in
-     the page, so a phone carries fewer. */
+  /* How many stand around the active one. Enough of them that the ring reads
+     as a circle rather than a diamond — four points do not describe a circle,
+     and that is what the first version looked like. A phone holds fewer only
+     because the circle it can draw is smaller. */
   function ringFor(width) {
-    if (width < 700) return 11;
-    if (width < 1100) return 15;
-    return 19;
+    if (width < 700) return 6;
+    if (width < 1100) return 8;
+    return 10;
   }
 
   /* A rough guess at what the device can carry. Deliberately narrow: plenty
@@ -90,8 +90,9 @@
         '<span class="g3d__grid" aria-hidden="true"></span>' +
         '<span class="g3d__glow" aria-hidden="true"></span>' +
         '<div class="g3d__space"></div>' +
-        /* The ball turns around the collection's name: what is in the middle
-           is the idea, and the products are what carry it round. */
+        /* The ring turns around the collection's name rather than around one
+           product blown up large — what is in the middle is the idea, and the
+           products are what circle it. */
         '<div class="g3d__centre" aria-hidden="true">' +
           '<span class="g3d__centre-title">' + esc(title) + '</span>' +
         '</div>' +
@@ -110,7 +111,7 @@
     var panel = host.querySelector('.g3d__panel');
 
     var ring = Math.min(ringFor(window.innerWidth), n - 1);
-    if (modest()) ring = Math.min(ring, 11);
+    if (modest()) ring = Math.min(ring, 4);
 
     /* Only the active product and its ring exist in the page. A category of a
        hundred products costs the same as a category of nine. */
@@ -125,7 +126,7 @@
         '<span class="g3d__float">' +
           '<span class="g3d__media"><img alt="" loading="lazy" decoding="async"></span>' +
         '</span>';
-      /* Different timings so the ball breathes rather than pulsing as one. */
+      /* Different timings so the ring breathes rather than pulsing as one. */
       var f = a.querySelector('.g3d__float');
       f.style.setProperty('--dur', (7 + (s % 4) * 1.7).toFixed(1) + 's');
       f.style.setProperty('--delay', (-(s * 1.3)).toFixed(1) + 's');
@@ -134,24 +135,36 @@
     }
 
     var active = 0;
-    var auto = false;
+    var auto = false, autoTimer = null;
+    var tiltX = 0, tiltY = 0, curX = 0, curY = 0;
     var raf = null, onScreen = false;
 
-    /* ---- where each product sits on the ball -------------------------- */
-    /* One radius, because a ball is as deep as it is wide. Held in far enough
-       that a card riding the widest part of it is still whole on the stage. */
+    /* ---- where each product stands ----------------------------------- */
+    /* The ring is an ellipse — wider than it is tall, because a circle of
+       photographs seen slightly from above is what reads as a ring standing
+       in space rather than a wheel painted on the glass. Both radii are held
+       back far enough to leave the name in the middle clear and near enough
+       that no card is cut off by the edge of the stage. */
     function geometry() {
       var w = stage.clientWidth || 1;
       var h = stage.clientHeight || 1;
       var card = slots[0].offsetWidth || 150;
       var tall = card * 1.25;                 /* the media is 4 / 5 */
+      var rx = Math.max(card * 0.85, Math.min(w / 2 - card / 2 - 10, w * 0.36));
       return {
-        r: Math.max(
-          card * 0.8,
-          Math.min(w / 2 - card / 2 - 8, (h - tall) / 2 - 4, w * 0.30)
-        )
+        rx: rx,
+        ry: Math.max(tall * 0.55, Math.min(h / 2 - tall / 2 - 10, h * 0.26)),
+        /* How far the hoop leans into the screen. Tied to its width so the
+           turn keeps its shape at every size, and kept modest: pushed further
+           the near cards are magnified by the perspective until they spill off
+           the stage. */
+        rz: rx * 0.55
       };
     }
+
+    /* A photograph dropped on a table does not land square. Fixed rather than
+       random so a product sits the same way each time it comes round. */
+    var TILTS = [-11, 7, -5, 13, -9, 4, -14, 9, -3, 11, -7, 6];
 
     /* Every card hangs from the middle of the stage, so each one is centred on
        its own slot before it is moved to it. */
@@ -167,70 +180,38 @@
        The product being shown sits at the near point of the hoop, which is
        where it is biggest — so "active" and "at the front" are the same
        thing, and nothing has to be lifted out of the ring to be the focus. */
-    /* Where each product sits on the ball.
-       Points are spread by the golden angle, the way a sunflower packs seeds:
-       it leaves no bands and no bald patches, unlike rings of latitude, which
-       crowd at the poles. That is what gives the arrangement its round,
-       evenly-covered shape.
-
-       The cards are never turned. Each one's place on the ball is worked out
-       here, frame by frame, and written as a position only — so a product on
-       the far side is smaller and dimmer but still square to the viewer and
-       still readable. Turning them to lie along the surface would panel the
-       ball properly but would also show half the range edge-on or from
-       behind, and a gallery is for looking at products. */
-    var GOLDEN = Math.PI * (3 - Math.sqrt(5));
-    var points = [];
-
-    function layout() {
+    function place(el, offset, g) {
       var total = slots.length;
-      points = [];
-      for (var i = 0; i < total; i++) {
-        var y = total === 1 ? 0 : 1 - (i / (total - 1)) * 2;
-        var band = Math.sqrt(Math.max(0, 1 - y * y));
-        var theta = GOLDEN * i;
-        points.push({ x: Math.cos(theta) * band, y: y, z: Math.sin(theta) * band });
-      }
-    }
+      var a = (90 + offset * (360 / total)) * Math.PI / 180;
 
-    /* Turns the ball and lays every card out at its new place. One pass, and
-       the only thing written per card is a transform and an opacity. */
-    function orient(spinDeg, tiltDeg, r) {
-      var sy = Math.sin(spinDeg * Math.PI / 180), cy = Math.cos(spinDeg * Math.PI / 180);
-      var sx = Math.sin(tiltDeg * Math.PI / 180), cx = Math.cos(tiltDeg * Math.PI / 180);
+      var x = Math.cos(a) * g.rx;
+      var y = Math.sin(a) * g.ry;
+      var z = Math.sin(a) * g.rz;
 
-      for (var i = 0; i < points.length; i++) {
-        var p = points[i];
-        /* Spin about the upright axis, then lean the whole ball towards us. */
-        var x1 = p.x * cy + p.z * sy;
-        var z1 = -p.x * sy + p.z * cy;
-        var y2 = p.y * cx - z1 * sx;
-        var z2 = p.y * sx + z1 * cx;          /* −1 at the back, 1 at the front */
+      /* 0 at the far side of the hoop, 1 at the near side. */
+      var near = (z / (g.rz || 1) + 1) / 2;
+      /* The perspective already enlarges the near side; this only widens the
+         gap a little, or the front of the hoop swallows the stage. */
+      var scale = 0.60 + near * 0.28;
+      var fade = 0.38 + near * 0.62;
+      var tilt = TILTS[offset % TILTS.length];
 
-        var near = (z2 + 1) / 2;
-        var el = slots[i];
-        el.style.transform = MIDDLE
-          + 'translate3d(' + (x1 * r).toFixed(1) + 'px,' + (y2 * r).toFixed(1) + 'px,'
-          + (z2 * r).toFixed(1) + 'px)'
-          + ' scale(' + (0.62 + near * 0.38).toFixed(3) + ')';
-        el.style.opacity = (0.26 + near * 0.74).toFixed(3);
-        el.style.zIndex = String(Math.round(near * 60));
-      }
+      el.style.transform = MIDDLE
+        + 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,' + Math.round(z) + 'px)'
+        + ' rotateZ(' + tilt + 'deg) scale(' + scale.toFixed(3) + ')';
+      el.style.opacity = fade.toFixed(3);
+      /* Cards on the near side pass in front of the collection's name, cards
+         on the far side behind it. */
+      el.style.zIndex = String(Math.round(near * 40) + (near > 0.5 ? 20 : 0));
+      if (offset === 0) el.setAttribute('data-active', '');
+      else el.removeAttribute('data-active');
     }
 
     /* ---- what each slot is showing ----------------------------------- */
     function paint() {
-      if (!points.length) layout();
-      /* Lay the ball out here rather than leaving it to the turning loop.
-         Someone who has asked for reduced motion never starts that loop, and
-         without this every card would sit unplaced on top of the next in the
-         middle of the stage. They get the ball standing still. */
-      orient(spin, lean, geometry().r);
-      /* A product keeps its place on the ball. Choosing another one changes
-         which is described below, not which picture is where — pictures
-         swapping under the visitor as the ball turned would be unreadable. */
+      var g = geometry();
       for (var k = 0; k <= ring; k++) {
-        var i = k % n;
+        var i = (active + k) % n;
         var p = list[i];
         var el = slots[k];
         var img = el.querySelector('img');
@@ -244,12 +225,11 @@
         img.alt = k === 0 ? (alts[0] || p.productName) : '';
         el.href = WW.productHref(p);
         el.setAttribute('data-slug', p.slug || p.id);
-        /* Every product on the ball is reachable by pointer and by tap; the
-           reader is told what each one is, and which one is being shown. */
-        el.setAttribute('aria-label', p.productName + (k === active ? ' — the product shown, open it' : ' — show this product'));
-        el.setAttribute('aria-current', k === active ? 'true' : 'false');
-        if (k === active) el.setAttribute('data-active', '');
-        else el.removeAttribute('data-active');
+        /* The ring is reachable by pointer and by tap; the reader is told
+           what each one is and that the active one is the active one. */
+        el.setAttribute('aria-label', p.productName + (k === 0 ? ' — the product shown, open it' : ' — show this product'));
+        el.setAttribute('aria-current', k === 0 ? 'true' : 'false');
+        place(el, k, g);
       }
       describe(list[active]);
     }
@@ -278,27 +258,25 @@
       if (WW.wireWhatsApp) WW.wireWhatsApp(panel);
     }
 
-    /* `active` is the product being described underneath, not a position on
-       the ball — the ball keeps turning either way. */
-    var shown = Math.min(ring, n - 1);
     function go(step) {
-      active = ((active + step) % (shown + 1) + (shown + 1)) % (shown + 1);
+      active = ((active + step) % n + n) % n;
       paint();
     }
     function selectSlug(slug) {
-      for (var k = 0; k <= shown; k++) {
-        if (String(list[k % n].slug || list[k % n].id) === slug) { active = k; paint(); return true; }
+      for (var i = 0; i < n; i++) {
+        if (String(list[i].slug || list[i].id) === slug) { active = i; paint(); return true; }
       }
       return false;
     }
 
     /* ---- moving through it -------------------------------------------- */
     host.addEventListener('click', function (e) {
-      /* Reaching for a product describes it below; reaching for the one
-         already described opens its page, because it is a plain link. */
+      /* A product that is not the active one is brought to the middle; the
+         active one is a plain link to its page, so it opens. */
       var item = e.target.closest('.g3d__item');
       if (item && !item.hasAttribute('data-active')) {
         e.preventDefault();
+        stopAuto();
         selectSlug(item.getAttribute('data-slug'));
       }
     });
@@ -306,33 +284,26 @@
     stage.addEventListener('keydown', function (e) {
       var step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1
         : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-      if (step) { e.preventDefault(); go(step); return; }
-      if (e.key === 'Home') { e.preventDefault(); active = 0; paint(); }
-      if (e.key === 'End') { e.preventDefault(); active = shown; paint(); }
-      /* Escape stops it turning, for anyone who finds the motion distracting
-         but has not turned motion down system-wide. */
+      if (step) { e.preventDefault(); stopAuto(); go(step); return; }
+      if (e.key === 'Home') { e.preventDefault(); stopAuto(); active = 0; paint(); }
+      if (e.key === 'End') { e.preventDefault(); stopAuto(); active = n - 1; paint(); }
       if (e.key === 'Escape') stopAuto();
     });
 
-    /* Drag with a mouse, swipe with a thumb: the ball turns under the hand,
-       degree for pixel, the way a globe does. A gesture closer to vertical is
-       left alone so the page can still be scrolled through the gallery. */
-    var from = null, fromY = 0, moved = false, held = false;
+    /* Drag with a mouse, swipe with a thumb. A sideways gesture moves the
+       gallery; anything closer to vertical is left to the page to scroll. */
+    var from = null, fromY = 0, moved = false;
     stage.addEventListener('pointerdown', function (e) {
       if (e.button) return;
-      from = e.clientX; fromY = e.clientY; moved = false; held = false;
+      from = e.clientX; fromY = e.clientY; moved = false;
     });
     stage.addEventListener('pointermove', function (e) {
       if (from === null) return;
       var dx = e.clientX - from, dy = e.clientY - fromY;
-      if (!held && (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy))) return;
-      held = true;
-      /* Their hand beats the drift, and keeps it once they let go. */
+      if (Math.abs(dx) < 46 || Math.abs(dx) < Math.abs(dy)) return;
       stopAuto();
-      spin = (spin + dx * 0.45) % 360;
-      leanWanted = Math.max(-40, Math.min(24, leanWanted + dy * 0.12));
+      go(dx < 0 ? 1 : -1);
       from = e.clientX; fromY = e.clientY; moved = true;
-      wake();
     });
     function release(e) {
       if (from !== null && moved && e && e.target.closest('.g3d__item')) {
@@ -346,25 +317,18 @@
     stage.addEventListener('pointercancel', release);
     stage.addEventListener('pointerleave', release);
 
-    /* ---- turning the ball --------------------------------------------- */
-    /* How far round it has been carried, and how far it leans. The spin is
-       kept as one running angle rather than a step count, so the ball drifts
-       rather than clicking from product to product. */
-    var spin = 0, lean = -12, leanWanted = -12;
-    var DRIFT = 0.16;                 /* degrees a frame — a turn every ~37s */
-    var drift = 0;
-
-    /* The lean follows the pointer a little, which is what makes it read as a
-       ball being looked at rather than a picture of one. */
+    /* ---- the room it stands in ---------------------------------------- */
+    /* The gallery leans towards the pointer, and a soft light follows it. */
     function onMove(e) {
       var r = stage.getBoundingClientRect();
       var nx = (e.clientX - r.left) / (r.width || 1) - 0.5;
       var ny = (e.clientY - r.top) / (r.height || 1) - 0.5;
-      leanWanted = -12 + ny * -16;
+      tiltY = nx * 9;
+      tiltX = ny * -6;
       stage.style.setProperty('--lx', (nx * 100 + 50).toFixed(1) + '%');
       stage.style.setProperty('--ly', (ny * 100 + 50).toFixed(1) + '%');
     }
-    function offMove() { leanWanted = -12; }
+    function offMove() { tiltX = 0; tiltY = 0; }
     if (finePointer && !reduced) {
       stage.addEventListener('mousemove', onMove);
       stage.addEventListener('mouseleave', offMove);
@@ -373,23 +337,27 @@
     function loop() {
       if (!onScreen || doc.hidden) { raf = null; return; }
       raf = requestAnimationFrame(loop);
-      spin = (spin + drift) % 360;
-      lean += (leanWanted - lean) * 0.06;
-      orient(spin, lean, geometry().r);
+      curX += (tiltX - curX) * 0.06;
+      curY += (tiltY - curY) * 0.06;
+      space.style.transform = 'rotateX(' + curX.toFixed(2) + 'deg) rotateY(' + curY.toFixed(2) + 'deg)';
     }
     function wake() { if (!raf && onScreen && !reduced) loop(); }
 
-    /* It turns by itself as soon as the visitor reaches it, so the whole
-       range comes round without them touching anything. */
+    /* A second a product: the ring turns by itself as soon as the visitor
+       reaches it, and they need touch nothing to see the range. */
+    var AUTO_MS = 1000;
     function startAuto() {
       if (reduced) return;
       auto = true;
-      drift = DRIFT;
-      wake();
+      clearInterval(autoTimer);
+      autoTimer = setInterval(function () {
+        if (onScreen && !doc.hidden) go(1);
+      }, AUTO_MS);
     }
     function stopAuto() {
       auto = false;
-      drift = 0;
+      clearInterval(autoTimer);
+      autoTimer = null;
     }
 
     /* Nothing runs while the gallery is not being looked at — and the moment
@@ -419,7 +387,7 @@
       clearTimeout(resizing);
       resizing = setTimeout(function () {
         var next = Math.min(ringFor(window.innerWidth), n - 1);
-        if (modest()) next = Math.min(next, 11);
+        if (modest()) next = Math.min(next, 4);
         /* A changed ring size means different slots, which means rebuilding —
            rare enough to be worth the simplicity. */
         if (next !== ring) { build(host, list, opts); return; }

@@ -25,11 +25,13 @@
   var SELF = (document.currentScript && document.currentScript.src) || '';
 
   /* §10 — the openers a first-time visitor can tap instead of typing. */
+  /* Both lines the company makes, not the balls alone: a visitor who wants
+     kit should see an opener that says so. */
   var QUICK = [
+    'I need custom team kits.',
+    'Show me tracksuits.',
     'Which ball is right for me?',
-    'I need custom footballs.',
     'I want a bulk order.',
-    'Show me match balls.',
     'How does customization work?',
     'Talk to a WIN WEARS representative.'
   ];
@@ -167,7 +169,7 @@
     var title = h('div', 'aic-head__title', 'WIN WEARS Assistant');
     title.id = 'aic-title';
     ht.appendChild(title);
-    ht.appendChild(h('div', 'aic-head__sub', 'Football manufacturing'));
+    ht.appendChild(h('div', 'aic-head__sub', 'Teamwear & footballs'));
     head.appendChild(ht);
 
     var x = h('button', 'aic-x');
@@ -189,7 +191,7 @@
     var form = h('form', 'aic-form');
     el.input = h('textarea', 'aic-input');
     el.input.rows = 1;
-    el.input.placeholder = 'Ask about footballs, sizes or bulk orders…';
+    el.input.placeholder = 'Ask about team kits, footballs or bulk orders…';
     el.input.setAttribute('aria-label', 'Your message');
     el.input.maxLength = state.maxLength;
 
@@ -238,7 +240,7 @@
       wrap.appendChild(h('p', 'aic-welcome__p', 'I can help with this football. What would you like to know?'));
     } else {
       wrap.appendChild(h('h2', 'aic-welcome__h', 'How can we help?'));
-      wrap.appendChild(h('p', 'aic-welcome__p', 'Ask about footballs, customization, bulk orders or request a quote.'));
+      wrap.appendChild(h('p', 'aic-welcome__p', 'Ask about team wear, footballs, customization or request a quote.'));
     }
 
     var chips = h('div', 'aic-chips');
