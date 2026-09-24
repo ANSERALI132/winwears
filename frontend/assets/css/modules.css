@@ -1187,13 +1187,13 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 /* --- One floating product ----------------------------------------------- */
 .g3d__item {
   position: absolute; top: 50%; left: 50%;
-  width: clamp(140px, 15vw, 215px);
+  width: clamp(96px, 11vw, 158px);
   margin: 0;
   transform-style: preserve-3d;
   text-decoration: none; color: inherit;
-  /* Shorter than the second between automatic turns, so each product comes
-     to rest before the next one is called forward. */
-  transition: transform .7s var(--e-out), opacity .7s var(--e-out);
+  /* No transition on the transform: gallery3d.js writes a new position every
+     frame as the ball turns, and a transition would drag each card behind
+     where it should be and smear the whole thing. */
   will-change: transform, opacity;
 }
 /* The card is centred on its slot by the transform in gallery3d.js, not by
@@ -1204,9 +1204,10 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   transform-style: preserve-3d;
   animation: g3d-drift var(--dur, 9s) var(--delay, 0s) ease-in-out infinite;
 }
+/* Small: the ball already moves, so this is only a little life on top. */
 @keyframes g3d-drift {
   0%, 100% { transform: translate3d(0, 0, 0); }
-  50%      { transform: translate3d(0, -14px, 22px); }
+  50%      { transform: translate3d(0, -6px, 0); }
 }
 
 .g3d__media {
@@ -1284,8 +1285,8 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   /* Taller and with smaller cards than the desktop stage: the circle needs
      room around the product in the middle, and a phone has none to spare
      sideways, so it is bought vertically. */
-  .g3d__stage { height: clamp(430px, 106vw, 560px); }
-  .g3d__item { width: clamp(124px, 34vw, 180px); }
+  .g3d__stage { height: clamp(400px, 98vw, 520px); }
+  .g3d__item { width: clamp(84px, 23vw, 124px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
