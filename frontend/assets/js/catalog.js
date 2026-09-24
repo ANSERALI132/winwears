@@ -56,6 +56,8 @@
       +     (chips ? '<ul class="p-card__specs">' + chips + '</ul>' : '')
       +   '</div>'
       +   '<div class="p-card__actions">'
+      +     '<button class="btn btn--ghost btn--sm" type="button" data-quickview="' + esc(p.slug || p.id) + '"'
+      +       ' aria-label="Quick view of ' + esc(p.productName) + '">Quick view</button>'
       +     '<a class="btn btn--ghost btn--sm" href="' + BASE + 'request-quote.html?product=' + encodeURIComponent(p.slug || p.id) + '">Request Quote</a>'
       +     '<a class="btn btn--whatsapp btn--sm p-card__wa" data-wa="' + esc(waMsg) + '" aria-label="Ask about ' + esc(p.productName) + ' on WhatsApp">' + WA_ICON + '</a>'
       +   '</div>'

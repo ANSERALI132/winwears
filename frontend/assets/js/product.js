@@ -44,6 +44,69 @@
     el.setAttribute('content', value);
   }
 
+  /**
+   * Product and breadcrumb structured data, built from the record the page is
+   * already showing — never from anything written here.
+   *
+   * A price is stated only where the admin has entered a real one and not
+   * marked the product quote-only. Most of this catalogue is quoted per order,
+   * and a made-up figure in the markup is a lie to the search engine as much
+   * as to the reader, so those products carry no offer at all.
+   */
+  function structuredData(p, imgs, categoryName, categoryPage) {
+    var origin = location.origin;
+    var url = origin + '/product.html?slug=' + encodeURIComponent(p.slug);
+    var c = p.commercial || {};
+
+    var product = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: p.productName,
+      url: url,
+      brand: { '@type': 'Brand', name: 'WIN WEARS' },
+      manufacturer: { '@type': 'Organization', name: 'WIN WEARS' }
+    };
+    if (imgs.length) product.image = imgs.map(function (s) { return origin + '/' + String(s).replace(/^\//, ''); });
+    if (p.shortDescription || p.fullDescription) product.description = p.fullDescription || p.shortDescription;
+    if (p.sku) product.sku = p.sku;
+    if (categoryName) product.category = categoryName;
+    if (p.material) product.material = p.material;
+
+    var priced = !c.quoteOnly && typeof c.price === 'number' && c.currency;
+    if (priced) {
+      product.offers = {
+        '@type': 'Offer',
+        url: url,
+        price: String(c.price),
+        priceCurrency: c.currency,
+        availability: 'https://schema.org/InStock',
+        seller: { '@type': 'Organization', name: 'WIN WEARS' }
+      };
+    }
+
+    var crumbs = [{ name: 'Home', item: origin + '/' }, { name: 'Products', item: origin + '/products.html' }];
+    if (categoryName) crumbs.push({ name: categoryName, item: origin + '/' + categoryPage });
+    crumbs.push({ name: p.productName, item: url });
+
+    var breadcrumb = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: crumbs.map(function (b, i) {
+        return { '@type': 'ListItem', position: i + 1, name: b.name, item: b.item };
+      })
+    };
+
+    var tag = doc.getElementById('pdp-schema');
+    if (!tag) {
+      tag = doc.createElement('script');
+      tag.type = 'application/ld+json';
+      tag.id = 'pdp-schema';
+      doc.head.appendChild(tag);
+    }
+    /* textContent, not innerHTML: this is data going into the document. */
+    tag.textContent = JSON.stringify([product, breadcrumb]);
+  }
+
   function render(p, related) {
     var imgs = WW.images(p);
     var alts = WW.imageAlts(p);
@@ -61,6 +124,8 @@
 
     var canon = $('link[rel="canonical"]');
     if (canon) canon.href = location.origin + '/product.html?slug=' + encodeURIComponent(p.slug);
+
+    structuredData(p, imgs, categoryName, categoryPage);
 
     /* --- header -------------------------------------------------------- */
     $('#pdp-eyebrow').textContent = categoryName;

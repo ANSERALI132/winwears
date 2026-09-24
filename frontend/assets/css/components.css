@@ -333,3 +333,85 @@ body.menu-open { overflow: hidden; }
   font-size: var(--t-micro); color: var(--on-dark-faint);
 }
 .footer__bottom a:hover { color: #fff; }
+
+/* ==========================================================================
+   Quick view
+   A product read without leaving the list. Behaviour — what it loads, focus,
+   Escape — is in assets/js/quickview.js.
+   ========================================================================== */
+.qv { position: fixed; inset: 0; z-index: var(--z-top); display: grid; place-items: center; padding: var(--s-4); }
+.qv[hidden] { display: none; }
+.qv__veil {
+  position: absolute; inset: 0;
+  background: rgba(7, 14, 36, .72);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  animation: qv-veil .24s var(--e-out) both;
+}
+@keyframes qv-veil { from { opacity: 0; } }
+
+.qv__box {
+  position: relative; z-index: 1;
+  width: min(940px, 100%); max-height: min(88vh, 760px);
+  overflow: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  background: var(--surface); color: var(--ink);
+  border-radius: var(--r-lg); box-shadow: var(--sh-3);
+  outline: none;
+  animation: qv-box .3s var(--e-out) both;
+}
+@keyframes qv-box { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+.qv__box:focus-visible { box-shadow: var(--sh-3), 0 0 0 2px var(--focus); }
+
+.qv__body { display: contents; }
+
+.qv__x {
+  position: absolute; top: .6rem; right: .6rem; z-index: 2;
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+  transition: background var(--d-fast), border-color var(--d-fast);
+}
+.qv__x:hover { background: var(--paper); border-color: var(--line-strong); }
+.qv__x svg { width: 18px; height: 18px; }
+
+/* A grid child refuses to shrink past its content unless told to, which let a
+   long specification push the panel wider than the phone it was on. */
+.qv__media, .qv__side { min-width: 0; }
+.qv__media { background: var(--paper); display: grid; place-items: center; }
+.qv__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.qv__noimg { display: block; width: 100%; aspect-ratio: 1; background: var(--paper-2); }
+
+.qv__side { padding: clamp(1.25rem, .9rem + 1.6vw, 2.25rem); display: grid; gap: .55rem; align-content: start; }
+.qv__cat {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red-500);
+}
+.qv__name { font-family: var(--font-display); font-size: var(--t-h3); line-height: var(--lh-snug); }
+.qv__desc { color: var(--ink-soft); }
+.qv__sku { font-family: var(--font-mono); font-size: var(--t-micro); color: var(--ink-faint); }
+.qv__badge {
+  justify-self: start; margin-top: .2rem;
+  padding: .3rem .7rem; border-radius: var(--r-pill);
+  border: 1px solid rgba(225,19,44,.4); background: rgba(225,19,44,.08); color: var(--red-600);
+  font-size: var(--t-eyebrow); letter-spacing: var(--tr-wide); text-transform: uppercase;
+}
+.qv__specs {
+  margin-top: var(--s-3); display: grid; gap: .4rem;
+  border-top: 1px solid var(--line); padding-top: var(--s-3);
+}
+.qv__specs > div { display: flex; justify-content: space-between; gap: var(--s-4); font-size: var(--t-small); }
+.qv__specs dt { color: var(--ink-faint); flex: 0 0 auto; }
+.qv__specs dd { text-align: right; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+.qv__actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-4); }
+
+/* The page behind does not scroll while the dialog is up. */
+.qv-open, .qv-open body { overflow: hidden; }
+
+@media (max-width: 760px) {
+  .qv__box { grid-template-columns: 1fr; max-height: 92vh; }
+  .qv__media { aspect-ratio: 4 / 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qv__veil, .qv__box { animation: none; }
+}
