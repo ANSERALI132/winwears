@@ -135,7 +135,7 @@
     }
 
     var active = 0;
-    var auto = false, autoTimer = null;
+    var auto = false;
     var tiltX = 0, tiltY = 0, curX = 0, curY = 0;
     var raf = null, onScreen = false;
 
@@ -211,7 +211,7 @@
     function paint() {
       var g = geometry();
       for (var k = 0; k <= ring; k++) {
-        var i = (active + k) % n;
+        var i = k % n;
         var p = list[i];
         var el = slots[k];
         var img = el.querySelector('img');
@@ -343,32 +343,30 @@
     }
     function wake() { if (!raf && onScreen && !reduced) loop(); }
 
-    /* A second a product: the ring turns by itself as soon as the visitor
-       reaches it, and they need touch nothing to see the range. */
-    var AUTO_MS = 1000;
-    function startAuto() {
-      if (reduced) return;
-      auto = true;
-      clearInterval(autoTimer);
-      autoTimer = setInterval(function () {
-        if (onScreen && !doc.hidden) go(1);
-      }, AUTO_MS);
-    }
+    /* The ring itself turns, and it turns in CSS — see .g3d__space in
+       modules.css. Each product keeps its place on the circle and rides round
+       with it, rather than the pictures swapping between fixed positions,
+       which is a slideshow wearing a circle's clothes.
+
+       It is CSS rather than a frame loop because the browser can run it on the
+       compositor: it keeps turning smoothly while the main thread is busy
+       drawing the rest of the page, and it cannot be starved the way a
+       requestAnimationFrame loop can.
+
+       Stopping it is for the visitor taking hold of it; starting is the CSS
+       doing its job, so there is nothing to start. */
     function stopAuto() {
       auto = false;
-      clearInterval(autoTimer);
-      autoTimer = null;
+      host.setAttribute('data-held', '');
     }
 
     /* Nothing runs while the gallery is not being looked at — and the moment
        it is, it starts turning on its own. Only the first arrival starts it:
        once the visitor has taken hold of it, scrolling back should not wrest
        it off them again. */
-    var everSeen = false;
     function arrived() {
       host.setAttribute('data-in', '');
       wake();
-      if (!everSeen) { everSeen = true; startAuto(); }
     }
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
