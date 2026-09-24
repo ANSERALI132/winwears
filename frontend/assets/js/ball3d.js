@@ -697,11 +697,16 @@
       rim.position.set(-2.4, 1.6, -4); scene.add(rim);
 
       /* ---- interaction ------------------------------------------------- */
-      var velY = opts.spin === false ? 0 : 0.0022;
-      var velX = 0.0005;
+      var spinning = opts.spin !== false;
+      var velY = spinning ? 0.0022 : 0;
+      var velX = spinning ? 0.0005 : 0;
       var dragging = false, lastX = 0, lastY = 0;
+      /* A face the viewer has asked to be shown, in radians; null means the
+         model is free — turning by itself or by the hand on it. */
+      var facing = null;
 
       function down(e) {
+        facing = null;
         dragging = true;
         lastX = e.touches ? e.touches[0].clientX : e.clientX;
         lastY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -768,11 +773,17 @@
         if (!visible || document.hidden) { raf = null; return; }
         raf = requestAnimationFrame(loop);
         if (!dragging) {
-          velY += (0.0022 - velY) * 0.02;
-          velX += (0.0005 - velX) * 0.02;
+          velY += ((spinning ? 0.0022 : 0) - velY) * 0.02;
+          velX += ((spinning ? 0.0005 : 0) - velX) * 0.02;
         }
-        ball.rotation.y += velY;
-        ball.rotation.x += velX;
+        if (facing === null) {
+          ball.rotation.y += velY;
+          ball.rotation.x += velX;
+        } else {
+          /* Eased onto the asked-for face, and level with it. */
+          ball.rotation.y += (facing - ball.rotation.y) * 0.12;
+          ball.rotation.x += (0 - ball.rotation.x) * 0.12;
+        }
         group.rotation.y += (tiltY - group.rotation.y) * 0.05;
         group.rotation.x += (tiltX - group.rotation.x) * 0.05;
         if (driven) {
@@ -805,6 +816,41 @@
 
       el.setAttribute('data-ball', 'ready');
       api.ready = true;
+
+      /* ---- what a control strip drives --------------------------------- */
+      function wake() { if (!raf && visible && mode !== 'still') loop(); }
+
+      /* Turns the model to face the viewer from a given angle, in degrees, and
+         stops it drifting off that face. Written against the model rather than
+         the ball, so a jersey or any other GLB answers it the same way. */
+      api.face = function (deg) {
+        spinning = false;
+        /* The nearest way round, so it never takes the long way to a face it
+           is already nearly showing. */
+        var want = deg * Math.PI / 180;
+        var turns = Math.round((ball.rotation.y - want) / (Math.PI * 2));
+        facing = want + turns * Math.PI * 2;
+        wake();
+      };
+      /* Back to turning on its own. */
+      api.spin = function (on) {
+        spinning = on !== false;
+        facing = null;
+        wake();
+      };
+      /* A multiplier on the resting distance: above 1 is further away. */
+      api.zoom = function (factor) {
+        if (!(factor > 0)) return;
+        opts.zoom = factor;
+        camera.position.z = opts.distance || fitDistance();
+        camera.updateProjectionMatrix();
+        wake();
+        if (mode === 'still') renderer.render(scene, camera);
+      };
+      api.spinning = function () { return spinning; };
+
+      /* So a control strip elsewhere in the page can find this viewer. */
+      el.__ball = api;
 
       /* Recolouring only touches materials — the geometry never rebuilds. */
       api.setColours = function (next) {
@@ -871,6 +917,48 @@
     });
   }
 
+  /* A strip of buttons that drives a viewer: data-ball-controls names the
+     viewer's id, and each button carries a data-view — an angle in degrees,
+     or "spin", "in" or "out". The strip does nothing until the viewer it
+     names has drawn, which is the point at which the buttons appear. */
+  var VIEWS = { front: 0, right: 90, back: 180, left: 270 };
+
+  function bootControls(strip) {
+    var el = document.getElementById(strip.getAttribute('data-ball-controls'));
+    if (!el) return;
+    var zoom = 1;
+
+    strip.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-view]');
+      var api = el.__ball;
+      if (!b || !api) return;
+      var view = b.getAttribute('data-view');
+
+      if (view === 'spin') {
+        var on = !api.spinning();
+        api.spin(on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      } else if (view === 'in' || view === 'out') {
+        /* The number is a distance, so closer is a smaller one. */
+        zoom = Math.max(0.8, Math.min(1.9, zoom * (view === 'in' ? 0.85 : 1.18)));
+        api.zoom(1.22 * zoom);
+        return;
+      } else {
+        api.face(VIEWS[view] !== undefined ? VIEWS[view] : parseFloat(view) || 0);
+      }
+
+      /* One face at a time is shown as pressed; spin keeps its own state. */
+      [].forEach.call(strip.querySelectorAll('button[data-view]'), function (o) {
+        if (o.getAttribute('data-view') === 'spin') return;
+        o.setAttribute('aria-pressed', o === b && view !== 'spin' ? 'true' : 'false');
+      });
+      if (view !== 'spin') {
+        var s = strip.querySelector('button[data-view="spin"]');
+        if (s) s.setAttribute('aria-pressed', 'false');
+      }
+    });
+  }
+
   var near = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
       if (!e.isIntersecting) return;
@@ -883,9 +971,14 @@
      page's own markup now, and markup a script draws later when it passes
      its container. */
   WW.bootBalls = function (root) {
-    [].forEach.call((root || document).querySelectorAll('[data-ball3d]:not([data-ball-queued])'), function (el) {
+    var ctx = root || document;
+    [].forEach.call(ctx.querySelectorAll('[data-ball3d]:not([data-ball-queued])'), function (el) {
       el.setAttribute('data-ball-queued', '');
       if (near) near.observe(el); else bootFromMarkup(el);
+    });
+    [].forEach.call(ctx.querySelectorAll('[data-ball-controls]:not([data-ball-wired])'), function (strip) {
+      strip.setAttribute('data-ball-wired', '');
+      bootControls(strip);
     });
   };
   WW.bootBalls();

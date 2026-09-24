@@ -116,10 +116,20 @@
     <div class="wrap">
       <div class="split">
         <div class="split__media split__media--full reveal">
-          <div class="tech__stage tech__stage--quiet" data-ball3d data-ball-model="WIN-WEARS-14-Panel-Ball-Diamond" role="img" aria-label="WIN WEARS 14-panel match ball in 3D — drag to turn it">
+          <div class="tech__stage tech__stage--quiet" id="ball-viewer" data-ball3d data-ball-model="WIN-WEARS-14-Panel-Ball-Diamond" role="img" aria-label="WIN WEARS 14-panel match ball in 3D — drag to turn it">
             <div class="tech__fallback">
               <img src="../assets/img/products/hybrid/hyb-02/1.jpeg" alt="" loading="lazy" decoding="async">
             </div>
+          </div>
+          <div class="viewer-ctl" data-ball-controls="ball-viewer" aria-label="Turn the ball">
+            <button class="viewer-ctl__btn" type="button" data-view="front" aria-pressed="false">Front</button>
+            <button class="viewer-ctl__btn" type="button" data-view="right" aria-pressed="false">Right</button>
+            <button class="viewer-ctl__btn" type="button" data-view="back" aria-pressed="false">Back</button>
+            <button class="viewer-ctl__btn" type="button" data-view="left" aria-pressed="false">Left</button>
+            <span class="viewer-ctl__sep" aria-hidden="true"></span>
+            <button class="viewer-ctl__btn" type="button" data-view="spin" aria-pressed="true">360&deg;</button>
+            <button class="viewer-ctl__btn" type="button" data-view="in" aria-label="Look closer">Zoom in</button>
+            <button class="viewer-ctl__btn" type="button" data-view="out" aria-label="Stand back">Zoom out</button>
           </div>
         </div>
         <div class="split__body reveal" data-delay="1">

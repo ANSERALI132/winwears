@@ -1125,3 +1125,34 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   .reveal.is-in .reach__ping { animation: none; }
   .kitwall__piece, .kitwall__piece:hover { transform: none; }
 }
+
+/* --- Viewer controls: the faces of a 3D model, and how close it stands ---
+   Wired in assets/js/ball3d.js through data-ball-controls, which names the
+   viewer the strip drives. Any model the viewer can load answers these, so a
+   jersey dropped into assets/models is turned by the same buttons. */
+.viewer-ctl {
+  display: flex; flex-wrap: wrap; gap: var(--s-2);
+  margin-top: var(--s-4); align-items: center;
+}
+.viewer-ctl__btn {
+  appearance: none; cursor: pointer;
+  min-height: 38px; padding: .4rem .85rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-dark); background: transparent;
+  color: var(--on-dark-soft); font: inherit;
+  font-size: var(--t-eyebrow); letter-spacing: var(--tr-wide); text-transform: uppercase;
+  transition: color var(--d-fast), border-color var(--d-fast), background var(--d-fast);
+}
+.viewer-ctl__btn:hover { color: var(--white); border-color: var(--line-dark-2); }
+.viewer-ctl__btn[aria-pressed="true"] {
+  color: var(--white); background: rgba(225,19,44,.16); border-color: rgba(225,19,44,.55);
+}
+.viewer-ctl__sep { width: 1px; height: 20px; background: var(--line-dark); margin-inline: .35rem; }
+/* On a light section the strip takes the page's ink instead. */
+.section:not(.section--dark):not(.section--navy) .viewer-ctl__btn {
+  border-color: var(--line); color: var(--ink-soft);
+}
+.section:not(.section--dark):not(.section--navy) .viewer-ctl__btn:hover {
+  color: var(--ink); border-color: var(--line-strong);
+}
+.section:not(.section--dark):not(.section--navy) .viewer-ctl__sep { background: var(--line); }
