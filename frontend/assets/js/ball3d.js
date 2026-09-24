@@ -734,6 +734,26 @@
       }
       if (opts.parallax !== false && mode === 'high') window.addEventListener('mousemove', onPointer);
 
+      /* ---- scroll drive ------------------------------------------------ */
+      /* The ball answers the page: as its panel travels up the screen it turns
+         further, drifts back into depth and loses a little size, so leaving a
+         section feels like moving past the ball rather than watching it cut.
+         Read on scroll, applied in the loop — one measurement per frame at
+         most, and none at all while the ball is off-screen. */
+      var driven = opts.scroll === true && mode !== 'still';
+      var travel = 0, travelTo = 0;
+      function measure() {
+        var r = el.getBoundingClientRect();
+        var span = window.innerHeight + r.height;
+        if (!span) return;
+        travelTo = Math.max(0, Math.min(1, (window.innerHeight - r.top) / span));
+      }
+      if (driven) {
+        measure();
+        window.addEventListener('scroll', measure, { passive: true });
+        window.addEventListener('resize', measure);
+      }
+
       /* ---- loop -------------------------------------------------------- */
       var visible = true, raf = null;
       if ('IntersectionObserver' in window) {
@@ -755,6 +775,17 @@
         ball.rotation.x += velX;
         group.rotation.y += (tiltY - group.rotation.y) * 0.05;
         group.rotation.x += (tiltX - group.rotation.x) * 0.05;
+        if (driven) {
+          /* Eased towards the measured position so a flung scroll arrives
+             smoothly rather than snapping. */
+          travel += (travelTo - travel) * 0.08;
+          var away = travel - 0.5;
+          ball.rotation.y += travel * 0.010;
+          group.position.y = away * -0.34;
+          group.position.z = -Math.abs(away) * 0.9;
+          var size = 1 - Math.abs(away) * 0.22;
+          group.scale.set(size, size, size);
+        }
         renderer.render(scene, camera);
       }
 
@@ -825,16 +856,18 @@
 
   /* A page can ask for a ball in its markup: data-ball3d on the container,
      data-ball-model naming a model in assets/models, data-ball-zoom, and
-     data-ball-interactive / data-ball-parallax set to "false" or "true". Each
-     starts loading only as it comes near the screen, so a ball further down
-     the page costs a visitor nothing until they scroll towards it. */
+     data-ball-interactive / data-ball-parallax / data-ball-scroll set to
+     "false" or "true". Each starts loading only as it comes near the screen,
+     so a ball further down the page costs a visitor nothing until they scroll
+     towards it. */
   function bootFromMarkup(el) {
     var zoom = parseFloat(el.getAttribute('data-ball-zoom'));
     WW.ball3d(el, {
       modelName: el.getAttribute('data-ball-model') || undefined,
       zoom: zoom > 0 ? zoom : 1.22,
       interactive: el.getAttribute('data-ball-interactive') !== 'false',
-      parallax: el.getAttribute('data-ball-parallax') === 'true'
+      parallax: el.getAttribute('data-ball-parallax') === 'true',
+      scroll: el.getAttribute('data-ball-scroll') === 'true'
     });
   }
 

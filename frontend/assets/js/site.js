@@ -226,9 +226,12 @@
   WW.bootAccordions = bootAccordions;
 
   /* --------------------------------------------------- Magnetic buttons -- */
-  function bootMagnetic() {
+  /* Takes a context so buttons drawn after load — a swapped showcase panel,
+     a rendered card — lean towards the pointer like the ones in the page. */
+  function bootMagnetic(ctx) {
     if (!finePointer || reduced) return;
-    $$('[data-magnetic]').forEach(function (el) {
+    $$('[data-magnetic]:not([data-magnetic-on])', ctx).forEach(function (el) {
+      el.setAttribute('data-magnetic-on', '');
       var raf = null, tx = 0, ty = 0;
       function move(e) {
         var r = el.getBoundingClientRect();
@@ -247,6 +250,7 @@
       el.addEventListener('blur', reset);
     });
   }
+  WW.bootMagnetic = bootMagnetic;
 
   /* -------------------------------------------------------- Cursor ------- */
   function bootCursor() {
@@ -271,7 +275,7 @@
     })();
 
     doc.addEventListener('mouseover', function (e) {
-      var hot = e.target.closest && e.target.closest('a, button, .p-card, .cat-card, .hotspot, .swatch, .opt');
+      var hot = e.target.closest && e.target.closest('a, button, .p-card, .cat-card, .deck__card, .hotspot, .swatch, .opt');
       c.setAttribute('data-hot', hot ? 'true' : 'false');
     });
   }

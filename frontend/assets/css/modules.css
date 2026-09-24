@@ -67,7 +67,13 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   animation: heroLine 1.05s var(--e-out) forwards;
 }
 .hero__title .ln:nth-child(2) > span { animation-delay: .10s; }
+.hero__title .ln:nth-child(3) > span { animation-delay: .20s; }
 .hero__title em { font-style: normal; color: var(--red-500); }
+/* The line that names the maker, set under the claim rather than beside it. */
+.hero__title .ln--maker {
+  font-size: .30em; letter-spacing: var(--tr-wide); line-height: 1.3;
+  color: var(--on-dark-soft); margin-top: .5em;
+}
 @keyframes heroLine { to { transform: translateY(0); } }
 
 .hero__sub {
@@ -916,3 +922,206 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 
 /* Used by the "load more" row under a product grid. */
 .cluster--center { justify-content: center; }
+
+/* ==========================================================================
+   The futuristic homepage layer
+   Four things the storytelling needs and the rest of the site does not: the
+   status line under the hero, the spatial product deck, the "select your
+   game" stage, and the delivery map. Behaviour for the first three is in
+   assets/js/experience.js.
+   ========================================================================== */
+
+/* --- Status line: what WIN WEARS does, stated plainly under the hero ----- */
+.sysline {
+  display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-6);
+  margin-top: var(--s-5);
+}
+.sysline__item {
+  display: inline-flex; align-items: center; gap: .55rem;
+  font-family: var(--font-mono);
+  font-size: var(--t-micro); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--on-dark-soft);
+}
+.sysline__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red-500); box-shadow: 0 0 0 3px rgba(225,19,44,.18);
+}
+.sysline__item b { font-weight: 600; color: var(--white); letter-spacing: .08em; }
+
+/* --- The deck: categories standing in depth along a rail ----------------- */
+/* Full width already — it sits outside the wrap so a card can run off the
+   screen edge — and clipped, because a card turned in 3D reaches wider than
+   the rail it scrolls in. */
+.deck { perspective: 1500px; overflow: hidden; }
+.deck__rail {
+  display: flex; gap: var(--s-5);
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  transform-style: preserve-3d;
+  padding: var(--s-6) max(var(--gutter), calc(50% - 170px));
+  scrollbar-width: none;
+}
+.deck__rail::-webkit-scrollbar { display: none; }
+.deck__rail[data-dragging] { cursor: grabbing; scroll-snap-type: none; }
+.deck__card {
+  flex: 0 0 300px; scroll-snap-align: center;
+  display: grid; align-content: start;
+  background: var(--navy-800);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--r-lg); overflow: hidden;
+  color: var(--on-dark); text-decoration: none;
+  transform-style: preserve-3d; will-change: transform, opacity;
+  transition: border-color var(--d-mid) var(--e-out), box-shadow var(--d-mid) var(--e-out);
+}
+.deck__card:hover, .deck__card:focus-visible {
+  border-color: rgba(225,19,44,.55);
+  box-shadow: 0 30px 70px rgba(0,0,0,.45);
+}
+.deck__media {
+  display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--navy-700);
+}
+.deck__media img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform var(--d-slow) var(--e-out);
+}
+.deck__card:hover .deck__media img { transform: scale(1.05); }
+.deck__body { display: grid; gap: .4rem; padding: var(--s-5); }
+.deck__count {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red-400);
+}
+.deck__title { font-family: var(--font-display); font-size: var(--t-h4); line-height: var(--lh-snug); }
+.deck__desc {
+  font-size: var(--t-small); color: var(--on-dark-soft); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.deck__go {
+  display: inline-flex; align-items: center; gap: .5rem; margin-top: .35rem;
+  font-size: var(--t-eyebrow); letter-spacing: var(--tr-wide); text-transform: uppercase;
+}
+.deck__go i {
+  width: 22px; height: 1px; background: currentColor;
+  transition: width var(--d-mid) var(--e-out);
+}
+.deck__card:hover .deck__go i { width: 34px; }
+.deck__hint {
+  display: block; text-align: center;
+  font-size: var(--t-micro); color: var(--on-dark-faint);
+  letter-spacing: var(--tr-wide); text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .deck__card { flex-basis: 74vw; }
+  .deck__rail { padding-inline: 13vw; }
+}
+
+/* --- Select your game: one category held on a stage ---------------------- */
+.showcase { display: grid; gap: var(--s-6); margin-top: var(--s-6); }
+.showcase__tabs { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.showcase__tab {
+  appearance: none; cursor: pointer;
+  padding: .6rem 1.1rem; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: var(--t-micro);
+  letter-spacing: var(--tr-wide); text-transform: uppercase;
+  transition: color var(--d-fast), background var(--d-fast), border-color var(--d-fast);
+}
+.showcase__tab:hover { color: var(--ink); border-color: var(--line-strong); }
+.showcase__tab[aria-selected="true"] {
+  background: var(--navy-900); border-color: var(--navy-900); color: var(--white);
+}
+.showcase__stage {
+  display: grid; grid-template-columns: 1.05fr .95fr; gap: var(--s-7); align-items: center;
+}
+.showcase__media {
+  position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+  border-radius: var(--r-lg); background: var(--navy-800);
+}
+.showcase__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.showcase__count {
+  font-family: var(--font-mono); font-size: var(--t-micro);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red-500);
+}
+.showcase__title { font-family: var(--font-display); font-size: var(--t-h2); line-height: var(--lh-snug); margin-top: .35rem; }
+.showcase__desc { font-size: var(--t-lead); color: var(--ink-soft); margin-top: var(--s-3); }
+.showcase__actions { margin-top: var(--s-5); }
+
+/* The swap: the panel arrives from a little further back rather than cutting
+   in, which is what makes changing tab feel like moving rather than blinking. */
+.showcase__media, .showcase__body { transition: opacity var(--d-mid) var(--e-out), transform var(--d-mid) var(--e-out); }
+[data-swapping] .showcase__media, [data-swapping] .showcase__body {
+  opacity: 0; transform: scale(.985) translateY(8px);
+}
+
+@media (max-width: 860px) {
+  .showcase__stage { grid-template-columns: 1fr; gap: var(--s-5); }
+}
+
+/* --- Global delivery: routes leaving one point -------------------------- */
+.reach { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-7); align-items: center; }
+.reach__map { width: 100%; height: auto; display: block; overflow: visible; }
+.reach__land { fill: rgba(255,255,255,.08); }
+.reach__route {
+  fill: none; stroke: var(--red-500); stroke-width: 1.2; stroke-linecap: round;
+  stroke-dasharray: 420; stroke-dashoffset: 420;
+}
+.reveal.is-in .reach__route { animation: reach-draw 1.6s var(--e-out) forwards; }
+.reveal.is-in .reach__route:nth-of-type(2) { animation-delay: .12s; }
+.reveal.is-in .reach__route:nth-of-type(3) { animation-delay: .24s; }
+.reveal.is-in .reach__route:nth-of-type(4) { animation-delay: .36s; }
+.reveal.is-in .reach__route:nth-of-type(5) { animation-delay: .48s; }
+@keyframes reach-draw { to { stroke-dashoffset: 0; } }
+.reach__home { fill: var(--red-500); }
+.reach__ping { fill: none; stroke: var(--red-500); stroke-width: 1; opacity: 0; }
+.reveal.is-in .reach__ping { animation: reach-ping 2.8s var(--e-out) infinite 1.2s; }
+@keyframes reach-ping {
+  0%   { r: 4px; opacity: .7; }
+  70%  { r: 20px; opacity: 0; }
+  100% { r: 20px; opacity: 0; }
+}
+.reach__stop { fill: rgba(255,255,255,.85); }
+.reach__list { display: grid; gap: var(--s-4); margin-top: var(--s-5); }
+.reach__row {
+  display: flex; align-items: baseline; gap: var(--s-4);
+  padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-dark);
+}
+.reach__row span:first-child {
+  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--red-400);
+  letter-spacing: .12em;
+}
+
+@media (max-width: 860px) { .reach { grid-template-columns: 1fr; } }
+
+/* --- The kit wall: the pieces of a strip, standing at different depths --- */
+.kitwall {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4);
+  perspective: 1200px;
+}
+.kitwall__piece {
+  position: relative; display: block; margin: 0;
+  border-radius: var(--r-lg); overflow: hidden;
+  background: var(--navy-800); border: 1px solid var(--line-dark);
+  transition: transform var(--d-mid) var(--e-out), border-color var(--d-mid) var(--e-out);
+}
+.kitwall__piece img { width: 100%; height: 100%; object-fit: cover; display: block; aspect-ratio: 4 / 5; }
+.kitwall__piece figcaption {
+  position: absolute; inset: auto 0 0 0; padding: var(--s-4);
+  font-size: var(--t-micro); letter-spacing: var(--tr-wide); text-transform: uppercase;
+  color: var(--white);
+  background: linear-gradient(transparent, rgba(7,14,36,.86));
+}
+/* Two of the six stand forward, so the wall reads as depth and not a grid. */
+.kitwall__piece:nth-child(2), .kitwall__piece:nth-child(5) { transform: translateZ(40px); }
+.kitwall__piece:hover { border-color: rgba(225,19,44,.55); transform: translateZ(60px); }
+
+@media (max-width: 860px) { .kitwall { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .kitwall { grid-template-columns: 1fr; } }
+
+/* Tilt is driven from experience.js; the card only says how it moves. */
+[data-tilt] { transition: transform var(--d-mid) var(--e-out); transform-style: preserve-3d; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal.is-in .reach__route { animation: none; stroke-dashoffset: 0; }
+  .reveal.is-in .reach__ping { animation: none; }
+  .kitwall__piece, .kitwall__piece:hover { transform: none; }
+}

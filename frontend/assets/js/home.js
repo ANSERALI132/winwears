@@ -45,6 +45,7 @@
       var a = document.createElement('a');
       a.className = 'cat-card reveal';
       a.href = c.page;
+      a.setAttribute('data-tilt', '');
       if (i) a.setAttribute('data-delay', String(Math.min(i, 5)));
       var cover = '<img src="' + (c.image || COVER[c.key] || COVER_FALLBACK) + '" alt="' + esc(c.name) + '" loading="lazy" decoding="async">';
       /* Told apart by what it holds, not by its name: a group of ball ranges. */
@@ -72,6 +73,7 @@
 
     if (WW.bootReveal) WW.bootReveal(host);
     if (WW.bootBalls) WW.bootBalls(host);
+    if (WW.bootTilt) WW.bootTilt(host);
   }
 
   function boot3D() {
@@ -86,7 +88,10 @@
         markColour: '#16264F',
         zoom: 1.12,
         interactive: false,
-        parallax: true
+        parallax: true,
+        /* Turns and falls back into depth as the hero leaves, so scrolling
+           past reads as moving past the ball. */
+        scroll: true
       });
     }
 
