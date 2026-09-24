@@ -93,6 +93,46 @@
 
     rail.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
+
+    /* The rail walks itself along a card every two and a half seconds while
+       it is on screen, so the ranges past the right-hand edge are seen
+       without anyone having to drag for them. It stops for good the moment
+       the visitor takes hold of it — theirs beats ours. */
+    var walk = null, taken = false, under = false;
+    /* Tracked rather than read back off :hover, which can stay stuck on after
+       a scroll moves the rail out from under a cursor that never moved — and
+       then the rail would sit still for good with nothing to show why. */
+    rail.addEventListener('mouseenter', function () { under = true; });
+    rail.addEventListener('mouseleave', function () { under = false; });
+    function stopWalk() {
+      clearInterval(walk);
+      walk = null;
+    }
+    function startWalk() {
+      if (walk || reduced || taken) return;
+      walk = setInterval(function () {
+        /* Not while the tab is in the background, and not under a pointer
+           that is reading one of the cards. */
+        if (doc.hidden || under) return;
+        var card = cards[0];
+        var step = card ? card.offsetWidth + 24 : 320;
+        var end = rail.scrollWidth - rail.clientWidth - 4;
+        rail.scrollTo({
+          left: rail.scrollLeft >= end ? 0 : rail.scrollLeft + step,
+          behavior: 'smooth'
+        });
+      }, 2500);
+    }
+    ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(function (evt) {
+      rail.addEventListener(evt, function () { taken = true; stopWalk(); }, { passive: true });
+    });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) startWalk(); else stopWalk();
+      }, { threshold: 0.25 }).observe(rail);
+    } else {
+      startWalk();
+    }
     /* Covers a card whose picture arrives after the first paint and changes
        the rail's measurements under us. */
     [].forEach.call(rail.querySelectorAll('img'), function (img) {

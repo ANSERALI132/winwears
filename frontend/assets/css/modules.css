@@ -1092,38 +1092,12 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 
 @media (max-width: 860px) { .reach { grid-template-columns: 1fr; } }
 
-/* --- The kit wall: the pieces of a strip, standing at different depths --- */
-.kitwall {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4);
-  perspective: 1200px;
-}
-.kitwall__piece {
-  position: relative; display: block; margin: 0;
-  border-radius: var(--r-lg); overflow: hidden;
-  background: var(--navy-800); border: 1px solid var(--line-dark);
-  transition: transform var(--d-mid) var(--e-out), border-color var(--d-mid) var(--e-out);
-}
-.kitwall__piece img { width: 100%; height: 100%; object-fit: cover; display: block; aspect-ratio: 4 / 5; }
-.kitwall__piece figcaption {
-  position: absolute; inset: auto 0 0 0; padding: var(--s-4);
-  font-size: var(--t-micro); letter-spacing: var(--tr-wide); text-transform: uppercase;
-  color: var(--white);
-  background: linear-gradient(transparent, rgba(7,14,36,.86));
-}
-/* Two of the six stand forward, so the wall reads as depth and not a grid. */
-.kitwall__piece:nth-child(2), .kitwall__piece:nth-child(5) { transform: translateZ(40px); }
-.kitwall__piece:hover { border-color: rgba(225,19,44,.55); transform: translateZ(60px); }
-
-@media (max-width: 860px) { .kitwall { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 480px) { .kitwall { grid-template-columns: 1fr; } }
-
 /* Tilt is driven from experience.js; the card only says how it moves. */
 [data-tilt] { transition: transform var(--d-mid) var(--e-out); transform-style: preserve-3d; }
 
 @media (prefers-reduced-motion: reduce) {
   .reveal.is-in .reach__route { animation: none; stroke-dashoffset: 0; }
   .reveal.is-in .reach__ping { animation: none; }
-  .kitwall__piece, .kitwall__piece:hover { transform: none; }
 }
 
 /* --- Viewer controls: the faces of a 3D model, and how close it stands ---
@@ -1178,7 +1152,9 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   /* Reserved before a single picture arrives, so nothing shifts as they load. */
   height: clamp(420px, 56vw, 660px);
   perspective: 1400px;
-  perspective-origin: 50% 46%;
+  /* Dead centre: an origin above the middle throws anything standing forward
+     of the screen downwards, which left the active product sitting low. */
+  perspective-origin: 50% 50%;
   touch-action: pan-y;         /* a sideways swipe is ours, a vertical one is the page's */
   outline: none;
 }
@@ -1211,18 +1187,20 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 /* --- One floating product ----------------------------------------------- */
 .g3d__item {
   position: absolute; top: 50%; left: 50%;
-  width: clamp(170px, 23vw, 270px);
+  width: clamp(140px, 15vw, 215px);
   margin: 0;
   transform-style: preserve-3d;
   text-decoration: none; color: inherit;
-  transition: transform 1.05s var(--e-out), opacity 1.05s var(--e-out);
+  /* Shorter than the second between automatic turns, so each product comes
+     to rest before the next one is called forward. */
+  transition: transform .7s var(--e-out), opacity .7s var(--e-out);
   will-change: transform, opacity;
 }
-/* The slot's own position is set from script and measured from its middle. */
+/* The card is centred on its slot by the transform in gallery3d.js, not by
+   margins repeating the width formula — those have to be kept in step with
+   every change to the width and silently go wrong when they are not. */
 .g3d__float {
   position: relative; display: block;
-  margin-left: -50%;
-  margin-top: calc(clamp(170px, 23vw, 270px) * -0.62);
   transform-style: preserve-3d;
   animation: g3d-drift var(--dur, 9s) var(--delay, 0s) ease-in-out infinite;
 }
@@ -1240,30 +1218,24 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   box-shadow: 0 24px 60px rgba(0,0,0,.45);
   transition: border-color var(--d-mid) var(--e-out), box-shadow var(--d-mid) var(--e-out);
 }
-/* contain, not cover: a ball is not cropped to fill a rectangle. */
-.g3d__media img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 8%; }
+/* cover, and no padding: the product fills its frame instead of sitting as a
+   stamp in the middle of one. The frames are 4/5 like the photographs, so
+   almost nothing is lost to the crop. */
+.g3d__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .g3d__media img[hidden] { display: none; }
 
-/* The label belongs on the product, not under it: a caption hanging below a
-   card on the lower edge of the ring would reach out of the stage and land on
-   the panel beneath. */
-.g3d__cap {
-  position: absolute; inset: auto 0 0 0;
-  display: grid; gap: .1rem;
-  padding: 2rem .85rem .8rem;
-  border-radius: 0 0 var(--r-lg) var(--r-lg);
-  background: linear-gradient(transparent, rgba(7,14,36,.94));
-  pointer-events: none;
-  opacity: 0; transition: opacity var(--d-mid) var(--e-out);
+/* --- The name the ring turns around ------------------------------------- */
+.g3d__centre {
+  position: absolute; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  pointer-events: none; text-align: center; padding-inline: var(--gutter);
 }
-.g3d__cap-name {
-  display: block; font-family: var(--font-display);
-  font-size: var(--t-small); line-height: 1.25; color: var(--white);
-}
-.g3d__cap-cat {
-  display: block; font-family: var(--font-mono);
-  font-size: var(--t-micro); letter-spacing: .1em; text-transform: uppercase;
-  color: var(--red-400);
+.g3d__centre-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1rem + 2.4vw, 3rem);
+  line-height: var(--lh-snug); letter-spacing: var(--tr-tight);
+  color: var(--white); max-width: 14ch;
+  text-shadow: 0 6px 34px rgba(7,14,36,.9);
 }
 
 /* The one in the middle: sharper, lit, and named without being pointed at. */
@@ -1271,11 +1243,9 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   border-color: rgba(225,19,44,.45);
   box-shadow: 0 34px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
 }
-.g3d__item[data-active] .g3d__cap { opacity: 1; }
 .g3d__item[data-active] .g3d__float { animation-duration: 11s; }
 
 /* Reaching for one brings it forward — pointer or keyboard alike. */
-.g3d__item:hover .g3d__cap, .g3d__item:focus-visible .g3d__cap { opacity: 1; }
 .g3d__item:hover .g3d__media, .g3d__item:focus-visible .g3d__media {
   border-color: rgba(225,19,44,.6);
   box-shadow: 0 34px 90px rgba(0,0,0,.6);
@@ -1304,36 +1274,6 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .g3d__panel-actions { margin-top: var(--s-5); }
 .g3d__panel-actions .btn svg { width: 1em; height: 1em; }
 
-/* --- Controls ------------------------------------------------------------ */
-.g3d__ctl {
-  display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3);
-  margin-top: var(--s-6); padding-top: var(--s-5);
-  border-top: 1px solid var(--line-dark);
-}
-.g3d__btn {
-  appearance: none; cursor: pointer;
-  display: inline-flex; align-items: center; gap: .5rem;
-  min-height: 42px; padding: .5rem 1.05rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line-dark); background: transparent; color: var(--on-dark-soft);
-  font: inherit; font-size: var(--t-eyebrow);
-  letter-spacing: var(--tr-wide); text-transform: uppercase;
-  transition: color var(--d-fast), border-color var(--d-fast), background var(--d-fast);
-}
-.g3d__btn:hover { color: var(--white); border-color: var(--line-dark-2); }
-.g3d__btn[aria-pressed="true"] {
-  color: var(--white); background: rgba(225,19,44,.16); border-color: rgba(225,19,44,.55);
-}
-.g3d__btn-ico svg { width: 1em; height: 1em; display: block; }
-.g3d__btn-ico--back svg { transform: rotate(180deg); }
-.g3d__count {
-  margin-inline: auto;
-  font-family: var(--font-mono); font-size: var(--t-micro);
-  letter-spacing: .14em; color: var(--on-dark-faint);
-}
-.g3d__count [data-at] { color: var(--white); }
-.g3d__count i { font-style: normal; margin-inline: .3rem; }
-
 /* --- Arriving ------------------------------------------------------------ */
 /* The gallery settles into place as it comes into view, rather than being
    already there when the visitor arrives at it. */
@@ -1341,10 +1281,11 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .g3d[data-in] .g3d__stage { opacity: 1; transform: none; }
 
 @media (max-width: 700px) {
-  .g3d__stage { height: clamp(380px, 92vw, 520px); }
-  .g3d__item { width: clamp(150px, 42vw, 210px); }
-  .g3d__float { margin-top: calc(clamp(150px, 42vw, 210px) * -0.62); }
-  .g3d__count { order: -1; width: 100%; margin-inline: 0; text-align: center; }
+  /* Taller and with smaller cards than the desktop stage: the circle needs
+     room around the product in the middle, and a phone has none to spare
+     sideways, so it is bought vertically. */
+  .g3d__stage { height: clamp(430px, 106vw, 560px); }
+  .g3d__item { width: clamp(124px, 34vw, 180px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -184,7 +184,7 @@
       orbit.setAttribute('data-eyebrow', 'You may also like');
       orbit.setAttribute('data-title', categoryName ? 'More ' + categoryName : 'More from this range');
       orbit.setAttribute('data-sub', 'The rest of the range, around the one you are looking at.');
-      orbit.setAttribute('data-limit', '24');
+      orbit.setAttribute('data-limit', '60');
       orbit.setAttribute('data-gallery3d', '');
       WW.bootGalleries(doc);
     }

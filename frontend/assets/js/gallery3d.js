@@ -39,14 +39,14 @@
     });
   }
 
-  /* How many stand around the active one. A phone holds fewer because each
-     needs room to read as a separate object rather than a smudge, and a weak
-     device is given the phone's count whatever its screen. */
+  /* How many stand around the active one. Enough of them that the ring reads
+     as a circle rather than a diamond — four points do not describe a circle,
+     and that is what the first version looked like. A phone holds fewer only
+     because the circle it can draw is smaller. */
   function ringFor(width) {
-    if (!finePointer && width < 700) return 4;
-    if (width < 700) return 4;
-    if (width < 1100) return 6;
-    return 8;
+    if (width < 700) return 6;
+    if (width < 1100) return 8;
+    return 10;
   }
 
   /* A rough guess at what the device can carry. Deliberately narrow: plenty
@@ -90,26 +90,25 @@
         '<span class="g3d__grid" aria-hidden="true"></span>' +
         '<span class="g3d__glow" aria-hidden="true"></span>' +
         '<div class="g3d__space"></div>' +
+        /* The ring turns around the collection's name rather than around one
+           product blown up large — what is in the middle is the idea, and the
+           products are what circle it. */
+        '<div class="g3d__centre" aria-hidden="true">' +
+          '<span class="g3d__centre-title">' + esc(title) + '</span>' +
+        '</div>' +
       '</div>' +
 
+      /* No buttons under the stage by choice. It turns on its own, a swipe or
+         a drag moves it, the arrow keys move it, and tapping a product brings
+         it to the front — so a row of controls would only be repeating what
+         the gallery already does. */
       '<div class="wrap">' +
         '<div class="g3d__panel" aria-live="polite"></div>' +
-        '<div class="g3d__ctl">' +
-          '<button class="g3d__btn" type="button" data-go="-1" aria-label="Previous product">' +
-            '<span class="g3d__btn-ico g3d__btn-ico--back" aria-hidden="true">' + ARROW + '</span> Prev</button>' +
-          '<p class="g3d__count"><span data-at>01</span> <i>/</i> <span data-of>' + n + '</span></p>' +
-          '<button class="g3d__btn" type="button" data-go="1" aria-label="Next product">' +
-            'Next <span class="g3d__btn-ico" aria-hidden="true">' + ARROW + '</span></button>' +
-          '<button class="g3d__btn g3d__btn--quiet" type="button" data-auto aria-pressed="false">Auto rotate</button>' +
-        '</div>' +
       '</div>';
 
     var stage = host.querySelector('.g3d__stage');
     var space = host.querySelector('.g3d__space');
     var panel = host.querySelector('.g3d__panel');
-    var at = host.querySelector('[data-at]');
-    var ofEl = host.querySelector('[data-of]');
-    if (ofEl) ofEl.textContent = String(n);
 
     var ring = Math.min(ringFor(window.innerWidth), n - 1);
     if (modest()) ring = Math.min(ring, 4);
@@ -120,13 +119,12 @@
     for (var s = 0; s <= ring; s++) {
       var a = doc.createElement('a');
       a.className = 'g3d__item';
+      /* The picture alone. A name written across a product hides the product,
+         and the one being shown is named in full underneath the stage; the
+         link's own label carries it for anyone not looking at the picture. */
       a.innerHTML =
         '<span class="g3d__float">' +
           '<span class="g3d__media"><img alt="" loading="lazy" decoding="async"></span>' +
-          '<span class="g3d__cap">' +
-            '<span class="g3d__cap-name"></span>' +
-            '<span class="g3d__cap-cat"></span>' +
-          '</span>' +
         '</span>';
       /* Different timings so the ring breathes rather than pulsing as one. */
       var f = a.querySelector('.g3d__float');
@@ -142,48 +140,71 @@
     var raf = null, onScreen = false;
 
     /* ---- where each product stands ----------------------------------- */
+    /* The ring is an ellipse — wider than it is tall, because a circle of
+       photographs seen slightly from above is what reads as a ring standing
+       in space rather than a wheel painted on the glass. Both radii are held
+       back far enough to leave the name in the middle clear and near enough
+       that no card is cut off by the edge of the stage. */
     function geometry() {
       var w = stage.clientWidth || 1;
       var h = stage.clientHeight || 1;
-      return { rx: w * (mode === 'carousel' ? 0.34 : 0.30), ry: h * 0.30 };
+      var card = slots[0].offsetWidth || 150;
+      var tall = card * 1.25;                 /* the media is 4 / 5 */
+      var rx = Math.max(card * 0.85, Math.min(w / 2 - card / 2 - 10, w * 0.36));
+      return {
+        rx: rx,
+        ry: Math.max(tall * 0.55, Math.min(h / 2 - tall / 2 - 10, h * 0.26)),
+        /* How far the hoop leans into the screen. Tied to its width so the
+           turn keeps its shape at every size, and kept modest: pushed further
+           the near cards are magnified by the perspective until they spill off
+           the stage. */
+        rz: rx * 0.55
+      };
     }
 
-    function place(el, offset, g) {
-      if (offset === 0) {
-        el.style.transform = 'translate3d(0,0,80px) scale(1)';
-        el.style.opacity = '1';
-        el.style.zIndex = '30';
-        el.setAttribute('data-active', '');
-        return;
-      }
-      el.removeAttribute('data-active');
+    /* A photograph dropped on a table does not land square. Fixed rather than
+       random so a product sits the same way each time it comes round. */
+    var TILTS = [-11, 7, -5, 13, -9, 4, -14, 9, -3, 11, -7, 6];
 
-      var x, y, z, scale, fade;
-      if (mode === 'carousel') {
-        /* A line running back into the distance on both sides. */
-        var side = offset <= ring / 2 ? 1 : -1;
-        var step = side > 0 ? offset : ring + 1 - offset;
-        x = side * g.rx * (0.55 + step * 0.42);
-        y = step * 6;
-        z = -150 - step * 130;
-        scale = Math.max(0.34, 0.72 - step * 0.12);
-        fade = Math.max(0.2, 0.7 - step * 0.14);
-      } else {
-        /* A ring: the next product at the top, going round clockwise. */
-        var ang = (-90 + (offset - 1) * (360 / ring)) * Math.PI / 180;
-        x = Math.cos(ang) * g.rx;
-        y = Math.sin(ang) * g.ry;
-        z = -210 - (offset % 3) * 45;
-        scale = 0.46;
-        fade = 0.62;
-      }
-      /* A slight turn towards the middle, so a card on the left is seen at an
-         angle rather than flat on. */
-      var turn = -(x / (g.rx || 1)) * 13;
-      el.style.transform = 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,' + Math.round(z) + 'px)'
-        + ' rotateY(' + turn.toFixed(1) + 'deg) scale(' + scale.toFixed(3) + ')';
-      el.style.opacity = String(fade);
-      el.style.zIndex = String(20 - Math.min(19, offset));
+    /* Every card hangs from the middle of the stage, so each one is centred on
+       its own slot before it is moved to it. */
+    var MIDDLE = 'translate(-50%, -50%) ';
+
+    /* Every product rides one hoop hung at an angle through the middle of the
+       stage. Going round it, a card swings out to the side, down towards the
+       viewer, across the front and away behind again — so the ring turns like
+       a ball rather than a wheel painted flat on the glass. Depth does the
+       work: the near side of the hoop is simply closer, so it is larger and
+       brighter without being told to be.
+
+       The product being shown sits at the near point of the hoop, which is
+       where it is biggest — so "active" and "at the front" are the same
+       thing, and nothing has to be lifted out of the ring to be the focus. */
+    function place(el, offset, g) {
+      var total = slots.length;
+      var a = (90 + offset * (360 / total)) * Math.PI / 180;
+
+      var x = Math.cos(a) * g.rx;
+      var y = Math.sin(a) * g.ry;
+      var z = Math.sin(a) * g.rz;
+
+      /* 0 at the far side of the hoop, 1 at the near side. */
+      var near = (z / (g.rz || 1) + 1) / 2;
+      /* The perspective already enlarges the near side; this only widens the
+         gap a little, or the front of the hoop swallows the stage. */
+      var scale = 0.60 + near * 0.28;
+      var fade = 0.38 + near * 0.62;
+      var tilt = TILTS[offset % TILTS.length];
+
+      el.style.transform = MIDDLE
+        + 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,' + Math.round(z) + 'px)'
+        + ' rotateZ(' + tilt + 'deg) scale(' + scale.toFixed(3) + ')';
+      el.style.opacity = fade.toFixed(3);
+      /* Cards on the near side pass in front of the collection's name, cards
+         on the far side behind it. */
+      el.style.zIndex = String(Math.round(near * 40) + (near > 0.5 ? 20 : 0));
+      if (offset === 0) el.setAttribute('data-active', '');
+      else el.removeAttribute('data-active');
     }
 
     /* ---- what each slot is showing ----------------------------------- */
@@ -203,12 +224,6 @@
         }
         img.alt = k === 0 ? (alts[0] || p.productName) : '';
         el.href = WW.productHref(p);
-        el.querySelector('.g3d__cap-name').textContent = p.productName;
-        /* What tells this one from the next. Within a range the names repeat
-           and the colourway is the difference, so that is the more useful
-           second line; the category is only worth saying across ranges. */
-        el.querySelector('.g3d__cap-cat').textContent =
-          p.shortDescription || (p.category && p.category.name) || '';
         el.setAttribute('data-slug', p.slug || p.id);
         /* The ring is reachable by pointer and by tap; the reader is told
            what each one is and that the active one is the active one. */
@@ -217,7 +232,6 @@
         place(el, k, g);
       }
       describe(list[active]);
-      if (at) at.textContent = String(active + 1).padStart(2, '0');
     }
 
     /* The active product's own words and its own buttons. The WhatsApp line
@@ -257,11 +271,6 @@
 
     /* ---- moving through it -------------------------------------------- */
     host.addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-go]');
-      if (b) { stopAuto(); go(parseInt(b.getAttribute('data-go'), 10)); return; }
-      var t = e.target.closest('button[data-auto]');
-      if (t) { auto ? stopAuto() : startAuto(); t.setAttribute('aria-pressed', auto ? 'true' : 'false'); return; }
-
       /* A product that is not the active one is brought to the middle; the
          active one is a plain link to its page, so it opens. */
       var item = e.target.closest('.g3d__item');
@@ -334,27 +343,42 @@
     }
     function wake() { if (!raf && onScreen && !reduced) loop(); }
 
+    /* A second a product: the ring turns by itself as soon as the visitor
+       reaches it, and they need touch nothing to see the range. */
+    var AUTO_MS = 1000;
     function startAuto() {
       if (reduced) return;
       auto = true;
       clearInterval(autoTimer);
       autoTimer = setInterval(function () {
         if (onScreen && !doc.hidden) go(1);
-      }, 3600);
+      }, AUTO_MS);
     }
-    function stopAuto() { auto = false; clearInterval(autoTimer); autoTimer = null; }
+    function stopAuto() {
+      auto = false;
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
 
-    /* Nothing runs while the gallery is not being looked at. */
+    /* Nothing runs while the gallery is not being looked at — and the moment
+       it is, it starts turning on its own. Only the first arrival starts it:
+       once the visitor has taken hold of it, scrolling back should not wrest
+       it off them again. */
+    var everSeen = false;
+    function arrived() {
+      host.setAttribute('data-in', '');
+      wake();
+      if (!everSeen) { everSeen = true; startAuto(); }
+    }
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function (entries) {
         onScreen = entries[0].isIntersecting;
-        if (onScreen) { host.setAttribute('data-in', ''); wake(); }
+        if (onScreen) arrived();
         else if (raf) { cancelAnimationFrame(raf); raf = null; }
       }, { threshold: 0.08 }).observe(host);
     } else {
       onScreen = true;
-      host.setAttribute('data-in', '');
-      wake();
+      arrived();
     }
     doc.addEventListener('visibilitychange', function () { if (!doc.hidden) wake(); });
 
@@ -389,10 +413,34 @@
     var wantsFeatured = host.getAttribute('data-featured') === 'true';
     if (wantsFeatured) params.featured = 'yes';
 
-    function fetched(res) {
-      return (res.items || []).filter(function (p) {
-        return String(p.slug || p.id) !== host.getAttribute('data-exclude');
+    /* A group holds several categories, and the API hands them back in order —
+       which on Team Wears means every uniform before the first tracksuit, so a
+       ring of nine would have shown uniforms alone. Dealing them out one
+       category at a time puts the whole group in view from the first turn. */
+    function interleave(items) {
+      var order = [], byCat = {};
+      items.forEach(function (p) {
+        var key = (p.category && p.category.slug) || '';
+        if (!byCat[key]) { byCat[key] = []; order.push(key); }
+        byCat[key].push(p);
       });
+      if (order.length < 2) return items;
+
+      var out = [], taken = true;
+      for (var round = 0; taken; round++) {
+        taken = false;
+        for (var i = 0; i < order.length; i++) {
+          var pile = byCat[order[i]];
+          if (round < pile.length) { out.push(pile[round]); taken = true; }
+        }
+      }
+      return out;
+    }
+
+    function fetched(res) {
+      return interleave((res.items || []).filter(function (p) {
+        return String(p.slug || p.id) !== host.getAttribute('data-exclude');
+      }));
     }
 
     WW.loadProducts(params).then(function (res) {
