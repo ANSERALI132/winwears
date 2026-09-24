@@ -304,3 +304,16 @@ blank the site behaves exactly as it did before the assistant existed — no
 launcher, no extra requests, no stylesheet fetched. See
 [backend/README.md](backend/README.md) for the cost ceilings and how to write
 knowledge entries.
+
+## Editor tooling
+
+`.mcp.json` registers the [21st.dev](https://21st.dev) component service for
+whoever is working on the frontend. It is a development aid only — the website
+never calls it, and nothing in `frontend/` or `backend/` depends on it.
+
+It reads its key from the `API_KEY_21ST` environment variable, which is why no
+key appears in the file. Set it in your own environment before starting a
+session; without it the server loads but every request is rejected.
+
+    setx API_KEY_21ST "your-key"      # Windows, then open a new terminal
+    export API_KEY_21ST="your-key"    # macOS / Linux, or add it to your shell profile
