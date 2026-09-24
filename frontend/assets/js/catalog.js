@@ -234,11 +234,36 @@
 
   /* --------------------------------------------------- category page ----- */
 
+  /* The range an address names: the last part of the path, or ?c= where a
+     host could not rewrite. Used by the one page that serves any category. */
+  function slugFromAddress() {
+    var asked = new URLSearchParams(location.search).get('c');
+    if (asked) return asked.toLowerCase();
+    return (location.pathname.split('/').pop() || '').replace(/\.html$/, '').toLowerCase();
+  }
+
   function initCategory() {
     var grid = $('#category-grid');
     if (!grid) return;
 
     var key = grid.getAttribute('data-category');
+    if (!key) {
+      /* The generic page. Which range it is showing is in the address, and a
+         group lists the categories inside it rather than products — the same
+         split the hand-written pages make, decided here so the two cannot
+         disagree. */
+      key = slugFromAddress();
+      var cat = WW.catBy(key);
+      if (!cat) return;                    /* category.js says so on the page */
+      if (cat.childCount) {
+        grid.id = 'subcategory-cards';
+        grid.className = 'grid grid--4';
+        grid.setAttribute('data-parent', cat.slug);
+        return;                            /* initSubcategories takes it from here */
+      }
+      grid.setAttribute('data-category', key);
+    }
+
     var state = { category: key, page: 1, perPage: 24, sort: 'order' };
 
     /* A photo set on the category in the admin replaces the page's artwork. */

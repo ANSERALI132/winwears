@@ -17,6 +17,14 @@
     {
       "source": "/admin/:path*",
       "destination": "/api/index"
+    },
+    {
+      "source": "/products/:slug.html",
+      "destination": "/products/category.html"
+    },
+    {
+      "source": "/products/:slug",
+      "destination": "/products/category.html"
     }
   ],
   "redirects": [

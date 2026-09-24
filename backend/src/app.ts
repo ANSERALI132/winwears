@@ -166,6 +166,19 @@ export function createApp(): express.Express {
     });
 
     app.use(express.static(frontend, { extensions: ['html'], maxAge: isProd ? '1h' : 0 }));
+
+    /* A category published in the admin has a page straight away. The eight
+       hand-written category pages are real files and were served above; this
+       only answers for the ones that have none, and the page works out which
+       range it is from the address. Vercel does the same through a rewrite in
+       vercel.json, which it applies only after looking for a file. */
+    app.use((req, res, next) => {
+      if (req.method !== 'GET') return next();
+      const match = /^\/products\/[a-z0-9-]+\.html$/.exec(req.path);
+      if (!match) return next();
+      res.sendFile(path.join(frontend, 'products', 'category.html'), (err) => (err ? next() : undefined));
+    });
+
     app.use((req, res, next) => {
       if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
       res.status(404).sendFile(path.join(frontend, '404.html'), (err) => (err ? next() : undefined));
