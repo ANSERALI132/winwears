@@ -172,6 +172,23 @@
       WW.renderGrid($('#related-grid'), related);
     }
 
+    /* The rest of the range orbiting this one. The gallery fetches the
+       category itself rather than reusing `related`, which the API caps at a
+       handful — too few to make a ring. It takes itself off the page when the
+       range is too small for one, so nothing here needs to guess. */
+    var orbit = $('#related-3d');
+    if (orbit && p.category && p.category.slug && WW.bootGalleries) {
+      orbit.hidden = false;
+      orbit.setAttribute('data-category', p.category.slug);
+      orbit.setAttribute('data-exclude', p.slug || p.id);
+      orbit.setAttribute('data-eyebrow', 'You may also like');
+      orbit.setAttribute('data-title', categoryName ? 'More ' + categoryName : 'More from this range');
+      orbit.setAttribute('data-sub', 'The rest of the range, around the one you are looking at.');
+      orbit.setAttribute('data-limit', '24');
+      orbit.setAttribute('data-gallery3d', '');
+      WW.bootGalleries(doc);
+    }
+
     if (WW.wireWhatsApp) WW.wireWhatsApp(doc);
     if (WW.bootReveal) WW.bootReveal(doc);
 
