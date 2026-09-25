@@ -27,10 +27,10 @@
   --surface:       var(--white);
   --ink:           #0C1226;      /* body copy on light                     */
   --ink-soft:      #4A5268;
-  --ink-faint:     #7C8497;
+  --ink-faint:     #626979;      /* AA on white, paper and paper-2 */
   --on-dark:       #FFFFFF;
   --on-dark-soft:  rgba(255,255,255,.66);
-  --on-dark-faint: rgba(255,255,255,.42);
+  --on-dark-faint: rgba(255,255,255,.55);  /* AA on every navy ground */
 
   --line:          rgba(12,18,38,.10);
   --line-strong:   rgba(12,18,38,.18);
