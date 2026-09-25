@@ -321,68 +321,151 @@
           <p class="eyebrow">Inside the factory</p>
           <h2 class="sec-head__title">How a ball is made.</h2>
         </div>
-        <p class="lead">Eight stages on our own floor, from the material rolls to the boxes going out. <a class="link" href="manufacturing.html">See each stage in full</a>.</p>
+        <p class="lead">Eleven stages on our own floor. <a class="link" href="manufacturing.html">See each stage in full</a>.</p>
       </div>
 
-      <div class="film-strip">
-        <figure class="film reveal">
-          <video class="film__video" data-inview muted playsinline preload="none"
-                 width="405" height="720" poster="assets/video/process/01-material-rolls.jpg" src="assets/video/process/01-material-rolls.mp4"
-                 data-playlist="assets/video/process/01-material-rolls.mp4 assets/video/process/02-material-sheet.mp4"
+      <!-- One stage at a time, moving on by itself once the section is
+           reached. Built and timed by assets/js/process-slides.js. -->
+      <div class="pslides reveal" data-pslides data-interval="2500"
+           aria-roledescription="carousel" aria-label="How a WIN WEARS ball is made">
+        <figure class="pslide" data-pslide data-on>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">01</span>
+            <span class="pslide__name">Material selection</span>
+            <span class="pslide__note">The rolls come in and are checked before anything is cut.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="metadata"
+                 width="720" height="1280" poster="assets/video/process/01-material-selection.jpg"
+                 src="assets/video/process/01-material-selection.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
                  aria-label="Material selection at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">01</span> Material selection</figcaption>
         </figure>
-        <figure class="film reveal" data-delay="1">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="405" height="720" poster="assets/video/process/03-panel-cutting.jpg" src="assets/video/process/03-panel-cutting.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">02</span>
+            <span class="pslide__name">Material check</span>
+            <span class="pslide__note">Every sheet inspected for thickness and finish.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="metadata"
+                 width="720" height="1280" poster="assets/video/process/02-material-check.jpg"
+                 src="assets/video/process/02-material-check.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Panel preparation at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">02</span> Panel preparation</figcaption>
+                 aria-label="Material check at the WIN WEARS factory"></video>
         </figure>
-        <figure class="film reveal" data-delay="2">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="405" height="720" poster="assets/video/process/04-printing.jpg" src="assets/video/process/04-printing.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">03</span>
+            <span class="pslide__name">Cutting</span>
+            <span class="pslide__note">Panels cut to the shape of the ball, one die at a time.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/03-cutting.jpg"
+                 data-src="assets/video/process/03-cutting.mp4"
+                 disablepictureinpicture disableremoteplayback controlslist="nodownload"
+                 aria-label="Cutting at the WIN WEARS factory"></video>
+        </figure>
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">04</span>
+            <span class="pslide__name">Printing</span>
+            <span class="pslide__note">Your colours and crest go onto the panels.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/04-printing.jpg"
+                 data-src="assets/video/process/04-printing.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
                  aria-label="Printing at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">03</span> Printing</figcaption>
         </figure>
-        <figure class="film reveal" data-delay="3">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="405" height="720" poster="assets/video/process/05-stitching.jpg" src="assets/video/process/05-stitching.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">05</span>
+            <span class="pslide__name">Stitching</span>
+            <span class="pslide__note">Panels joined by hand and by machine, depending on the range.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/05-stitching.jpg"
+                 data-src="assets/video/process/05-stitching.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Stitching and bonding at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">04</span> Stitching &amp; bonding</figcaption>
+                 aria-label="Stitching at the WIN WEARS factory"></video>
         </figure>
-        <figure class="film reveal" data-delay="4">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="720" height="405" poster="assets/video/process/06-bladders.jpg" src="assets/video/process/06-bladders.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">06</span>
+            <span class="pslide__name">Stitched</span>
+            <span class="pslide__note">The ball closed and the last seam finished.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/06-stitching-complete.jpg"
+                 data-src="assets/video/process/06-stitching-complete.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Bladder installation at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">05</span> Bladder installation</figcaption>
+                 aria-label="Stitched at the WIN WEARS factory"></video>
         </figure>
-        <figure class="film reveal" data-delay="5">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="720" height="405" poster="assets/video/process/07-shape-inspection.jpg" src="assets/video/process/07-shape-inspection.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">07</span>
+            <span class="pslide__name">Bladder</span>
+            <span class="pslide__note">The bladder fitted and the valve seated.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/07-bladder.jpg"
+                 data-src="assets/video/process/07-bladder.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Shape and pressure at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">06</span> Shape &amp; pressure</figcaption>
+                 aria-label="Bladder at the WIN WEARS factory"></video>
         </figure>
-        <figure class="film reveal" data-delay="5">
-          <video class="film__video" data-inview muted playsinline preload="none" loop
-                 width="405" height="720" poster="assets/video/process/08-quality-control.jpg" src="assets/video/process/08-quality-control.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">08</span>
+            <span class="pslide__name">Finished ball</span>
+            <span class="pslide__note">Inflated, shaped and ready for checking.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/08-ball-complete.jpg"
+                 data-src="assets/video/process/08-ball-complete.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Quality control at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">07</span> Quality control</figcaption>
+                 aria-label="Finished ball at the WIN WEARS factory"></video>
         </figure>
-        <figure class="film reveal" data-delay="5">
-          <video class="film__video" data-inview muted playsinline preload="none"
-                 width="405" height="720" poster="assets/video/process/09-packing.jpg" src="assets/video/process/09-packing.mp4"
-                 data-playlist="assets/video/process/09-packing.mp4 assets/video/process/10-final-packing.mp4"
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">09</span>
+            <span class="pslide__name">Quality check</span>
+            <span class="pslide__note">Weight, roundness and pressure, ball by ball.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/09-quality-check.jpg"
+                 data-src="assets/video/process/09-quality-check.mp4"
                  disablepictureinpicture disableremoteplayback controlslist="nodownload"
-                 aria-label="Final packaging at the WIN WEARS factory"></video>
-          <figcaption class="film__caption"><span class="num">08</span> Final packaging</figcaption>
+                 aria-label="Quality check at the WIN WEARS factory"></video>
         </figure>
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">10</span>
+            <span class="pslide__name">Packing</span>
+            <span class="pslide__note">Boxed to your packaging or ours.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/10-packing.jpg"
+                 data-src="assets/video/process/10-packing.mp4"
+                 disablepictureinpicture disableremoteplayback controlslist="nodownload"
+                 aria-label="Packing at the WIN WEARS factory"></video>
+        </figure>
+        <figure class="pslide" data-pslide>
+          <figcaption class="pslide__cap">
+            <span class="pslide__num">11</span>
+            <span class="pslide__name">Order complete</span>
+            <span class="pslide__note">Palletised and ready to leave the floor.</span>
+          </figcaption>
+          <video class="pslide__video" muted playsinline loop preload="none"
+                 width="720" height="1280" poster="assets/video/process/11-order-complete.jpg"
+                 data-src="assets/video/process/11-order-complete.mp4"
+                 disablepictureinpicture disableremoteplayback controlslist="nodownload"
+                 aria-label="Order complete at the WIN WEARS factory"></video>
+        </figure>
+      </div>
+
+      <div class="pslides__ctl">
+        <button class="pslides__btn" type="button" data-pslide-go="-1" aria-label="Previous stage">&larr; Prev</button>
+        <p class="pslides__count"><span data-pslide-at>01</span> / 11</p>
+        <button class="pslides__btn" type="button" data-pslide-go="1" aria-label="Next stage">Next &rarr;</button>
       </div>
     </div>
   </section>
@@ -742,6 +825,7 @@
 <script defer src="assets/js/backdrop.js"></script>
 <script defer src="assets/js/gallery3d.js"></script>
 <script defer src="assets/js/experience.js"></script>
+<script defer src="assets/js/process-slides.js"></script>
 <script defer src="assets/js/home.js"></script>
   <script defer src="assets/js/ai-chat.js"></script>
 </body>
