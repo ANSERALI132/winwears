@@ -83,7 +83,8 @@ strong { font-weight: 650; }
 .section--navy { background: var(--navy-600); color: var(--on-dark); }
 .section--sunken { background: var(--bg-sunken); }
 .section--dark h1, .section--dark h2, .section--dark h3,
-.section--navy h1, .section--navy h2, .section--navy h3 { color: var(--on-dark); }
+.section--navy h1, .section--navy h2, .section--navy h3,
+.g3d h1, .g3d h2, .g3d h3 { color: var(--on-dark); }
 
 .grid { display: grid; gap: var(--s-5); }
 .grid--2 { grid-template-columns: repeat(2, 1fr); }
@@ -110,10 +111,12 @@ strong { font-weight: 650; }
   content: ""; width: 26px; height: 2px; background: var(--red-500); flex: none;
 }
 .eyebrow--plain::before { display: none; }
-.section--dark .eyebrow, .section--navy .eyebrow { color: var(--on-dark-soft); }
+.section--dark .eyebrow, .section--navy .eyebrow,
+.g3d .eyebrow { color: var(--on-dark-soft); }
 
 .lead { font-size: var(--t-lead); line-height: 1.5; color: var(--ink-soft); max-width: var(--maxw-text); }
-.section--dark .lead, .section--navy .lead { color: var(--on-dark-soft); }
+.section--dark .lead, .section--navy .lead,
+.g3d .lead { color: var(--on-dark-soft); }
 
 .num {
   font-family: var(--font-mono);
@@ -127,7 +130,8 @@ strong { font-weight: 650; }
    3.95:1, so the dark grounds take the lighter red instead. */
 .mobile-menu .num,
 .section--dark .num,
-.section--navy .num { color: var(--red-400); }
+.section--navy .num,
+.g3d .num { color: var(--red-400); }
 
 .u-hide { display: none !important; }
 /* Components that set their own display would otherwise beat the UA rule. */
