@@ -15,7 +15,8 @@
 
   --red-600:  #B60E22;
   --red-500:  #E1132C;   /* the badge red                                  */
-  --red-400:  #FF2D45;
+  --red-400:  #FF2D45;   /* red on navy-900                                */
+  --red-300:  #FF6B78;   /* red on navy-600, which is too light for -400   */
 
   --white:    #FFFFFF;
   --paper:    #F6F7F9;   /* light section ground                           */

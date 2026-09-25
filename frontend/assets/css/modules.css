@@ -1078,7 +1078,7 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   padding-bottom: var(--s-4); border-bottom: 1px solid var(--line-dark);
 }
 .reach__row span:first-child {
-  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--red-400);
+  font-family: var(--font-mono); font-size: var(--t-micro); color: var(--red-300);
   letter-spacing: .12em;
 }
 
