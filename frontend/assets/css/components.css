@@ -75,9 +75,9 @@
 .btn svg { width: 1.05em; height: 1.05em; flex: none; }
 
 /* WhatsApp-flavoured button keeps the platform green so it stays recognisable */
-.btn--whatsapp { --btn-bg: #1FA855; --btn-bd: #1FA855; }
-.btn--whatsapp::after { background: #14833f; }
-.btn--whatsapp:hover { border-color: #14833f; }
+.btn--whatsapp { --btn-bg: #158040; --btn-bd: #158040; }
+.btn--whatsapp::after { background: #0F6E35; }
+.btn--whatsapp:hover { border-color: #0F6E35; }
 
 /* Text link with animated underline */
 .link {

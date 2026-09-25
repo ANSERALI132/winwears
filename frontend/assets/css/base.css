@@ -123,6 +123,12 @@ strong { font-weight: 650; }
   font-weight: 600;
 }
 
+/* The badge red is only readable on a light ground; over navy it drops to
+   3.95:1, so the dark grounds take the lighter red instead. */
+.mobile-menu .num,
+.section--dark .num,
+.section--navy .num { color: var(--red-400); }
+
 .u-hide { display: none !important; }
 /* Components that set their own display would otherwise beat the UA rule. */
 [hidden] { display: none !important; }

@@ -228,8 +228,8 @@
 .aic-mini:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .aic-mini--red { background: var(--red-500); border-color: var(--red-500); }
 .aic-mini--red:hover { background: var(--red-400); }
-.aic-mini--wa { background: #1FA855; border-color: #1FA855; }
-.aic-mini--wa:hover { background: #24c163; }
+.aic-mini--wa { background: #158040; border-color: #158040; }
+.aic-mini--wa:hover { background: #0F6E35; }
 
 /* --- typing --------------------------------------------------------------- */
 
