@@ -315,6 +315,37 @@
     });
   }
 
+  /**
+   * Every .field already carries its own message — a .field__hint that is
+   * always there, a .field__error that appears when the field is wrong. Both
+   * were visible and neither was announced: the control said aria-invalid and
+   * nothing else, so a screen reader reported that something was wrong
+   * without ever saying what. Pointing aria-describedby at them fixes that.
+   *
+   * It lives here rather than in each form script because the quote form, the
+   * contact form and anything added later share the same markup.
+   *
+   * The error stays referenced even while hidden — a display:none element is
+   * not announced, so there is nothing to toggle and nothing to get wrong.
+   */
+  function bootFieldMessages() {
+    var n = 0;
+    $$('.field').forEach(function (field) {
+      var control = $('input, select, textarea', field);
+      if (!control) return;
+
+      var ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+      $$('.field__hint, .field__error', field).forEach(function (msg) {
+        if (!msg.id) {
+          var kind = msg.className.indexOf('error') > -1 ? 'error' : 'hint';
+          msg.id = (control.id || 'field') + '-' + kind + '-' + (++n);
+        }
+        if (ids.indexOf(msg.id) < 0) ids.push(msg.id);
+      });
+      if (ids.length) control.setAttribute('aria-describedby', ids.join(' '));
+    });
+  }
+
   /* --------------------------------------------------------- Footer ------ */
   function bootFooter() {
     $$('[data-year]').forEach(function (el) { el.textContent = new Date().getFullYear(); });
@@ -426,6 +457,7 @@
     bootInviewVideos();
     bootPictureGuard();
     bootCurrent();
+    bootFieldMessages();
     bootFooter();
 
     /* Everything above is chrome and motion — it needs no data and must not

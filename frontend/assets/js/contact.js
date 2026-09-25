@@ -39,18 +39,26 @@
     if (!input) return;
     var wrap = input.closest('.field');
     if (wrap) wrap.setAttribute('data-invalid', invalid ? 'true' : 'false');
+    input.setAttribute('aria-invalid', invalid ? 'true' : 'false');
     if (invalid) input.focus();
   }
 
   function clearInvalid() {
-    $$('.field[data-invalid="true"]', form).forEach(function (el) { el.setAttribute('data-invalid', 'false'); });
+    $$('.field[data-invalid="true"]', form).forEach(function (el) {
+      el.setAttribute('data-invalid', 'false');
+      var control = $('input, select, textarea', el);
+      if (control) control.setAttribute('aria-invalid', 'false');
+    });
   }
 
   /* Clear a field's error as soon as the visitor starts fixing it. */
   $$('.input, .textarea', form).forEach(function (el) {
     el.addEventListener('input', function () {
       var wrap = el.closest('.field');
-      if (wrap && wrap.getAttribute('data-invalid') === 'true') wrap.setAttribute('data-invalid', 'false');
+      if (wrap && wrap.getAttribute('data-invalid') === 'true') {
+        wrap.setAttribute('data-invalid', 'false');
+        el.setAttribute('aria-invalid', 'false');
+      }
     });
   });
 

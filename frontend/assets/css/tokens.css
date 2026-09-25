@@ -39,7 +39,7 @@
   --line-dark-2:   rgba(255,255,255,.26);
 
   --accent:        var(--red-500);
-  --focus:         #4D8DFF;
+  --focus:         #3D80FF;    /* 3:1 against paper too, not just white */
 
   /* --- Type ------------------------------------------------------------- */
   --font-display: "Archivo", "Archivo Black", "Helvetica Neue", Arial, sans-serif;
