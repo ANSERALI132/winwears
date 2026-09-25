@@ -49,13 +49,16 @@ table { border-collapse: collapse; width: 100%; }
 
 /* --- Skip link ----------------------------------------------------------- */
 .skip-link {
-  position: fixed; top: -100px; left: var(--s-4); z-index: var(--z-top);
+  position: fixed; top: var(--s-4); left: var(--s-4); z-index: var(--z-top);
   background: var(--navy-600); color: #fff;
   padding: .7rem 1.1rem; border-radius: var(--r-sm);
   font-size: var(--t-small); font-weight: 600;
-  transition: top var(--d-fast) var(--e-out);
+  /* Held off-screen by a transform rather than a negative top, so the one
+     animation a keyboard visitor sees first is also a composited one. */
+  transform: translateY(calc(-100% - var(--s-4) - 8px));
+  transition: transform var(--d-fast) var(--e-out);
 }
-.skip-link:focus { top: var(--s-4); }
+.skip-link:focus { transform: translateY(0); }
 
 /* --- Headings ------------------------------------------------------------ */
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); font-weight: 800; line-height: var(--lh-snug); letter-spacing: var(--tr-tight); }

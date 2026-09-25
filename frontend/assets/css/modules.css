@@ -18,7 +18,13 @@
 }
 .preloader__inner { display: grid; justify-items: center; gap: var(--s-4); }
 .preloader__bar { width: min(220px, 50vw); height: 2px; background: rgba(255,255,255,.16); overflow: hidden; }
-.preloader__fill { display: block; height: 100%; width: 0%; background: var(--red-500); transition: width .5s var(--e-out); }
+.preloader__fill {
+  display: block; height: 100%; width: 100%; background: var(--red-500);
+  /* Scaled rather than widened: this runs while the page is still loading,
+     so a per-frame layout here lands on the busiest moment there is. */
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .5s var(--e-out);
+}
 .preloader__word {
   font-size: var(--t-eyebrow); letter-spacing: var(--tr-wider);
   text-transform: uppercase; color: var(--on-dark-faint);
@@ -998,10 +1004,13 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   font-size: var(--t-eyebrow); letter-spacing: var(--tr-wide); text-transform: uppercase;
 }
 .deck__go i {
-  width: 22px; height: 1px; background: currentColor;
-  transition: width var(--d-mid) var(--e-out);
+  /* Drawn at its full 34px and held short, so the hover is a scale on the
+     compositor rather than a width change the page has to lay out. */
+  width: 34px; height: 1px; background: currentColor;
+  transform: scaleX(.647); transform-origin: left;
+  transition: transform var(--d-mid) var(--e-out);
 }
-.deck__card:hover .deck__go i { width: 34px; }
+.deck__card:hover .deck__go i { transform: scaleX(1); }
 .deck__hint {
   display: block; text-align: center;
   font-size: var(--t-micro); color: var(--on-dark-faint);

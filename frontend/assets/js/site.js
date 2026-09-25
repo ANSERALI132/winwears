@@ -48,12 +48,12 @@
     var pct = 0;
     var tick = setInterval(function () {
       pct = Math.min(92, pct + Math.random() * 18);
-      if (fill) fill.style.width = pct + '%';
+      if (fill) fill.style.transform = 'scaleX(' + (pct / 100) + ')';
     }, 120);
 
     function done() {
       clearInterval(tick);
-      if (fill) fill.style.width = '100%';
+      if (fill) fill.style.transform = 'scaleX(1)';
       setTimeout(function () { doc.body.classList.add('is-loaded'); }, 240);
     }
     if (doc.readyState === 'complete') done();

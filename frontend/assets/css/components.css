@@ -311,9 +311,11 @@ body.menu-open { overflow: hidden; }
 .footer__links { display: grid; gap: .7rem; }
 .footer__links a {
   font-size: var(--t-small); color: var(--on-dark-soft);
-  transition: color var(--d-fast) var(--e-out), padding-left var(--d-fast) var(--e-out);
+  transition: color var(--d-fast) var(--e-out), transform var(--d-fast) var(--e-out);
 }
-.footer__links a:hover { color: #fff; padding-left: 5px; }
+/* Shifted, not padded: padding-left re-lays-out the column on every frame of
+   every hover. The links are grid items, so they take a transform. */
+.footer__links a:hover { color: #fff; transform: translateX(5px); }
 .footer__contact { display: grid; gap: .7rem; font-size: var(--t-small); color: var(--on-dark-soft); }
 .footer__contact a:hover { color: #fff; }
 
