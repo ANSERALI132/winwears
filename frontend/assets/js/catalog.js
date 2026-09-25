@@ -109,18 +109,63 @@
 
       /* Everything made, not the ball ranges alone: uniforms, tracksuits and
        socks are listed here too. */
-    var state = { category: '', construction: '', material: '', usage: '', size: '', page: 1, perPage: 24, sort: 'order' };
+    var state = { category: '', construction: '', material: '', usage: '', size: '',
+      customization: '', q: '', page: 1, perPage: 24, sort: 'order' };
 
-    var params = new URLSearchParams(location.search);
-    /* Accept the old ?cat= as well as ?category=, so existing links survive. */
-    state.category = params.get('category') || params.get('cat') || '';
-    if (params.get('q')) state.q = params.get('q');
+    /* Every filter belongs in the address, not just two of them: the point of
+       a shareable link is that it shows what the sender was looking at. */
+    var URL_KEYS = ['category', 'construction', 'material', 'usage', 'size', 'customization', 'q'];
+
+    /* The control each filter is set from, so the toolbar can be put back to
+       match an address arrived at by link or by Back. */
+    var CONTROL = {
+      category: '#f-cat', construction: '#f-con', material: '#f-mat',
+      usage: '#f-use', size: '#f-size', customization: '#f-custom',
+    };
+
+    function readAddress() {
+      var params = new URLSearchParams(location.search);
+      URL_KEYS.forEach(function (k) { state[k] = params.get(k) || ''; });
+      /* Accept the old ?cat= as well as ?category=, so existing links survive. */
+      if (!state.category) state.category = params.get('cat') || '';
+      state.page = 1;
+    }
+
+    function writeAddress(push) {
+      var next = new URLSearchParams();
+      URL_KEYS.forEach(function (k) { if (state[k]) next.set(k, state[k]); });
+      var query = next.toString();
+      var url = query ? '?' + query : location.pathname;
+      /* replaceState for a view the visitor did not choose to navigate to —
+         the first render, a page of "load more", a keystroke mid-search. */
+      history[push ? 'pushState' : 'replaceState'](null, '', url);
+    }
+
+    /* Put the toolbar back to whatever the address says. */
+    function syncControls() {
+      Object.keys(CONTROL).forEach(function (k) {
+        var el = $(CONTROL[k]);
+        if (el) el.value = state[k] || '';
+      });
+      var search = $('#f-search');
+      if (search) search.value = state.q || '';
+    }
+
+    readAddress();
+
+    /* Back and Forward move through the filters that were applied, instead of
+       leaving the catalogue at the first press. */
+    window.addEventListener('popstate', function () {
+      readAddress();
+      syncControls();
+      apply(false, 'skip');
+    });
 
     showSkeleton(grid, 8);
 
     WW.loadFilters()
       .then(function (options) {
-        fill($('#f-cat'), options.categories.map(function (c) { return { value: c.slug, label: c.name }; }), state.category);
+        fillCategories($('#f-cat'), state.category);
         fill($('#f-con'), options.construction.map(v), state.construction);
         fill($('#f-mat'), options.material.map(v), state.material);
         fill($('#f-use'), options.usage.map(v), state.usage);
@@ -131,6 +176,38 @@
       .catch(function (err) { showError(grid, err, initCatalogue); });
 
     function v(x) { return { value: x, label: x }; }
+
+    /* The category select, built from the tree rather than a flat list, so a
+       group can be chosen as well as a range. Indented with a real space
+       rather than markup, because an <optgroup> label cannot be selected and
+       choosing the whole group is the point. */
+    function fillCategories(sel, current) {
+      if (!sel || !window.WW || !WW.CATEGORIES) return;
+      while (sel.options.length > 1) sel.remove(1);
+
+      var all = WW.CATEGORIES;
+      var groups = all.filter(function (c) { return !c.parentId; });
+
+      function add(cat, indent) {
+        var count = indent ? cat.productCount : cat.groupCount;
+        if (!count) return;
+        var o = doc.createElement('option');
+        o.value = cat.slug;
+        o.textContent = (indent ? '\u00a0\u00a0\u00a0' : '') + cat.name + ' (' + count + ')';
+        if (cat.slug === current) o.selected = true;
+        sel.appendChild(o);
+      }
+
+      groups.forEach(function (g) {
+        add(g, false);
+        all.filter(function (c) { return c.parentId === g.id; }).forEach(function (c) { add(c, true); });
+      });
+
+      /* A range with no group above it would otherwise never be listed. */
+      all.filter(function (c) {
+        return c.parentId && !groups.some(function (g) { return g.id === c.parentId; });
+      }).forEach(function (c) { add(c, false); });
+    }
 
     function fill(sel, values, current) {
       if (!sel) return;
@@ -154,19 +231,19 @@
           var name = sel.getAttribute('data-filter');
           state[FILTER_KEYS[name] || name] = sel.value;
           state.page = 1;
-          apply();
+          /* A chosen filter is a place the visitor went, so it gets a history
+             entry and Back returns to what they were looking at before. */
+          apply(false, 'push');
         });
       });
 
       var reset = $('#f-reset');
       if (reset) {
         reset.addEventListener('click', function () {
-          ['category', 'construction', 'material', 'usage', 'size', 'q'].forEach(function (k) { state[k] = ''; });
+          URL_KEYS.forEach(function (k) { state[k] = ''; });
           state.page = 1;
-          $$('[data-filter]').forEach(function (s) { s.value = ''; });
-          var search = $('#f-search');
-          if (search) search.value = '';
-          apply();
+          syncControls();
+          apply(false, 'push');
         });
       }
 
@@ -178,7 +255,9 @@
           timer = setTimeout(function () {
             state.q = search.value.trim();
             state.page = 1;
-            apply();
+            /* Replaced, not pushed: one query typed letter by letter would
+               otherwise bury the previous page under a dozen entries. */
+            apply(false, 'replace');
           }, 300);
         });
       }
@@ -192,7 +271,10 @@
       }
     }
 
-    function apply(append) {
+    /* nav: 'push' for a filter the visitor chose, 'replace' for a view they
+       did not navigate to, 'skip' when the address is already right —
+       answering popstate must not write history back. */
+    function apply(append, nav) {
       if (!append) showSkeleton(grid, 8);
 
       return WW.loadProducts(state)
@@ -218,12 +300,7 @@
           var more = $('#f-more');
           if (more) more.hidden = res.meta.page >= res.meta.totalPages;
 
-          /* Keep the address bar shareable without pushing history entries. */
-          var next = new URLSearchParams();
-          if (state.category) next.set('category', state.category);
-          if (state.q) next.set('q', state.q);
-          var query = next.toString();
-          history.replaceState(null, '', query ? '?' + query : location.pathname);
+          if (nav !== 'skip') writeAddress(nav === 'push');
         })
         .catch(function (err) {
           if (append) state.page -= 1;

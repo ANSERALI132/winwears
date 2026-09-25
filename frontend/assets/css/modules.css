@@ -628,7 +628,13 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s-4);
   display: grid; gap: .55rem; background: var(--surface);
 }
-.cx__summary h3 { font-size: var(--t-micro); letter-spacing: var(--tr-wide); text-transform: uppercase; color: var(--ink-faint); }
+/* A heading, not a subheading: it sits directly under the page h1, so it is
+   an h2 and the outline has no gap in it. Sized down here rather than left
+   at the h2 default, which is why line-height is pinned too. */
+.cx__summary h2 {
+  font-size: var(--t-micro); line-height: var(--lh-snug);
+  letter-spacing: var(--tr-wide); text-transform: uppercase; color: var(--ink-faint);
+}
 .cx__summary dl { display: grid; gap: .4rem; }
 .cx__summary dl div { display: flex; justify-content: space-between; gap: var(--s-4); font-size: var(--t-small); }
 .cx__summary dt { color: var(--ink-faint); }
