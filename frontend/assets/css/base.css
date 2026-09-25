@@ -82,9 +82,12 @@ strong { font-weight: 650; }
 .section--dark { background: var(--navy-900); color: var(--on-dark); }
 .section--navy { background: var(--navy-600); color: var(--on-dark); }
 .section--sunken { background: var(--bg-sunken); }
-.section--dark h1, .section--dark h2, .section--dark h3,
-.section--navy h1, .section--navy h2, .section--navy h3,
-.g3d h1, .g3d h2, .g3d h3 { color: var(--on-dark); }
+/* Every block that paints itself navy and switches to white text. The
+   muted tokens are picked for a light ground, so the three utilities that
+   use them are restated here once, rather than each page remembering to. */
+:is(.on-navy, .section--dark, .section--navy, .g3d, .hero, .page-hero,
+    .cta-band, .nf, .site-footer, .mega, .mobile-menu)
+  :is(h1, h2, h3) { color: var(--on-dark); }
 
 .grid { display: grid; gap: var(--s-5); }
 .grid--2 { grid-template-columns: repeat(2, 1fr); }
@@ -111,12 +114,14 @@ strong { font-weight: 650; }
   content: ""; width: 26px; height: 2px; background: var(--red-500); flex: none;
 }
 .eyebrow--plain::before { display: none; }
-.section--dark .eyebrow, .section--navy .eyebrow,
-.g3d .eyebrow { color: var(--on-dark-soft); }
+:is(.on-navy, .section--dark, .section--navy, .g3d, .hero, .page-hero,
+    .cta-band, .nf, .site-footer, .mega, .mobile-menu)
+  .eyebrow { color: var(--on-dark-soft); }
 
 .lead { font-size: var(--t-lead); line-height: 1.5; color: var(--ink-soft); max-width: var(--maxw-text); }
-.section--dark .lead, .section--navy .lead,
-.g3d .lead { color: var(--on-dark-soft); }
+:is(.on-navy, .section--dark, .section--navy, .g3d, .hero, .page-hero,
+    .cta-band, .nf, .site-footer, .mega, .mobile-menu)
+  .lead { color: var(--on-dark-soft); }
 
 .num {
   font-family: var(--font-mono);
@@ -128,10 +133,9 @@ strong { font-weight: 650; }
 
 /* The badge red is only readable on a light ground; over navy it drops to
    3.95:1, so the dark grounds take the lighter red instead. */
-.mobile-menu .num,
-.section--dark .num,
-.g3d .num { color: var(--red-400); }
-.section--navy .num { color: var(--red-300); }
+:is(.on-navy, .section--dark, .g3d, .hero, .page-hero, .cta-band,
+    .nf, .site-footer, .mega, .mobile-menu) .num { color: var(--red-400); }
+.section--navy .num { color: var(--red-300); }   /* navy-600 is lighter */
 
 .u-hide { display: none !important; }
 /* Components that set their own display would otherwise beat the UA rule. */
