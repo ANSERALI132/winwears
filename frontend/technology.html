@@ -110,7 +110,8 @@
         <p class="lead">Drag the ball to turn it. Each layer below is a separate decision, and each one changes how the finished ball plays.</p>
       </div>
 
-      <div class="tech">
+      <div class="tech cutaway" data-cutaway>
+        <div class="cutaway__pin">
         <div>
           <div class="tech__stage reveal" id="tech-ball">
             <div class="tech__fallback">
@@ -130,19 +131,19 @@
         </div>
 
         <div class="exploded reveal" data-delay="1">
-          <article class="layer" style="--depth:1">
+          <article class="layer" data-layer="1">
             <span class="layer__ring" aria-hidden="true"></span>
             <div><h3 class="layer__name">01 · Outer Layer</h3><p class="layer__desc">PU or TPU. Sets touch, grip and how the print sits. Grain and thickness are specified per range.</p></div>
           </article>
-          <article class="layer" style="--depth:2">
+          <article class="layer" data-layer="2">
             <span class="layer__ring" aria-hidden="true"></span>
             <div><h3 class="layer__name">02 · Panels</h3><p class="layer__desc">32-panel, low-panel or 20-panel layouts. Panel geometry drives flight character and artwork area.</p></div>
           </article>
-          <article class="layer" style="--depth:3">
+          <article class="layer" data-layer="3">
             <span class="layer__ring" aria-hidden="true"></span>
             <div><h3 class="layer__name">03 · Lining</h3><p class="layer__desc">Layers of backing cloth between outer and bladder. This is what holds the ball round under repeated impact.</p></div>
           </article>
-          <article class="layer" style="--depth:4">
+          <article class="layer" data-layer="4">
             <span class="layer__ring" aria-hidden="true"></span>
             <div><h3 class="layer__name">04 · Bladder</h3><p class="layer__desc">Butyl for air retention, latex for rebound. Chosen against how often the ball gets inflated.</p></div>
           </article>
@@ -272,6 +273,7 @@
           <a href="mailto:wwinwears@gmail.com">wwinwears@gmail.com</a>
           <a href="request-quote.html">Request a Quote</a>
           <a href="contact.html">Contact Page</a>
+        </div>
         </div>
       </div>
     </div>

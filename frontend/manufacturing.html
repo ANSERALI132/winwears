@@ -115,7 +115,13 @@
         <p class="lead">Each stage below describes our general production capability. Exact methods and materials are agreed per order and confirmed at sampling.</p>
       </div>
 
-      <div class="process">
+      <div class="rail" data-rail>
+        <div class="rail__pin">
+          <p class="rail__count" data-rail-count aria-live="polite">
+            <span class="rail__at">01</span><span class="rail__of"> / 11</span>
+          </p>
+          <div class="rail__bar" aria-hidden="true"><i data-rail-fill></i></div>
+        <div class="process">
 
         <article class="process__step reveal">
           <div class="process__index"><span class="num">01</span><h3 class="process__title">Material Selection</h3></div>
@@ -271,6 +277,8 @@
           </figure>
         </article>
       </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -366,6 +374,7 @@
 <script defer src="assets/js/site.js"></script>
 <script defer src="assets/js/megamenu.js"></script>
   <script src="assets/js/content.js" defer></script>
+<script defer src="assets/js/manufacturing.js"></script>
   <script defer src="assets/js/ai-chat.js"></script>
 </body>
 </html>

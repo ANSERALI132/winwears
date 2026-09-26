@@ -36,7 +36,12 @@ export function createApp(): express.Express {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
+          /* 'wasm-unsafe-eval' is what lets the Draco decoder's WebAssembly
+             compile. It is narrower than it sounds and quite different from
+             'unsafe-eval': it permits WebAssembly.instantiate and nothing
+             else — eval(), new Function() and friends stay refused. Without
+             it the decoder aborts and the ball never draws. */
+          scriptSrc: ["'self'", "'wasm-unsafe-eval'", 'https://cdnjs.cloudflare.com'],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
           imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
@@ -44,6 +49,12 @@ export function createApp(): express.Express {
              model: it unpacks them to blob URLs and fetches them back. A blob URL
              is data this page already holds, so this opens no other host. */
           connectSrc: ["'self'", 'blob:'],
+          /* The Draco decoder runs in a worker it creates from a blob URL, so
+             that the ball's geometry is unpacked off the main thread. Without
+             this the worker is refused and the model never renders: worker-src
+             falls back to script-src, which names hosts and not blob:. The
+             blob is our own decoder, already fetched from this origin. */
+          workerSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
           baseUri: ["'self'"],

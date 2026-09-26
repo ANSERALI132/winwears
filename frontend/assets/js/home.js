@@ -91,13 +91,15 @@
         parallax: true,
         /* Turns and falls back into depth as the hero leaves, so scrolling
            past reads as moving past the ball. */
-        scroll: true
+        scroll: true,
+        /* And rolls across as it goes, rather than spinning on the spot. */
+        roll: true
       });
     }
 
     var tech = document.getElementById('tech-ball');
     if (tech) {
-      WW.ball3d(tech, {
+      var ball = WW.ball3d(tech, {
         base: '#FFFFFF',
         accent: '#E1132C',
         seam: '#0C1226',
@@ -106,7 +108,85 @@
         interactive: true,
         parallax: false
       });
+      cutaway(ball);
     }
+  }
+
+  /**
+   * The pinned cutaway: scrolling through the section's track opens the ball
+   * and lights each layer in turn. Same driver as technology.js — see there
+   * for why progress is read from the track's own position rather than a
+   * library.
+   */
+  function cutaway(ball) {
+    var host = document.querySelector('[data-cutaway]');
+    if (!host || !ball) return;
+
+    var pin = host.querySelector('.cutaway__pin');
+    var layers = [].slice.call(host.querySelectorAll('.layer'));
+    if (!pin || !layers.length) return;
+
+    var still = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var wide = window.matchMedia('(min-height: 560px)');
+
+    var at = -1;
+    var queued = false;
+
+    function apply() {
+      queued = false;
+
+      if (still.matches || !wide.matches) {
+        if (at !== -1) {
+          at = -1;
+          host.style.removeProperty('--p');
+          layers.forEach(function (l) { l.removeAttribute('data-on'); });
+          if (ball.cutaway) ball.cutaway(0);
+        }
+        return;
+      }
+
+      var box = host.getBoundingClientRect();
+      var travel = box.height - pin.offsetHeight;
+      if (travel <= 0) return;
+
+      var p = Math.max(0, Math.min(1, -box.top / travel));
+      host.style.setProperty('--p', p.toFixed(3));
+
+      var n = Math.min(layers.length - 1, Math.floor(p * layers.length));
+      if (n !== at) {
+        at = n;
+        layers.forEach(function (l, i) {
+          if (i === n) l.setAttribute('data-on', '');
+          else l.removeAttribute('data-on');
+        });
+      }
+
+      if (ball.cutaway) ball.cutaway(p);
+    }
+
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(apply);
+    }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) {
+          window.addEventListener('scroll', schedule, { passive: true });
+          schedule();
+        } else {
+          window.removeEventListener('scroll', schedule);
+        }
+      }, { threshold: 0 }).observe(host);
+    } else {
+      window.addEventListener('scroll', schedule, { passive: true });
+    }
+
+    window.addEventListener('resize', schedule);
+    still.addEventListener('change', schedule);
+    wide.addEventListener('change', schedule);
+    schedule();
   }
 
   /**

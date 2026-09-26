@@ -59,16 +59,39 @@
      this site — the same version as three itself, and no second outside host.
      ====================================================================== */
   var models = {};
+  var draco = null;
+
+  /* One decoder for the page. Each DRACOLoader starts its own worker pool, so
+     a loader per ball would put several copies of a 190 KB decoder in memory
+     on a page that shows more than one. */
+  function dracoLoader(THREE, base) {
+    if (draco) return draco;
+    draco = new THREE.DRACOLoader();
+    draco.setDecoderPath(base + 'assets/js/vendor/');
+    /* JS over wasm only where wasm is unavailable; the wasm build is several
+       times faster to decode. */
+    draco.setDecoderConfig({ type: 'wasm' });
+    return draco;
+  }
 
   function loadModel(THREE, url) {
     if (models[url]) return models[url];
     var base = document.documentElement.getAttribute('data-base') || '';
-    models[url] = (THREE.GLTFLoader ? Promise.resolve() : loadScript(base + 'assets/js/vendor/GLTFLoader.js'))
-      .then(function () {
-        return new Promise(function (resolve, reject) {
-          new THREE.GLTFLoader().load(url, resolve, undefined, reject);
-        });
+
+    /* Both are needed before a model can be read: the models carry Draco
+       geometry, which GLTFLoader cannot decode on its own. */
+    var ready = Promise.all([
+      THREE.GLTFLoader ? null : loadScript(base + 'assets/js/vendor/GLTFLoader.js'),
+      THREE.DRACOLoader ? null : loadScript(base + 'assets/js/vendor/DRACOLoader.js'),
+    ]);
+
+    models[url] = ready.then(function () {
+      return new Promise(function (resolve, reject) {
+        var loader = new THREE.GLTFLoader();
+        loader.setDRACOLoader(dracoLoader(THREE, base));
+        loader.load(url, resolve, undefined, reject);
       });
+    });
     return models[url];
   }
 
@@ -746,6 +769,12 @@
          Read on scroll, applied in the loop — one measurement per frame at
          most, and none at all while the ball is off-screen. */
       var driven = opts.scroll === true && mode !== 'still';
+      /* Only the ball that leads a page rolls away; the ones inside cards and
+         on the technology page stay where they are put. */
+      var rolls = driven && opts.roll === true;
+      /* Tuned against the hero: the canvas already sits right of centre, so a
+         wide span carries the ball out of frame before the roll can be seen. */
+      var ROLL_SPAN = 0.5;
       var travel = 0, travelTo = 0;
       function measure() {
         var r = el.getBoundingClientRect();
@@ -796,6 +825,60 @@
           group.position.z = -Math.abs(away) * 0.9;
           var size = 1 - Math.abs(away) * 0.22;
           group.scale.set(size, size, size);
+
+          /* Rolling, for the ball that leads a page: it travels across as the
+             section leaves and turns by the distance it covered, so it reads
+             as a ball rolling out of frame rather than one sliding sideways
+             while spinning to its own time.
+
+             The ball is normalised to radius R, so an arc of d covers d / R
+             radians. Using that rather than a number picked by eye is what
+             keeps the surface still against the direction of travel. */
+          if (rolls) {
+            var across = away * ROLL_SPAN;
+            group.position.x = across;
+            ball.rotation.z = -across / R;
+          }
+        }
+
+        /* The cut, eased so a flung scroll opens the ball smoothly. Each plane
+           trails the one outside it by a slice of the radius, which is what
+           makes the layers appear one after another rather than all at once. */
+        if (shellCaps) {
+          cutAt += (cutTo - cutAt) * 0.10;
+          var ease = function (v) { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); };
+          var stage = function (from, span) { return ease((cutAt - from) / span); };
+
+          /* The shell: two rigid groups of real panels, pulled straight apart
+             along the ball's own axis. Because each group only translates —
+             nothing inside it moves relative to anything else in the same
+             group — the boundary between them stays exactly at the panel
+             edges it started at. */
+          var shellT = stage(0, 0.34);
+          shellCaps.top.position.y = shellT * R * 1.05;
+          shellCaps.bottom.position.y = -shellT * R * 1.05;
+
+          /* Foam, then lining: smooth caps, each waiting for the one outside
+             it to be most of the way open before it starts to show. */
+          var foamT = stage(0.16, 0.36);
+          foamCaps.top.position.y = foamT * R * 0.68;
+          foamCaps.bottom.position.y = -foamT * R * 0.68;
+          foamCaps.top.visible = foamCaps.bottom.visible = foamT > 0.02;
+
+          var liningT = stage(0.34, 0.36);
+          liningCaps.top.position.y = liningT * R * 0.40;
+          liningCaps.bottom.position.y = -liningT * R * 0.40;
+          liningCaps.top.visible = liningCaps.bottom.visible = liningT > 0.02;
+
+          /* The bladder sits still at the centre and simply appears once the
+             lining has cleared enough to show it. */
+          var bladderT = stage(0.52, 0.34);
+          bladder.visible = bladderT > 0.02;
+          bladder.scale.setScalar(0.9 + bladderT * 0.1);
+
+          /* The stack stands taller than the whole ball did, so the group
+             draws back as it opens to keep every piece in shot. */
+          ball.scale.setScalar(1 - cutAt * 0.5);
         }
         renderer.render(scene, camera);
       }
@@ -848,6 +931,114 @@
         if (mode === 'still') renderer.render(scene, camera);
       };
       api.spinning = function () { return spinning; };
+
+      /* ---- all four layers, stacked -------------------------------------- */
+      /* Built on the first call rather than up front: a page that never
+         scrolls to the section never pays for the geometry or the materials. */
+      var shellCaps = null, foamCaps = null, liningCaps = null, bladder = null;
+      var cutTo = 0, cutAt = 0;
+
+      /* A half sphere with a rim over the cut, for the two layers that have
+         no panel geometry of their own. */
+      function domeCap(radius, up, mat, rimMat) {
+        var seg = mode === 'low' ? 28 : 56;
+        var rings = mode === 'low' ? 14 : 28;
+        var geo = new THREE.SphereGeometry(radius, seg, rings, 0, Math.PI * 2, up ? 0 : Math.PI / 2, Math.PI / 2);
+        var g = new THREE.Group();
+        g.add(new THREE.Mesh(geo, mat));
+        var rim = new THREE.Mesh(new THREE.RingGeometry(radius * 0.92, radius, seg), rimMat || mat);
+        rim.rotation.x = -Math.PI / 2;
+        g.add(rim);
+        return g;
+      }
+
+      function buildLayers() {
+        if (shellCaps) return;
+
+        /* --- the shell: the model's own fourteen panels, sorted into a top
+           group and a bottom group by which side of the equator each one's
+           own centre sits on. Grouped rather than reparented, so every panel
+           keeps the exact position it was modelled at relative to the others
+           in its group — the cap is not reshaped, only carried. */
+        var top = new THREE.Group(), bottom = new THREE.Group();
+        var centre = new THREE.Vector3();
+
+        /* Collected first, reparented after: traverse() walks ball.children
+           by index as it goes, and add() below removes a node from wherever
+           it currently lives — reparenting mid-traversal shifts that same
+           array out from under the walk and silently skips every other
+           panel. */
+        var found = [];
+        ball.traverse(function (node) {
+          if (!node.isMesh || !node.geometry) return;
+          found.push(node);
+        });
+
+        ball.add(top, bottom);
+        ball.updateMatrixWorld(true);
+
+        found.forEach(function (node) {
+          if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
+          centre.copy(node.geometry.boundingSphere.center);
+          node.localToWorld(centre);
+          ball.worldToLocal(centre);
+          /* attach(), not add(): the panel is nested inside the model's own
+             normalising scale (modelBall() sets that on an inner node, not on
+             ball itself), several levels down. add() only carries a node's
+             local position and drops every transform between its old parent
+             and the new one — which is that whole scale — so the ball that
+             reappeared here was correct in every proportion and about twelve
+             times too small. attach() solves for the local matrix that keeps
+             the node's world position, rotation and scale exactly as they
+             were. */
+          (centre.y >= 0 ? top : bottom).attach(node);
+        });
+        shellCaps = { top: top, bottom: bottom };
+
+        /* --- foam and lining: smooth caps, one size step in from the last. */
+        var foamMat = new THREE.MeshStandardMaterial({ color: 0xDCCCAA, roughness: 0.95, side: THREE.DoubleSide });
+        var liningMat = new THREE.MeshStandardMaterial({ color: 0x5E6F95, roughness: 0.85, side: THREE.DoubleSide });
+
+        var foamTop = domeCap(R * 0.88, true, foamMat);
+        var foamBottom = domeCap(R * 0.88, false, foamMat);
+        foamTop.visible = foamBottom.visible = false;
+        ball.add(foamTop, foamBottom);
+        foamCaps = { top: foamTop, bottom: foamBottom };
+
+        var liningTop = domeCap(R * 0.78, true, liningMat);
+        var liningBottom = domeCap(R * 0.78, false, liningMat);
+        liningTop.visible = liningBottom.visible = false;
+        ball.add(liningTop, liningBottom);
+        liningCaps = { top: liningTop, bottom: liningBottom };
+
+        /* --- the bladder, whole, at the centre --------------------------- */
+        bladder = new THREE.Mesh(
+          new THREE.SphereGeometry(R * 0.66, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48),
+          new THREE.MeshPhysicalMaterial({ color: 0x17171A, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.15 })
+        );
+        bladder.visible = false;
+        ball.add(bladder);
+
+        var valve = new THREE.Mesh(
+          new THREE.CylinderGeometry(R * 0.035, R * 0.046, R * 0.09, 20),
+          new THREE.MeshStandardMaterial({ color: 0xB8B2A4, metalness: 0.9, roughness: 0.3 })
+        );
+        valve.position.y = R * 0.66;
+        bladder.add(valve);
+      }
+
+      /**
+       * How far open the ball is, 0 (whole) to 1 (every layer apart).
+       * Shell first, then foam, then lining, then the bladder settles.
+       */
+      api.cutaway = function (p) {
+        p = Math.max(0, Math.min(1, p || 0));
+        buildLayers();
+        cutTo = p;
+        wake();
+      };
+
+      api.cutOpen = function () { return cutAt; };
 
       /* So a control strip elsewhere in the page can find this viewer. */
       el.__ball = api;
@@ -913,7 +1104,8 @@
       zoom: zoom > 0 ? zoom : 1.22,
       interactive: el.getAttribute('data-ball-interactive') !== 'false',
       parallax: el.getAttribute('data-ball-parallax') === 'true',
-      scroll: el.getAttribute('data-ball-scroll') === 'true'
+      scroll: el.getAttribute('data-ball-scroll') === 'true',
+      roll: el.getAttribute('data-ball-roll') === 'true'
     });
   }
 

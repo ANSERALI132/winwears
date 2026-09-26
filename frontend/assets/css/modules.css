@@ -68,13 +68,52 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   text-transform: uppercase; max-width: 16ch;
 }
 .hero__title .ln { display: block; overflow: hidden; }
-.hero__title .ln > span {
-  display: block; transform: translateY(102%);
+/* Word by word rather than line by line. inline-block is what lets a word be
+   moved at all — an inline box ignores transform — and the space between the
+   spans in the markup is what keeps the words apart. */
+.hero__title .w {
+  display: inline-block; transform: translateY(102%);
   animation: heroLine 1.05s var(--e-out) forwards;
 }
-.hero__title .ln:nth-child(2) > span { animation-delay: .10s; }
-.hero__title .ln:nth-child(3) > span { animation-delay: .20s; }
+/* Spelled out per word rather than set from an inline style, so the markup
+   stays free of them. Roughly .07s apart, with a longer beat before the
+   maker line so it reads as a separate thought. */
+.hero__title .ln:nth-child(1) .w:nth-child(1) { animation-delay: 0s; }
+.hero__title .ln:nth-child(1) .w:nth-child(2) { animation-delay: .07s; }
+.hero__title .ln:nth-child(2) .w:nth-child(1) { animation-delay: .14s; }
+.hero__title .ln:nth-child(2) .w:nth-child(2) { animation-delay: .21s; }
+.hero__title .ln:nth-child(3) .w:nth-child(1) { animation-delay: .34s; }
+.hero__title .ln:nth-child(3) .w:nth-child(2) { animation-delay: .39s; }
+.hero__title .ln:nth-child(3) .w:nth-child(3) { animation-delay: .44s; }
+.hero__title .ln:nth-child(3) .w:nth-child(4) { animation-delay: .49s; }
+
 .hero__title em { font-style: normal; color: var(--red-500); }
+
+/* The shimmer on "style.": a pale sweep travelling through the crimson, on a
+   slow cycle so it reads as an occasional glint rather than a blinking light.
+   Every colour in the sweep is lighter than the base, so contrast on the navy
+   only ever improves — 3.95:1 at rest, up to 13.2:1 at the peak.
+
+   Guarded, because the text is painted by the gradient and made transparent
+   to show it. Without background-clip the word would be invisible rather than
+   merely unshimmered. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hero__title em {
+    background: linear-gradient(100deg,
+      var(--red-500) 42%, #FFC9CE 50%, var(--red-500) 58%);
+    background-size: 280% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: heroShimmer 6s var(--e-in-out) 1.4s infinite;
+  }
+}
+@keyframes heroShimmer {
+  0%, 62%, 100% { background-position: 100% 0; }
+  22%           { background-position: 0 0; }
+}
 /* The line that names the maker, set under the claim rather than beside it. */
 .hero__title .ln--maker {
   font-size: .30em; letter-spacing: var(--tr-wide); line-height: 1.3;
@@ -126,9 +165,17 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .page-hero--backdrop .wrap { position: relative; z-index: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__title .ln > span { transform: none; animation: none; }
+  .hero__title .ln > span,
+  .hero__title .w { transform: none; animation: none; }
   .hero__sub, .hero__actions { opacity: 1; animation: none; }
   .backdrop__layer { transition: none !important; }
+  /* The paint goes back to a flat colour. Stopping the animation alone would
+     leave the word transparent, because it is the gradient that draws it. */
+  .hero__title em {
+    background: none;
+    -webkit-text-fill-color: var(--red-500);
+    color: var(--red-500);
+  }
 }
 
 .hero__meta {
@@ -497,7 +544,99 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .tech__panel p { padding-bottom: 1.15rem; color: var(--on-dark-soft); font-size: var(--t-small); max-width: 52ch; }
 
 /* Exploded layer stack */
+/* --------------------------------------------------------------------------
+   Cutaway (technology)
+   The section holds still while the page scrolls past it, and that scroll
+   opens the ball. --p is the progress through it, 0 to 1, written by
+   technology.js; everything below reads it rather than measuring anything.
+   -------------------------------------------------------------------------- */
+.cutaway { --p: 0; }
+
+/* The track is what the visitor scrolls through; the panel inside it stays.
+   Only where there is room to hold a viewport still — on a short screen a
+   pinned section is a trap, so it stays an ordinary block. */
+@media (min-height: 560px) {
+  .cutaway[data-cutaway] {
+    display: block;
+    /* Enough travel for four layers to arrive without racing. */
+    height: 320vh;
+  }
+  .cutaway__pin {
+    position: sticky;
+    top: calc(var(--nav-h) + var(--s-5));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
+    gap: clamp(1.5rem, 1rem + 3vw, 4rem);
+    align-items: center;
+    min-height: calc(100vh - var(--nav-h) - var(--s-7));
+  }
+
+  /* On a narrow screen there is no room beside the ball, so the ball takes
+     the top and the layers read underneath it. */
+  @media (max-width: 900px) {
+    .cutaway__pin {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: var(--s-4);
+      top: var(--nav-h);
+      min-height: calc(100vh - var(--nav-h));
+      padding-block: var(--s-4);
+    }
+    /* The ball gives up height so four layers still fit under it. */
+    .cutaway__pin .tech__stage { max-height: 42vh; }
+    .cutaway .layer { padding: var(--s-3); }
+    .cutaway .layer__desc { display: none; }
+    /* The control strip is for turning a ball you can reach; while the section
+       is pinned and driving itself it only takes up room. */
+    .cutaway__pin .viewer-ctl { display: none; }
+  }
+}
+
 .exploded { display: grid; gap: var(--s-4); }
+
+/* A layer waits, then takes its turn — but only where the section is pinned
+   and something is actually driving the turns. Unpinned, nothing ever sets
+   data-on, so dimming here would leave all four permanently unreadable on
+   exactly the phones most of these buyers arrive on. */
+.cutaway .layer {
+  transition: opacity var(--d-mid) var(--e-out), transform var(--d-mid) var(--e-out),
+              border-color var(--d-mid) var(--e-out), background var(--d-mid) var(--e-out);
+}
+@media (min-height: 560px) {
+  .cutaway .layer { opacity: .38; }
+}
+.cutaway .layer[data-on] {
+  opacity: 1;
+  border-color: rgba(225, 19, 44, .45);
+  background: rgba(225, 19, 44, .05);
+}
+/* The connector: a line reaching from the card back towards the ball. It is
+   drawn only for the layer being shown, and only where the two sit side by
+   side — stacked on a narrow screen it would point at nothing. */
+@media (min-width: 901px) {
+  .cutaway .layer { position: relative; }
+  .cutaway .layer[data-on]::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    width: clamp(1rem, 4vw, 3.5rem);
+    height: 1px;
+    background: linear-gradient(to left, var(--red-500), transparent);
+    transform-origin: right center;
+    animation: cutLine var(--d-mid) var(--e-out) forwards;
+  }
+}
+@keyframes cutLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Nothing is pinned and nothing is scrubbed for a visitor who asked for less
+   motion: the section is an ordinary block and every layer is simply legible. */
+@media (prefers-reduced-motion: reduce) {
+  .cutaway[data-cutaway] { height: auto; }
+  .cutaway__pin { position: static; min-height: 0; }
+  .cutaway .layer { opacity: 1; }
+  .cutaway .layer[data-on]::before { animation: none; }
+}
 .layer {
   display: grid; grid-template-columns: 3rem 1fr; gap: var(--s-4); align-items: center;
   padding: var(--s-4); border: 1px solid var(--line-dark); border-radius: var(--r-md);
@@ -512,6 +651,87 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 }
 .layer__name { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: var(--tr-tight); font-size: var(--t-h4); }
 .layer__desc { font-size: var(--t-small); color: var(--on-dark-soft); margin-top: .2rem; }
+
+/* --------------------------------------------------------------------------
+   The rail (manufacturing)
+   Eleven stages held on screen while the page scrolls past them, travelling
+   sideways as it goes. --p is progress through the track, written by
+   manufacturing.js.
+
+   Only where there is room to hold a viewport still and lay a stage out
+   beside its film. Everywhere else — a phone, a short window, a visitor who
+   asked for less motion — none of this applies and the stages stay the
+   vertical read they already were, which is the better way to read eleven of
+   anything.
+   -------------------------------------------------------------------------- */
+.rail { --p: 0; }
+
+@media (min-width: 901px) and (min-height: 620px) {
+  .rail[data-rail] {
+    /* One viewport of travel per stage, near enough, so no stage races past. */
+    height: 700vh;
+    position: relative;
+  }
+  .rail__pin {
+    position: sticky;
+    top: var(--nav-h);
+    height: calc(100vh - var(--nav-h));
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: var(--s-3);
+    align-content: start;
+    padding-top: var(--s-5);
+    overflow: hidden;
+  }
+
+  .rail__pin .process {
+    display: flex;
+    gap: clamp(2rem, 1rem + 4vw, 5rem);
+    align-items: center;
+    height: 100%;
+    /* Driven from --p rather than from scrollLeft: a transform is composited,
+       and scrolling a container from JS fights the page's own scrolling. */
+    transform: translate3d(calc(var(--p) * -1 * var(--rail-travel, 0px)), 0, 0);
+    will-change: transform;
+  }
+  .rail__pin .process__step {
+    flex: 0 0 min(88vw, 1100px);
+    border: 0;
+    padding-block: 0;
+    height: 100%;
+    align-content: center;
+    /* The stage being read comes up to full strength; the others stay legible
+       but step back, so the eye knows where it is. */
+    opacity: .3;
+    transition: opacity var(--d-mid) var(--e-out);
+  }
+  .rail__pin .process__step[data-on] { opacity: 1; }
+  .rail__pin .process__step:last-child { border-bottom: 0; }
+  .rail__pin .process__video { max-height: min(52vh, 460px); }
+
+  .rail__count {
+    font-family: var(--font-mono); font-size: var(--t-micro);
+    letter-spacing: var(--tr-wide); color: var(--on-dark-soft);
+  }
+  .rail__count .rail__at { color: var(--red-400); font-weight: 700; }
+  .rail__bar { height: 2px; background: var(--line-dark); border-radius: var(--r-pill); overflow: hidden; }
+  .rail__bar i {
+    display: block; height: 100%; width: 100%; background: var(--red-500);
+    transform: scaleX(var(--p)); transform-origin: left;
+  }
+}
+
+/* Unpinned: the counter and bar describe a movement that is not happening. */
+@media (max-width: 900px), (max-height: 619px) {
+  .rail__count, .rail__bar { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail[data-rail] { height: auto; }
+  .rail__pin { position: static; height: auto; overflow: visible; padding-top: 0; }
+  .rail__pin .process { display: grid; transform: none; height: auto; }
+  .rail__pin .process__step { flex: none; opacity: 1; height: auto; }
+  .rail__count, .rail__bar { display: none; }
+}
 
 /* --------------------------------------------------------------------------
    Process timeline (manufacturing)
