@@ -59,16 +59,39 @@
      this site — the same version as three itself, and no second outside host.
      ====================================================================== */
   var models = {};
+  var draco = null;
+
+  /* One decoder for the page. Each DRACOLoader starts its own worker pool, so
+     a loader per ball would put several copies of a 190 KB decoder in memory
+     on a page that shows more than one. */
+  function dracoLoader(THREE, base) {
+    if (draco) return draco;
+    draco = new THREE.DRACOLoader();
+    draco.setDecoderPath(base + 'assets/js/vendor/');
+    /* JS over wasm only where wasm is unavailable; the wasm build is several
+       times faster to decode. */
+    draco.setDecoderConfig({ type: 'wasm' });
+    return draco;
+  }
 
   function loadModel(THREE, url) {
     if (models[url]) return models[url];
     var base = document.documentElement.getAttribute('data-base') || '';
-    models[url] = (THREE.GLTFLoader ? Promise.resolve() : loadScript(base + 'assets/js/vendor/GLTFLoader.js'))
-      .then(function () {
-        return new Promise(function (resolve, reject) {
-          new THREE.GLTFLoader().load(url, resolve, undefined, reject);
-        });
+
+    /* Both are needed before a model can be read: the models carry Draco
+       geometry, which GLTFLoader cannot decode on its own. */
+    var ready = Promise.all([
+      THREE.GLTFLoader ? null : loadScript(base + 'assets/js/vendor/GLTFLoader.js'),
+      THREE.DRACOLoader ? null : loadScript(base + 'assets/js/vendor/DRACOLoader.js'),
+    ]);
+
+    models[url] = ready.then(function () {
+      return new Promise(function (resolve, reject) {
+        var loader = new THREE.GLTFLoader();
+        loader.setDRACOLoader(dracoLoader(THREE, base));
+        loader.load(url, resolve, undefined, reject);
       });
+    });
     return models[url];
   }
 
