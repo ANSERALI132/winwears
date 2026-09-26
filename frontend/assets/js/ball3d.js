@@ -844,30 +844,37 @@
         /* The cut, eased so a flung scroll opens the ball smoothly. Each plane
            trails the one outside it by a slice of the radius, which is what
            makes the layers appear one after another rather than all at once. */
-        if (planes) {
+        if (panels) {
           cutAt += (cutTo - cutAt) * 0.10;
 
-          for (var pi = 0; pi < planes.length; pi++) {
-            var lag = pi * 0.26;
-            var open = Math.max(0, Math.min(1, (cutAt - lag) / (1 - lag || 1)));
-            /* Past the centre, not up to it: stopping at the middle leaves a
-               notch in the edge rather than a way in. */
-            planes[pi].constant = R * 1.4 - open * (R * 1.95);
+          /* Each panel travels straight out along its own direction. Nothing
+             is clipped, so the artwork on every panel stays whole. */
+          for (var pi = 0; pi < panels.length; pi++) {
+            var panel = panels[pi];
+            /* Staggered from the top down, and each panel still has most of
+               the scroll to make its move in. */
+            var from = panel.order * 0.35;
+            var t = Math.max(0, Math.min(1, (cutAt - from) / 0.55));
+            t = t * t * (3 - 2 * t);
+
+            var lift = t * R * 1.25;
+            panel.node.position.set(
+              panel.home.x + panel.dir.x * lift,
+              panel.home.y + panel.dir.y * lift,
+              panel.home.z + panel.dir.z * lift
+            );
           }
 
-          /* Each layer thins out once the one beneath it is what matters. The
-             skin leads, so by the time the bladder is being named there are
-             three ghosts in front of it rather than three walls. */
-          if (skinMats) {
-            var skinFade = 1 - Math.max(0, Math.min(1, (cutAt - 0.12) / 0.5)) * 0.82;
-            for (var si = 0; si < skinMats.length; si++) skinMats[si].opacity = skinFade;
+          /* The layers beneath, each waiting for the one outside it. */
+          for (var ii = 0; ii < inners.length; ii++) {
+            var show = Math.max(0, Math.min(1, (cutAt - (0.18 + ii * 0.2)) / 0.3));
+            inners[ii].visible = show > 0.01;
+            inners[ii].scale.setScalar(0.92 + show * 0.08);
           }
-          for (var ci = 0; ci < shells.length; ci++) {
-            var from = 0.26 + ci * 0.26;
-            var fade = 1 - Math.max(0, Math.min(1, (cutAt - from) / 0.42)) * 0.78;
-            shells[ci].material.transparent = fade < 0.999;
-            shells[ci].material.opacity = fade;
-          }
+
+          /* Opened, the panels stand well clear of the ball, so the whole
+             group draws back to keep them in shot. */
+          ball.scale.setScalar(1 - cutAt * 0.42);
         }
         renderer.render(scene, camera);
       }
@@ -921,82 +928,88 @@
       };
       api.spinning = function () { return spinning; };
 
-      /* ---- cutaway ------------------------------------------------------ */
-      /* Built on the first call rather than up front: a page that never scrolls
-         to the section never pays for the geometry or the materials. */
-      var shells = null;
-      var planes = null;
-      var skinMats = null;
+      /* ---- opening panel by panel --------------------------------------- */
+      /* Built on the first call rather than up front: a page that never
+         scrolls to the section never pays for the geometry or the materials. */
+      var panels = null;
+      var inners = null;
       var cutTo = 0, cutAt = 0;
 
-      /* Inner layers, outermost first. Radii are a fraction of the ball's own,
-         and the colours say what each one is rather than trying to be a
-         photograph of it: this is a diagram, not a scan. */
+      /* What sits under the panels. Radii leave a clear step between each, or
+         the stack reads as one thick ball rather than four materials. */
       var LAYERS = [
-        { r: 0.94, colour: 0x16264F, rough: 0.45, metal: 0.0 },  /* panels  */
-        { r: 0.86, colour: 0xE8E4DA, rough: 0.92, metal: 0.0 },  /* lining  */
-        { r: 0.77, colour: 0x2B2F38, rough: 0.35, metal: 0.0 }   /* bladder */
+        { r: 0.88, colour: 0xDCCCAA, rough: 0.95 },   /* foam    */
+        { r: 0.78, colour: 0x5E6F95, rough: 0.85 },   /* lining  */
+        { r: 0.68, colour: 0x17171A, rough: 0.25 }    /* bladder */
       ];
 
-      function buildCutaway() {
-        if (shells) return;
-        renderer.localClippingEnabled = true;
+      function buildPanels() {
+        if (panels) return;
+        panels = [];
+        inners = [];
 
-        /* One plane per depth, all facing the same way. Sweeping their
-           constants together is what opens the ball. */
-        planes = [];
-        shells = [];
-
-        var facingCamera = new THREE.Vector3(0.55, 0.35, 1).normalize();
-        for (var i = 0; i <= LAYERS.length; i++) {
-          planes.push(new THREE.Plane(facingCamera.clone(), R * 1.4));
-        }
-
-        /* The model's own materials get the outermost plane. */
-        skinMats = [];
+        /* Every mesh in the model is a panel. Each one's own centre, taken
+           from its geometry rather than guessed, gives the direction it has
+           to travel to come straight off the ball. */
+        var centre = new THREE.Vector3();
         ball.traverse(function (node) {
-          if (!node.isMesh || !node.material) return;
-          var mats = Array.isArray(node.material) ? node.material : [node.material];
-          mats.forEach(function (m) {
-            m.clippingPlanes = [planes[0]];
-            m.clipShadows = true;
-            m.side = THREE.DoubleSide;
-            /* Needed before opacity means anything, and the depth write has to
-               go with it or the shells behind a ghosted skin are hidden by it. */
-            m.transparent = true;
-            m.depthWrite = true;
-            m.needsUpdate = true;
-            skinMats.push(m);
+          if (!node.isMesh || !node.geometry) return;
+          if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
+
+          centre.copy(node.geometry.boundingSphere.center);
+          node.localToWorld(centre);
+          ball.worldToLocal(centre);
+
+          var dir = centre.clone();
+          /* A panel sitting exactly on the centre has no outward direction to
+             use; nothing in a ball should, but a stray helper mesh might. */
+          if (dir.lengthSq() < 1e-6) dir.set(0, 1, 0);
+          dir.normalize();
+
+          panels.push({
+            node: node,
+            dir: dir,
+            home: node.position.clone(),
+            /* Top panels leave first, so it opens from the top down rather
+               than every panel jumping at once. */
+            order: (1 - (dir.y + 1) / 2)
           });
         });
 
+        /* The layers under them. */
         LAYERS.forEach(function (layer, i) {
-          var geo = new THREE.SphereGeometry(R * layer.r, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48);
-          var mat = new THREE.MeshStandardMaterial({
-            color: layer.colour,
-            roughness: layer.rough,
-            metalness: layer.metal,
-            /* Double-sided, or the inside of the cut shell reads as a hole. */
-            side: THREE.DoubleSide,
-            clippingPlanes: [planes[i + 1]],
-            clipShadows: true
-          });
-          var mesh = new THREE.Mesh(geo, mat);
+          var mat = i === 2
+            ? new THREE.MeshPhysicalMaterial({
+                color: layer.colour, roughness: layer.rough, clearcoat: 1, clearcoatRoughness: 0.15
+              })
+            : new THREE.MeshStandardMaterial({ color: layer.colour, roughness: layer.rough });
+
+          var mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(R * layer.r, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48),
+            mat
+          );
           mesh.visible = false;
           ball.add(mesh);
-          shells.push(mesh);
+          inners.push(mesh);
         });
+
+        /* The valve, because a bladder without one is a black sphere. */
+        var valve = new THREE.Mesh(
+          new THREE.CylinderGeometry(R * 0.035, R * 0.046, R * 0.09, 20),
+          new THREE.MeshStandardMaterial({ color: 0xB8B2A4, metalness: 0.9, roughness: 0.3 })
+        );
+        valve.position.y = R * LAYERS[2].r;
+        inners[2].add(valve);
       }
 
       /**
-       * How far open the ball is, 0 (whole) to 1 (cut to the centre).
-       * Each layer trails the one outside it, so they peel back in order.
+       * How far open the ball is, 0 (whole) to 1 (panels fully clear).
+       * The panels go first, then each layer beneath appears in turn.
        */
       api.cutaway = function (p) {
         p = Math.max(0, Math.min(1, p || 0));
-        buildCutaway();
+        buildPanels();
         cutTo = p;
-        shells.forEach(function (m) { m.visible = p > 0.001; });
         wake();
       };
 

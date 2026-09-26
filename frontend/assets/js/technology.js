@@ -43,7 +43,10 @@
     if (!pin || !layers.length) return;
 
     var still = window.matchMedia('(prefers-reduced-motion: reduce)');
-    var wide = window.matchMedia('(min-width: 901px) and (min-height: 620px)');
+    /* Phones get the cutaway too — the layout changes rather than the
+       section being withheld. Only a screen too short to hold a pinned
+       viewport is left as an ordinary block. */
+    var wide = window.matchMedia('(min-height: 560px)');
 
     var at = -1;
     var queued = false;

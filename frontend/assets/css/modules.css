@@ -555,7 +555,7 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 /* The track is what the visitor scrolls through; the panel inside it stays.
    Only where there is room to hold a viewport still — on a short screen a
    pinned section is a trap, so it stays an ordinary block. */
-@media (min-width: 901px) and (min-height: 620px) {
+@media (min-height: 560px) {
   .cutaway[data-cutaway] {
     display: block;
     /* Enough travel for four layers to arrive without racing. */
@@ -570,6 +570,26 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
     align-items: center;
     min-height: calc(100vh - var(--nav-h) - var(--s-7));
   }
+
+  /* On a narrow screen there is no room beside the ball, so the ball takes
+     the top and the layers read underneath it. */
+  @media (max-width: 900px) {
+    .cutaway__pin {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: var(--s-4);
+      top: var(--nav-h);
+      min-height: calc(100vh - var(--nav-h));
+      padding-block: var(--s-4);
+    }
+    /* The ball gives up height so four layers still fit under it. */
+    .cutaway__pin .tech__stage { max-height: 42vh; }
+    .cutaway .layer { padding: var(--s-3); }
+    .cutaway .layer__desc { display: none; }
+    /* The control strip is for turning a ball you can reach; while the section
+       is pinned and driving itself it only takes up room. */
+    .cutaway__pin .viewer-ctl { display: none; }
+  }
 }
 
 .exploded { display: grid; gap: var(--s-4); }
@@ -582,7 +602,7 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   transition: opacity var(--d-mid) var(--e-out), transform var(--d-mid) var(--e-out),
               border-color var(--d-mid) var(--e-out), background var(--d-mid) var(--e-out);
 }
-@media (min-width: 901px) and (min-height: 620px) {
+@media (min-height: 560px) {
   .cutaway .layer { opacity: .38; }
 }
 .cutaway .layer[data-on] {
