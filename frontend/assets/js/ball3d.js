@@ -840,6 +840,35 @@
             ball.rotation.z = -across / R;
           }
         }
+
+        /* The cut, eased so a flung scroll opens the ball smoothly. Each plane
+           trails the one outside it by a slice of the radius, which is what
+           makes the layers appear one after another rather than all at once. */
+        if (planes) {
+          cutAt += (cutTo - cutAt) * 0.10;
+
+          for (var pi = 0; pi < planes.length; pi++) {
+            var lag = pi * 0.26;
+            var open = Math.max(0, Math.min(1, (cutAt - lag) / (1 - lag || 1)));
+            /* Past the centre, not up to it: stopping at the middle leaves a
+               notch in the edge rather than a way in. */
+            planes[pi].constant = R * 1.4 - open * (R * 1.95);
+          }
+
+          /* Each layer thins out once the one beneath it is what matters. The
+             skin leads, so by the time the bladder is being named there are
+             three ghosts in front of it rather than three walls. */
+          if (skinMats) {
+            var skinFade = 1 - Math.max(0, Math.min(1, (cutAt - 0.12) / 0.5)) * 0.82;
+            for (var si = 0; si < skinMats.length; si++) skinMats[si].opacity = skinFade;
+          }
+          for (var ci = 0; ci < shells.length; ci++) {
+            var from = 0.26 + ci * 0.26;
+            var fade = 1 - Math.max(0, Math.min(1, (cutAt - from) / 0.42)) * 0.78;
+            shells[ci].material.transparent = fade < 0.999;
+            shells[ci].material.opacity = fade;
+          }
+        }
         renderer.render(scene, camera);
       }
 
@@ -891,6 +920,87 @@
         if (mode === 'still') renderer.render(scene, camera);
       };
       api.spinning = function () { return spinning; };
+
+      /* ---- cutaway ------------------------------------------------------ */
+      /* Built on the first call rather than up front: a page that never scrolls
+         to the section never pays for the geometry or the materials. */
+      var shells = null;
+      var planes = null;
+      var skinMats = null;
+      var cutTo = 0, cutAt = 0;
+
+      /* Inner layers, outermost first. Radii are a fraction of the ball's own,
+         and the colours say what each one is rather than trying to be a
+         photograph of it: this is a diagram, not a scan. */
+      var LAYERS = [
+        { r: 0.94, colour: 0x16264F, rough: 0.45, metal: 0.0 },  /* panels  */
+        { r: 0.86, colour: 0xE8E4DA, rough: 0.92, metal: 0.0 },  /* lining  */
+        { r: 0.77, colour: 0x2B2F38, rough: 0.35, metal: 0.0 }   /* bladder */
+      ];
+
+      function buildCutaway() {
+        if (shells) return;
+        renderer.localClippingEnabled = true;
+
+        /* One plane per depth, all facing the same way. Sweeping their
+           constants together is what opens the ball. */
+        planes = [];
+        shells = [];
+
+        var facingCamera = new THREE.Vector3(0.55, 0.35, 1).normalize();
+        for (var i = 0; i <= LAYERS.length; i++) {
+          planes.push(new THREE.Plane(facingCamera.clone(), R * 1.4));
+        }
+
+        /* The model's own materials get the outermost plane. */
+        skinMats = [];
+        ball.traverse(function (node) {
+          if (!node.isMesh || !node.material) return;
+          var mats = Array.isArray(node.material) ? node.material : [node.material];
+          mats.forEach(function (m) {
+            m.clippingPlanes = [planes[0]];
+            m.clipShadows = true;
+            m.side = THREE.DoubleSide;
+            /* Needed before opacity means anything, and the depth write has to
+               go with it or the shells behind a ghosted skin are hidden by it. */
+            m.transparent = true;
+            m.depthWrite = true;
+            m.needsUpdate = true;
+            skinMats.push(m);
+          });
+        });
+
+        LAYERS.forEach(function (layer, i) {
+          var geo = new THREE.SphereGeometry(R * layer.r, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48);
+          var mat = new THREE.MeshStandardMaterial({
+            color: layer.colour,
+            roughness: layer.rough,
+            metalness: layer.metal,
+            /* Double-sided, or the inside of the cut shell reads as a hole. */
+            side: THREE.DoubleSide,
+            clippingPlanes: [planes[i + 1]],
+            clipShadows: true
+          });
+          var mesh = new THREE.Mesh(geo, mat);
+          mesh.visible = false;
+          ball.add(mesh);
+          shells.push(mesh);
+        });
+      }
+
+      /**
+       * How far open the ball is, 0 (whole) to 1 (cut to the centre).
+       * Each layer trails the one outside it, so they peel back in order.
+       */
+      api.cutaway = function (p) {
+        p = Math.max(0, Math.min(1, p || 0));
+        buildCutaway();
+        cutTo = p;
+        shells.forEach(function (m) { m.visible = p > 0.001; });
+        wake();
+      };
+
+      api.cutOpen = function () { return cutAt; };
 
       /* So a control strip elsewhere in the page can find this viewer. */
       el.__ball = api;

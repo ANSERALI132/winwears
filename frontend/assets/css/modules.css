@@ -544,7 +544,79 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .tech__panel p { padding-bottom: 1.15rem; color: var(--on-dark-soft); font-size: var(--t-small); max-width: 52ch; }
 
 /* Exploded layer stack */
+/* --------------------------------------------------------------------------
+   Cutaway (technology)
+   The section holds still while the page scrolls past it, and that scroll
+   opens the ball. --p is the progress through it, 0 to 1, written by
+   technology.js; everything below reads it rather than measuring anything.
+   -------------------------------------------------------------------------- */
+.cutaway { --p: 0; }
+
+/* The track is what the visitor scrolls through; the panel inside it stays.
+   Only where there is room to hold a viewport still — on a short screen a
+   pinned section is a trap, so it stays an ordinary block. */
+@media (min-width: 901px) and (min-height: 620px) {
+  .cutaway[data-cutaway] {
+    display: block;
+    /* Enough travel for four layers to arrive without racing. */
+    height: 320vh;
+  }
+  .cutaway__pin {
+    position: sticky;
+    top: calc(var(--nav-h) + var(--s-5));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
+    gap: clamp(1.5rem, 1rem + 3vw, 4rem);
+    align-items: center;
+    min-height: calc(100vh - var(--nav-h) - var(--s-7));
+  }
+}
+
 .exploded { display: grid; gap: var(--s-4); }
+
+/* A layer waits, then takes its turn — but only where the section is pinned
+   and something is actually driving the turns. Unpinned, nothing ever sets
+   data-on, so dimming here would leave all four permanently unreadable on
+   exactly the phones most of these buyers arrive on. */
+.cutaway .layer {
+  transition: opacity var(--d-mid) var(--e-out), transform var(--d-mid) var(--e-out),
+              border-color var(--d-mid) var(--e-out), background var(--d-mid) var(--e-out);
+}
+@media (min-width: 901px) and (min-height: 620px) {
+  .cutaway .layer { opacity: .38; }
+}
+.cutaway .layer[data-on] {
+  opacity: 1;
+  border-color: rgba(225, 19, 44, .45);
+  background: rgba(225, 19, 44, .05);
+}
+/* The connector: a line reaching from the card back towards the ball. It is
+   drawn only for the layer being shown, and only where the two sit side by
+   side — stacked on a narrow screen it would point at nothing. */
+@media (min-width: 901px) {
+  .cutaway .layer { position: relative; }
+  .cutaway .layer[data-on]::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    width: clamp(1rem, 4vw, 3.5rem);
+    height: 1px;
+    background: linear-gradient(to left, var(--red-500), transparent);
+    transform-origin: right center;
+    animation: cutLine var(--d-mid) var(--e-out) forwards;
+  }
+}
+@keyframes cutLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Nothing is pinned and nothing is scrubbed for a visitor who asked for less
+   motion: the section is an ordinary block and every layer is simply legible. */
+@media (prefers-reduced-motion: reduce) {
+  .cutaway[data-cutaway] { height: auto; }
+  .cutaway__pin { position: static; min-height: 0; }
+  .cutaway .layer { opacity: 1; }
+  .cutaway .layer[data-on]::before { animation: none; }
+}
 .layer {
   display: grid; grid-template-columns: 3rem 1fr; gap: var(--s-4); align-items: center;
   padding: var(--s-4); border: 1px solid var(--line-dark); border-radius: var(--r-md);
