@@ -844,37 +844,41 @@
         /* The cut, eased so a flung scroll opens the ball smoothly. Each plane
            trails the one outside it by a slice of the radius, which is what
            makes the layers appear one after another rather than all at once. */
-        if (panels) {
+        if (shellCaps) {
           cutAt += (cutTo - cutAt) * 0.10;
+          var ease = function (v) { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); };
+          var stage = function (from, span) { return ease((cutAt - from) / span); };
 
-          /* Each panel travels straight out along its own direction. Nothing
-             is clipped, so the artwork on every panel stays whole. */
-          for (var pi = 0; pi < panels.length; pi++) {
-            var panel = panels[pi];
-            /* Staggered from the top down, and each panel still has most of
-               the scroll to make its move in. */
-            var from = panel.order * 0.35;
-            var t = Math.max(0, Math.min(1, (cutAt - from) / 0.55));
-            t = t * t * (3 - 2 * t);
+          /* The shell: two rigid groups of real panels, pulled straight apart
+             along the ball's own axis. Because each group only translates —
+             nothing inside it moves relative to anything else in the same
+             group — the boundary between them stays exactly at the panel
+             edges it started at. */
+          var shellT = stage(0, 0.34);
+          shellCaps.top.position.y = shellT * R * 1.05;
+          shellCaps.bottom.position.y = -shellT * R * 1.05;
 
-            var lift = t * R * 1.25;
-            panel.node.position.set(
-              panel.home.x + panel.dir.x * lift,
-              panel.home.y + panel.dir.y * lift,
-              panel.home.z + panel.dir.z * lift
-            );
-          }
+          /* Foam, then lining: smooth caps, each waiting for the one outside
+             it to be most of the way open before it starts to show. */
+          var foamT = stage(0.16, 0.36);
+          foamCaps.top.position.y = foamT * R * 0.68;
+          foamCaps.bottom.position.y = -foamT * R * 0.68;
+          foamCaps.top.visible = foamCaps.bottom.visible = foamT > 0.02;
 
-          /* The layers beneath, each waiting for the one outside it. */
-          for (var ii = 0; ii < inners.length; ii++) {
-            var show = Math.max(0, Math.min(1, (cutAt - (0.18 + ii * 0.2)) / 0.3));
-            inners[ii].visible = show > 0.01;
-            inners[ii].scale.setScalar(0.92 + show * 0.08);
-          }
+          var liningT = stage(0.34, 0.36);
+          liningCaps.top.position.y = liningT * R * 0.40;
+          liningCaps.bottom.position.y = -liningT * R * 0.40;
+          liningCaps.top.visible = liningCaps.bottom.visible = liningT > 0.02;
 
-          /* Opened, the panels stand well clear of the ball, so the whole
-             group draws back to keep them in shot. */
-          ball.scale.setScalar(1 - cutAt * 0.42);
+          /* The bladder sits still at the centre and simply appears once the
+             lining has cleared enough to show it. */
+          var bladderT = stage(0.52, 0.34);
+          bladder.visible = bladderT > 0.02;
+          bladder.scale.setScalar(0.9 + bladderT * 0.1);
+
+          /* The stack stands taller than the whole ball did, so the group
+             draws back as it opens to keep every piece in shot. */
+          ball.scale.setScalar(1 - cutAt * 0.5);
         }
         renderer.render(scene, camera);
       }
@@ -928,87 +932,108 @@
       };
       api.spinning = function () { return spinning; };
 
-      /* ---- opening panel by panel --------------------------------------- */
+      /* ---- all four layers, stacked -------------------------------------- */
       /* Built on the first call rather than up front: a page that never
          scrolls to the section never pays for the geometry or the materials. */
-      var panels = null;
-      var inners = null;
+      var shellCaps = null, foamCaps = null, liningCaps = null, bladder = null;
       var cutTo = 0, cutAt = 0;
 
-      /* What sits under the panels. Radii leave a clear step between each, or
-         the stack reads as one thick ball rather than four materials. */
-      var LAYERS = [
-        { r: 0.88, colour: 0xDCCCAA, rough: 0.95 },   /* foam    */
-        { r: 0.78, colour: 0x5E6F95, rough: 0.85 },   /* lining  */
-        { r: 0.68, colour: 0x17171A, rough: 0.25 }    /* bladder */
-      ];
+      /* A half sphere with a rim over the cut, for the two layers that have
+         no panel geometry of their own. */
+      function domeCap(radius, up, mat, rimMat) {
+        var seg = mode === 'low' ? 28 : 56;
+        var rings = mode === 'low' ? 14 : 28;
+        var geo = new THREE.SphereGeometry(radius, seg, rings, 0, Math.PI * 2, up ? 0 : Math.PI / 2, Math.PI / 2);
+        var g = new THREE.Group();
+        g.add(new THREE.Mesh(geo, mat));
+        var rim = new THREE.Mesh(new THREE.RingGeometry(radius * 0.92, radius, seg), rimMat || mat);
+        rim.rotation.x = -Math.PI / 2;
+        g.add(rim);
+        return g;
+      }
 
-      function buildPanels() {
-        if (panels) return;
-        panels = [];
-        inners = [];
+      function buildLayers() {
+        if (shellCaps) return;
 
-        /* Every mesh in the model is a panel. Each one's own centre, taken
-           from its geometry rather than guessed, gives the direction it has
-           to travel to come straight off the ball. */
+        /* --- the shell: the model's own fourteen panels, sorted into a top
+           group and a bottom group by which side of the equator each one's
+           own centre sits on. Grouped rather than reparented, so every panel
+           keeps the exact position it was modelled at relative to the others
+           in its group — the cap is not reshaped, only carried. */
+        var top = new THREE.Group(), bottom = new THREE.Group();
         var centre = new THREE.Vector3();
+
+        /* Collected first, reparented after: traverse() walks ball.children
+           by index as it goes, and add() below removes a node from wherever
+           it currently lives — reparenting mid-traversal shifts that same
+           array out from under the walk and silently skips every other
+           panel. */
+        var found = [];
         ball.traverse(function (node) {
           if (!node.isMesh || !node.geometry) return;
-          if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
+          found.push(node);
+        });
 
+        ball.add(top, bottom);
+        ball.updateMatrixWorld(true);
+
+        found.forEach(function (node) {
+          if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
           centre.copy(node.geometry.boundingSphere.center);
           node.localToWorld(centre);
           ball.worldToLocal(centre);
-
-          var dir = centre.clone();
-          /* A panel sitting exactly on the centre has no outward direction to
-             use; nothing in a ball should, but a stray helper mesh might. */
-          if (dir.lengthSq() < 1e-6) dir.set(0, 1, 0);
-          dir.normalize();
-
-          panels.push({
-            node: node,
-            dir: dir,
-            home: node.position.clone(),
-            /* Top panels leave first, so it opens from the top down rather
-               than every panel jumping at once. */
-            order: (1 - (dir.y + 1) / 2)
-          });
+          /* attach(), not add(): the panel is nested inside the model's own
+             normalising scale (modelBall() sets that on an inner node, not on
+             ball itself), several levels down. add() only carries a node's
+             local position and drops every transform between its old parent
+             and the new one — which is that whole scale — so the ball that
+             reappeared here was correct in every proportion and about twelve
+             times too small. attach() solves for the local matrix that keeps
+             the node's world position, rotation and scale exactly as they
+             were. */
+          (centre.y >= 0 ? top : bottom).attach(node);
         });
+        shellCaps = { top: top, bottom: bottom };
 
-        /* The layers under them. */
-        LAYERS.forEach(function (layer, i) {
-          var mat = i === 2
-            ? new THREE.MeshPhysicalMaterial({
-                color: layer.colour, roughness: layer.rough, clearcoat: 1, clearcoatRoughness: 0.15
-              })
-            : new THREE.MeshStandardMaterial({ color: layer.colour, roughness: layer.rough });
+        /* --- foam and lining: smooth caps, one size step in from the last. */
+        var foamMat = new THREE.MeshStandardMaterial({ color: 0xDCCCAA, roughness: 0.95, side: THREE.DoubleSide });
+        var liningMat = new THREE.MeshStandardMaterial({ color: 0x5E6F95, roughness: 0.85, side: THREE.DoubleSide });
 
-          var mesh = new THREE.Mesh(
-            new THREE.SphereGeometry(R * layer.r, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48),
-            mat
-          );
-          mesh.visible = false;
-          ball.add(mesh);
-          inners.push(mesh);
-        });
+        var foamTop = domeCap(R * 0.88, true, foamMat);
+        var foamBottom = domeCap(R * 0.88, false, foamMat);
+        foamTop.visible = foamBottom.visible = false;
+        ball.add(foamTop, foamBottom);
+        foamCaps = { top: foamTop, bottom: foamBottom };
 
-        /* The valve, because a bladder without one is a black sphere. */
+        var liningTop = domeCap(R * 0.78, true, liningMat);
+        var liningBottom = domeCap(R * 0.78, false, liningMat);
+        liningTop.visible = liningBottom.visible = false;
+        ball.add(liningTop, liningBottom);
+        liningCaps = { top: liningTop, bottom: liningBottom };
+
+        /* --- the bladder, whole, at the centre --------------------------- */
+        bladder = new THREE.Mesh(
+          new THREE.SphereGeometry(R * 0.66, mode === 'low' ? 32 : 64, mode === 'low' ? 24 : 48),
+          new THREE.MeshPhysicalMaterial({ color: 0x17171A, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.15 })
+        );
+        bladder.visible = false;
+        ball.add(bladder);
+
         var valve = new THREE.Mesh(
           new THREE.CylinderGeometry(R * 0.035, R * 0.046, R * 0.09, 20),
           new THREE.MeshStandardMaterial({ color: 0xB8B2A4, metalness: 0.9, roughness: 0.3 })
         );
-        valve.position.y = R * LAYERS[2].r;
-        inners[2].add(valve);
+        valve.position.y = R * 0.66;
+        bladder.add(valve);
       }
 
       /**
-       * How far open the ball is, 0 (whole) to 1 (panels fully clear).
-       * The panels go first, then each layer beneath appears in turn.
+       * How far open the ball is, 0 (whole) to 1 (every layer apart).
+       * Shell first, then foam, then lining, then the bladder settles.
        */
       api.cutaway = function (p) {
         p = Math.max(0, Math.min(1, p || 0));
-        buildPanels();
+        buildLayers();
         cutTo = p;
         wake();
       };
