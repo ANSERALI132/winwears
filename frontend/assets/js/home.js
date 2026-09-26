@@ -91,7 +91,9 @@
         parallax: true,
         /* Turns and falls back into depth as the hero leaves, so scrolling
            past reads as moving past the ball. */
-        scroll: true
+        scroll: true,
+        /* And rolls across as it goes, rather than spinning on the spot. */
+        roll: true
       });
     }
 

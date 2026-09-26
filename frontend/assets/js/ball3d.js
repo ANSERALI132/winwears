@@ -769,6 +769,12 @@
          Read on scroll, applied in the loop — one measurement per frame at
          most, and none at all while the ball is off-screen. */
       var driven = opts.scroll === true && mode !== 'still';
+      /* Only the ball that leads a page rolls away; the ones inside cards and
+         on the technology page stay where they are put. */
+      var rolls = driven && opts.roll === true;
+      /* Tuned against the hero: the canvas already sits right of centre, so a
+         wide span carries the ball out of frame before the roll can be seen. */
+      var ROLL_SPAN = 0.5;
       var travel = 0, travelTo = 0;
       function measure() {
         var r = el.getBoundingClientRect();
@@ -819,6 +825,20 @@
           group.position.z = -Math.abs(away) * 0.9;
           var size = 1 - Math.abs(away) * 0.22;
           group.scale.set(size, size, size);
+
+          /* Rolling, for the ball that leads a page: it travels across as the
+             section leaves and turns by the distance it covered, so it reads
+             as a ball rolling out of frame rather than one sliding sideways
+             while spinning to its own time.
+
+             The ball is normalised to radius R, so an arc of d covers d / R
+             radians. Using that rather than a number picked by eye is what
+             keeps the surface still against the direction of travel. */
+          if (rolls) {
+            var across = away * ROLL_SPAN;
+            group.position.x = across;
+            ball.rotation.z = -across / R;
+          }
         }
         renderer.render(scene, camera);
       }
@@ -936,7 +956,8 @@
       zoom: zoom > 0 ? zoom : 1.22,
       interactive: el.getAttribute('data-ball-interactive') !== 'false',
       parallax: el.getAttribute('data-ball-parallax') === 'true',
-      scroll: el.getAttribute('data-ball-scroll') === 'true'
+      scroll: el.getAttribute('data-ball-scroll') === 'true',
+      roll: el.getAttribute('data-ball-roll') === 'true'
     });
   }
 

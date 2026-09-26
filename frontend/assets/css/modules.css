@@ -68,13 +68,52 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
   text-transform: uppercase; max-width: 16ch;
 }
 .hero__title .ln { display: block; overflow: hidden; }
-.hero__title .ln > span {
-  display: block; transform: translateY(102%);
+/* Word by word rather than line by line. inline-block is what lets a word be
+   moved at all — an inline box ignores transform — and the space between the
+   spans in the markup is what keeps the words apart. */
+.hero__title .w {
+  display: inline-block; transform: translateY(102%);
   animation: heroLine 1.05s var(--e-out) forwards;
 }
-.hero__title .ln:nth-child(2) > span { animation-delay: .10s; }
-.hero__title .ln:nth-child(3) > span { animation-delay: .20s; }
+/* Spelled out per word rather than set from an inline style, so the markup
+   stays free of them. Roughly .07s apart, with a longer beat before the
+   maker line so it reads as a separate thought. */
+.hero__title .ln:nth-child(1) .w:nth-child(1) { animation-delay: 0s; }
+.hero__title .ln:nth-child(1) .w:nth-child(2) { animation-delay: .07s; }
+.hero__title .ln:nth-child(2) .w:nth-child(1) { animation-delay: .14s; }
+.hero__title .ln:nth-child(2) .w:nth-child(2) { animation-delay: .21s; }
+.hero__title .ln:nth-child(3) .w:nth-child(1) { animation-delay: .34s; }
+.hero__title .ln:nth-child(3) .w:nth-child(2) { animation-delay: .39s; }
+.hero__title .ln:nth-child(3) .w:nth-child(3) { animation-delay: .44s; }
+.hero__title .ln:nth-child(3) .w:nth-child(4) { animation-delay: .49s; }
+
 .hero__title em { font-style: normal; color: var(--red-500); }
+
+/* The shimmer on "style.": a pale sweep travelling through the crimson, on a
+   slow cycle so it reads as an occasional glint rather than a blinking light.
+   Every colour in the sweep is lighter than the base, so contrast on the navy
+   only ever improves — 3.95:1 at rest, up to 13.2:1 at the peak.
+
+   Guarded, because the text is painted by the gradient and made transparent
+   to show it. Without background-clip the word would be invisible rather than
+   merely unshimmered. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hero__title em {
+    background: linear-gradient(100deg,
+      var(--red-500) 42%, #FFC9CE 50%, var(--red-500) 58%);
+    background-size: 280% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: heroShimmer 6s var(--e-in-out) 1.4s infinite;
+  }
+}
+@keyframes heroShimmer {
+  0%, 62%, 100% { background-position: 100% 0; }
+  22%           { background-position: 0 0; }
+}
 /* The line that names the maker, set under the claim rather than beside it. */
 .hero__title .ln--maker {
   font-size: .30em; letter-spacing: var(--tr-wide); line-height: 1.3;
@@ -126,9 +165,17 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .page-hero--backdrop .wrap { position: relative; z-index: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__title .ln > span { transform: none; animation: none; }
+  .hero__title .ln > span,
+  .hero__title .w { transform: none; animation: none; }
   .hero__sub, .hero__actions { opacity: 1; animation: none; }
   .backdrop__layer { transition: none !important; }
+  /* The paint goes back to a flat colour. Stopping the animation alone would
+     leave the word transparent, because it is the gradient that draws it. */
+  .hero__title em {
+    background: none;
+    -webkit-text-fill-color: var(--red-500);
+    color: var(--red-500);
+  }
 }
 
 .hero__meta {
