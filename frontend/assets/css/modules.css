@@ -633,6 +633,87 @@ body.is-loaded .preloader { opacity: 0; visibility: hidden; pointer-events: none
 .layer__desc { font-size: var(--t-small); color: var(--on-dark-soft); margin-top: .2rem; }
 
 /* --------------------------------------------------------------------------
+   The rail (manufacturing)
+   Eleven stages held on screen while the page scrolls past them, travelling
+   sideways as it goes. --p is progress through the track, written by
+   manufacturing.js.
+
+   Only where there is room to hold a viewport still and lay a stage out
+   beside its film. Everywhere else — a phone, a short window, a visitor who
+   asked for less motion — none of this applies and the stages stay the
+   vertical read they already were, which is the better way to read eleven of
+   anything.
+   -------------------------------------------------------------------------- */
+.rail { --p: 0; }
+
+@media (min-width: 901px) and (min-height: 620px) {
+  .rail[data-rail] {
+    /* One viewport of travel per stage, near enough, so no stage races past. */
+    height: 700vh;
+    position: relative;
+  }
+  .rail__pin {
+    position: sticky;
+    top: var(--nav-h);
+    height: calc(100vh - var(--nav-h));
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: var(--s-3);
+    align-content: start;
+    padding-top: var(--s-5);
+    overflow: hidden;
+  }
+
+  .rail__pin .process {
+    display: flex;
+    gap: clamp(2rem, 1rem + 4vw, 5rem);
+    align-items: center;
+    height: 100%;
+    /* Driven from --p rather than from scrollLeft: a transform is composited,
+       and scrolling a container from JS fights the page's own scrolling. */
+    transform: translate3d(calc(var(--p) * -1 * var(--rail-travel, 0px)), 0, 0);
+    will-change: transform;
+  }
+  .rail__pin .process__step {
+    flex: 0 0 min(88vw, 1100px);
+    border: 0;
+    padding-block: 0;
+    height: 100%;
+    align-content: center;
+    /* The stage being read comes up to full strength; the others stay legible
+       but step back, so the eye knows where it is. */
+    opacity: .3;
+    transition: opacity var(--d-mid) var(--e-out);
+  }
+  .rail__pin .process__step[data-on] { opacity: 1; }
+  .rail__pin .process__step:last-child { border-bottom: 0; }
+  .rail__pin .process__video { max-height: min(52vh, 460px); }
+
+  .rail__count {
+    font-family: var(--font-mono); font-size: var(--t-micro);
+    letter-spacing: var(--tr-wide); color: var(--on-dark-soft);
+  }
+  .rail__count .rail__at { color: var(--red-400); font-weight: 700; }
+  .rail__bar { height: 2px; background: var(--line-dark); border-radius: var(--r-pill); overflow: hidden; }
+  .rail__bar i {
+    display: block; height: 100%; width: 100%; background: var(--red-500);
+    transform: scaleX(var(--p)); transform-origin: left;
+  }
+}
+
+/* Unpinned: the counter and bar describe a movement that is not happening. */
+@media (max-width: 900px), (max-height: 619px) {
+  .rail__count, .rail__bar { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail[data-rail] { height: auto; }
+  .rail__pin { position: static; height: auto; overflow: visible; padding-top: 0; }
+  .rail__pin .process { display: grid; transform: none; height: auto; }
+  .rail__pin .process__step { flex: none; opacity: 1; height: auto; }
+  .rail__count, .rail__bar { display: none; }
+}
+
+/* --------------------------------------------------------------------------
    Process timeline (manufacturing)
    -------------------------------------------------------------------------- */
 .process { display: grid; gap: 0; counter-reset: step; }
