@@ -82,6 +82,8 @@
     var hero = document.getElementById('hero-ball');
     if (hero) {
       WW.ball3d(hero, {
+        /* The navy/red Diamond ball, not the default yellow one. */
+        modelName: 'WIN-WEARS-14-Panel-Ball-Diamond',
         base: '#F2F4F8',
         accent: '#16264F',
         seam: '#070E24',
