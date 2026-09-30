@@ -113,9 +113,20 @@ strong { font-weight: 650; }
   color: var(--ink-faint);
   display: flex; align-items: center; gap: .7rem;
 }
+/* A stitch, not a bar — dashes the width of a real hand-stitch, drawn in
+   from the left rather than appearing solid. The brand is a stitching floor;
+   the section marker says so. */
 .eyebrow::before {
-  content: ""; width: 26px; height: 2px; background: var(--red-500); flex: none;
+  content: ""; width: 26px; height: 2px; flex: none;
+  background-image: repeating-linear-gradient(to right, var(--red-500) 0 4px, transparent 4px 7px);
+  transform: scaleX(0); transform-origin: left;
 }
+/* Drawn once the section scrolls into view — the same IntersectionObserver
+   that already reveals everything else, so this needed no new script. */
+:is(.reveal.is-in .eyebrow, .eyebrow.reveal.is-in)::before {
+  animation: stitchDraw .6s var(--e-out) forwards;
+}
+@keyframes stitchDraw { to { transform: scaleX(1); } }
 .eyebrow--plain::before { display: none; }
 :is(.on-navy, .section--dark, .section--navy, .g3d, .hero, .page-hero,
     .cta-band, .nf, .site-footer, .mega, .mobile-menu)
